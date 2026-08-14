@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Cric Scorer",
+    "slug": "CricFlowMobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#071B2C"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.cricscorer.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#071B2C",
+        "foregroundImage": "./assets/logo.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "80810216-2a05-4e4f-baeb-257668f81671"
+      }
+    },
+    "owner": "bastixxx",
+    "plugins": [
+      "expo-splash-screen"
+    ]
+  }
+}
