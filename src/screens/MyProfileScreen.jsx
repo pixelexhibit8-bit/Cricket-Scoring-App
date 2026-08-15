@@ -51,17 +51,20 @@ export function MyProfileScreen({
   onBack = null,
   readOnly = false
 }) {
+  const targetPlayerName = typeof targetPlayer === 'string'
+    ? targetPlayer
+    : (targetPlayer?.name || targetPlayer?.fullName || targetPlayer?.playerName || '');
   const isPublicView = Boolean(targetPlayer) || readOnly;
   const [currentUser, setCurrentUser] = useState(null);
   const [profile, setProfile] = useState(targetPlayer ? {
-    name: targetPlayer.name || targetPlayer.fullName || 'Cricket Player',
-    role: targetPlayer.role || 'All-Rounder',
-    battingStyle: targetPlayer.battingStyle || 'Right Hand Bat',
-    bowlingStyle: targetPlayer.bowlingStyle || 'Right Arm Medium',
-    city: targetPlayer.city || 'Local Ground',
-    jerseyNumber: targetPlayer.jerseyNumber || '',
-    dob: targetPlayer.dob || '',
-    photoUrl: targetPlayer.photoUrl || targetPlayer.avatar || ''
+    name: targetPlayerName || 'Cricket Player',
+    role: targetPlayer?.role || 'All-Rounder',
+    battingStyle: targetPlayer?.battingStyle || 'Right Hand Bat',
+    bowlingStyle: targetPlayer?.bowlingStyle || 'Right Arm Medium',
+    city: targetPlayer?.city || 'Sadokan',
+    jerseyNumber: targetPlayer?.jerseyNumber || '',
+    dob: targetPlayer?.dob || '',
+    photoUrl: targetPlayer?.photoUrl || targetPlayer?.avatar || ''
   } : null);
   const [loading, setLoading] = useState(!targetPlayer);
 
@@ -199,16 +202,19 @@ export function MyProfileScreen({
       appStateSub.remove();
       linkSub.remove();
     };
-  }, [quickPlayerName, quickPhone]);
+  }, [targetPlayer, quickPlayerName, quickPhone]);
 
   const loadUserSession = async () => {
     if (targetPlayer) {
+      const pName = typeof targetPlayer === 'string'
+        ? targetPlayer
+        : (targetPlayer.name || targetPlayer.fullName || targetPlayer.playerName || 'Cricket Player');
       setProfile({
-        name: targetPlayer.name || targetPlayer.fullName || 'Cricket Player',
+        name: pName,
         role: targetPlayer.role || 'All-Rounder',
         battingStyle: targetPlayer.battingStyle || 'Right Hand Bat',
         bowlingStyle: targetPlayer.bowlingStyle || 'Right Arm Medium',
-        city: targetPlayer.city || 'Local Ground',
+        city: targetPlayer.city || 'Sadokan',
         jerseyNumber: targetPlayer.jerseyNumber || '',
         dob: targetPlayer.dob || '',
         photoUrl: targetPlayer.photoUrl || targetPlayer.avatar || ''
@@ -616,7 +622,7 @@ export function MyProfileScreen({
   }
 
   // ─── 2. PLAYER PROFILE VIEW (SELF OR PUBLIC) ───
-  const playerName = profile?.name || currentUser?.name || 'Local Player';
+  const playerName = targetPlayerName || profile?.name || currentUser?.name || 'Local Player';
   const stats = calculatePlayerCareerStats(playerName, finishedMatches);
 
   return (
