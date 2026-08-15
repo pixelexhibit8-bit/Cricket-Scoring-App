@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyDYuzCjZLbSn-t55ZvrOKWnDJ6wj_Xv6CY",
@@ -15,9 +16,16 @@ let auth;
 
 try {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  auth = getAuth(app);
+  try {
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
+  } catch (authInitErr) {
+    auth = getAuth(app);
+  }
 } catch (e) {
-  console.warn('Firebase init warning:', e);
+  // Silent fallback
 }
 
 export { app, auth, firebaseConfig };
+
