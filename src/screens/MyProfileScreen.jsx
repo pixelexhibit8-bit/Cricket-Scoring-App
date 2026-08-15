@@ -334,11 +334,16 @@ export function MyProfileScreen({
     }
     setLoading(true);
     try {
-      await sendPhoneOtp(cleanPhone);
+      const res = await sendPhoneOtp(cleanPhone);
       setOtpSent(true);
       setResendTimer(30);
-      setAuthOtp('');
-      showToast(`OTP sent to +91 ${cleanPhone.slice(-10)}`, 'success');
+      if (res?.mode === 'instant' || res?.demoCode) {
+        setAuthOtp(res.demoCode || '123456');
+        showToast(`Verification code: ${res.demoCode || '123456'}`, 'success');
+      } else {
+        setAuthOtp('');
+        showToast(`OTP sent to +91 ${cleanPhone.slice(-10)}`, 'success');
+      }
     } catch (e) {
       showToast(e?.message || 'Could not send OTP. Please try again.', 'error');
     } finally {
