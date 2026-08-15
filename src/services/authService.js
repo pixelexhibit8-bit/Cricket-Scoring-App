@@ -198,10 +198,8 @@ export async function signInWithGoogle({ name, email, photoUrl } = {}) {
   }
 }
 
-const activeTestingCodes = new Map();
-
 /**
- * Send Phone OTP via Supabase Auth or SMS Gateway
+ * Send Phone OTP strictly via Supabase Auth (Real SMS Provider)
  */
 export async function sendPhoneOtp(rawPhone) {
   const cleanPhone = String(rawPhone || '').replace(/\D/g, '').slice(-10);
@@ -211,91 +209,70 @@ export async function sendPhoneOtp(rawPhone) {
 
   const fullPhone = `+91${cleanPhone}`;
 
-  if (supabase && supabase.auth) {
-    try {
-      const { data, error } = await supabase.auth.signInWithOtp({
-        phone: fullPhone
-      });
-
-      if (!error) {
-        return { success: true, phone: cleanPhone, fullPhone, data, mode: 'sms' };
-      }
-    } catch (err) {
-      console.log('Supabase SMS gateway check:', err?.message);
-    }
+  if (!supabase || !supabase.auth) {
+    throw new Error('Authentication service is offline. Please check your connection.');
   }
 
-  // Instant verification code when SMS provider is not active
-  const demoCode = '123456';
-  activeTestingCodes.set(cleanPhone, demoCode);
-  return {
-    success: true,
-    phone: cleanPhone,
-    fullPhone,
-    mode: 'instant',
-    demoCode: '123456',
-    message: `Verification code: 123456`
-  };
+  const { data, error } = await supabase.auth.signInWithOtp({
+    phone: fullPhone
+  });
+
+  if (error) {
+    if (error.message.includes('Unsupported phone provider') || error.message.includes('provider is not enabled')) {
+      throw new Error('SMS service is not enabled in Supabase yet. Please enable Twilio / SMS Provider in Supabase Dashboard (Auth -> Providers -> Phone).');
+    }
+    throw new Error(error.message || 'Could not send SMS verification code. Please try again.');
+  }
+
+  return { success: true, phone: cleanPhone, fullPhone, data };
 }
 
 /**
- * Verify Phone OTP and auto-link player profile by mobile number
+ * Verify Phone OTP strictly via Supabase Auth
  */
 export async function verifyPhoneOtp(rawPhone, otpToken) {
   const cleanPhone = String(rawPhone || '').replace(/\D/g, '').slice(-10);
   const token = String(otpToken || '').trim();
 
   if (!token || token.length < 4) {
-    throw new Error('Please enter the 6-digit OTP code');
+    throw new Error('Please enter the 6-digit OTP code sent to your mobile');
   }
 
   const fullPhone = `+91${cleanPhone}`;
-  let supabaseUserId = null;
 
-  if (supabase && supabase.auth) {
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: fullPhone,
-        token: token,
-        type: 'sms'
-      });
-
-      if (!error && data?.user) {
-        supabaseUserId = data.user.id;
-      }
-    } catch (err) {
-      console.log('Supabase verify check:', err?.message);
-    }
+  if (!supabase || !supabase.auth) {
+    throw new Error('Authentication service is offline. Please check your connection.');
   }
 
-  // If Supabase didn't verify, validate testing code
-  if (!supabaseUserId) {
-    const savedCode = activeTestingCodes.get(cleanPhone) || '123456';
-    if (token !== savedCode && token !== '123456') {
-      throw new Error('Invalid OTP code. Please enter 123456 to verify.');
-    }
-    supabaseUserId = `user_${cleanPhone}`;
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone: fullPhone,
+    token: token,
+    type: 'sms'
+  });
+
+  if (error || !data?.user) {
+    throw new Error(error?.message || 'Invalid or expired OTP code. Please enter the exact code received on your phone.');
   }
+
+  const supabaseUserId = data.user.id;
 
   // Lookup existing player profile by phone in local_players
   let existingProfile = null;
   try {
-    if (supabase) {
-      const { data: profileData } = await supabase
-        .from('local_players')
-        .select('*')
-        .eq('phone', cleanPhone)
-        .limit(1);
-      if (Array.isArray(profileData) && profileData.length > 0) {
-        existingProfile = profileData[0];
-      }
+    const { data: profileData } = await supabase
+      .from('local_players')
+      .select('*')
+      .eq('phone', cleanPhone)
+      .limit(1);
+    if (Array.isArray(profileData) && profileData.length > 0) {
+      existingProfile = profileData[0];
     }
   } catch (e) {
     console.warn('Profile search by phone:', e);
   }
 
   const userId = supabaseUserId;
-  const userName = existingProfile?.name || 'Cricket Player';
+  const userName = existingProfile?.name || data.user.user_metadata?.full_name || 'Cricket Player';
 
   const userObj = {
     id: userId,
