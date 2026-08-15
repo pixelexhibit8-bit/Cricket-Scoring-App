@@ -86,6 +86,7 @@ export function MyProfileScreen({
   const [editDob, setEditDob] = useState('');
   const [dobPickerVisible, setDobPickerVisible] = useState(false);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [optionsMenuVisible, setOptionsMenuVisible] = useState(false);
 
   // Quick Google Sign-In Input
   const [quickPlayerName, setQuickPlayerName] = useState('');
@@ -666,53 +667,47 @@ export function MyProfileScreen({
           </TouchableOpacity>
 
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.playerNameText} numberOfLines={1}>{playerName}</Text>
-              {profile?.jerseyNumber ? (
-                <View style={{ backgroundColor: '#0284C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: fontWeights.bold, fontFamily: systemFont }}>#{profile.jerseyNumber}</Text>
-                </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 6 }}>
+                <Text style={styles.playerNameText} numberOfLines={1}>{playerName}</Text>
+                {profile?.jerseyNumber ? (
+                  <View style={styles.jerseyBadge}>
+                    <Text style={styles.jerseyBadgeText}>#{profile.jerseyNumber}</Text>
+                  </View>
+                ) : null}
+                <Ionicons name="checkmark-circle" size={17} color="#0284C7" />
+              </View>
+
+              {/* 3-DOTS INDUSTRIAL ACTION MENU (Only for profile owner) */}
+              {!isPublicView ? (
+                <TouchableOpacity
+                  onPress={() => setOptionsMenuVisible(true)}
+                  style={styles.threeDotsBtn}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Ionicons name="ellipsis-vertical" size={20} color="#64748B" />
+                </TouchableOpacity>
               ) : null}
-              <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
             </View>
+
             <Text style={styles.playerRoleText}>
               {profile?.role || 'All-Rounder'} • {profile?.city || 'Local Ground'}
             </Text>
 
-            {/* Batting & Bowling Styles */}
-            <View style={styles.stylesRow}>
-              <View style={styles.stylePill}>
-                <Text style={styles.stylePillText}>{profile?.battingStyle || 'Right Hand Bat'}</Text>
+            {/* Batting & Bowling Styles (Sleek Horizontal Badges) */}
+            <View style={styles.styleBadgesRow}>
+              <View style={styles.styleBadgeItem}>
+                <MaterialCommunityIcons name="cricket" size={12} color="#0284C7" />
+                <Text style={styles.styleBadgeText}>{profile?.battingStyle || 'Right Hand Bat'}</Text>
               </View>
-              <View style={[styles.stylePill, { backgroundColor: '#F1F5F9' }]}>
-                <Text style={[styles.stylePillText, { color: '#475569' }]}>{profile?.bowlingStyle || 'Right Arm Medium'}</Text>
+              <View style={[styles.styleBadgeItem, styles.bowlingBadgeItem]}>
+                <MaterialCommunityIcons name="baseball" size={12} color="#64748B" />
+                <Text style={[styles.styleBadgeText, { color: '#475569' }]}>{profile?.bowlingStyle || 'Right Arm Medium'}</Text>
               </View>
             </View>
           </View>
         </View>
-
-        {/* Action Buttons: Edit Profile / Sign Out (Only for profile owner) */}
-        {!isPublicView ? (
-          <View style={styles.profileActionRow}>
-            <TouchableOpacity
-              style={styles.editProfileBtn}
-              onPress={() => setIsEditing(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="create-outline" size={16} color="#0284C7" />
-              <Text style={styles.editProfileText}>Edit Profile</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.signOutBtn}
-              onPress={handleSignOut}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="log-out-outline" size={16} color="#EF4444" />
-              <Text style={styles.signOutText}>Sign Out</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
       </View>
 
       {/* QUICK CAREER OVERVIEW (4 TILES) */}
@@ -1046,6 +1041,89 @@ export function MyProfileScreen({
         </TouchableOpacity>
       </Modal>
 
+      {/* 3-DOTS INDUSTRIAL ACTION MENU BOTTOM SHEET */}
+      <Modal
+        visible={optionsMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOptionsMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.actionModalOverlay}
+          activeOpacity={1}
+          onPress={() => setOptionsMenuVisible(false)}
+        >
+          <View style={styles.actionMenuCard}>
+            <View style={styles.actionMenuHeader}>
+              <Text style={styles.actionMenuTitle}>Profile Settings</Text>
+              <TouchableOpacity
+                onPress={() => setOptionsMenuVisible(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Edit Profile Option */}
+            <TouchableOpacity
+              style={styles.actionMenuItem}
+              onPress={() => {
+                setOptionsMenuVisible(false);
+                setIsEditing(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F0F9FF' }]}>
+                <Ionicons name="create-outline" size={18} color="#0284C7" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionMenuLabel}>Edit Profile</Text>
+                <Text style={styles.actionMenuSub}>Photo, role, batting & bowling style, city</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+            </TouchableOpacity>
+
+            {/* Refresh Stats Option */}
+            <TouchableOpacity
+              style={styles.actionMenuItem}
+              onPress={() => {
+                setOptionsMenuVisible(false);
+                handleRefresh();
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8FAFC' }]}>
+                <Ionicons name="refresh-outline" size={18} color="#475569" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionMenuLabel}>Refresh Stats</Text>
+                <Text style={styles.actionMenuSub}>Sync career matches, runs & wickets</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+            </TouchableOpacity>
+
+            {/* Sign Out Option */}
+            <TouchableOpacity
+              style={[styles.actionMenuItem, { borderBottomWidth: 0 }]}
+              onPress={() => {
+                setOptionsMenuVisible(false);
+                handleSignOut();
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#FEF2F2' }]}>
+                <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.actionMenuLabel, { color: '#EF4444' }]}>Sign Out</Text>
+                <Text style={styles.actionMenuSub}>Log out of your cricketer account</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#FECACA" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Modern CricFlow Floating Toast */}
       <CricToast
         visible={toast.visible}
@@ -1219,72 +1297,114 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold,
     color: '#0F172A'
   },
+  jerseyBadge: {
+    backgroundColor: '#0284C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  jerseyBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontFamily: systemFontMedium
+  },
+  threeDotsBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   playerRoleText: {
     fontSize: 12,
     color: '#64748B',
     fontFamily: systemFontMedium,
     marginTop: 2
   },
-  playerStylePillRow: {
+  styleBadgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
+    gap: 8,
+    marginTop: 8,
     flexWrap: 'wrap'
   },
-  stylePill: {
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6
-  },
-  stylePillText: {
-    fontSize: 10,
-    fontFamily: systemFontBold,
-    color: '#0284C7'
-  },
-  profileActionRow: {
+  styleBadgeItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9'
-  },
-  editProfileBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 8,
+    gap: 5,
     backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#BAE6FD'
   },
-  editProfileText: {
-    fontSize: 12,
-    fontFamily: systemFontBold,
+  bowlingBadgeItem: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0'
+  },
+  styleBadgeText: {
+    fontSize: 11,
+    fontFamily: systemFontMedium,
     color: '#0284C7'
   },
-  signOutBtn: {
+
+  // 3-Dots Action Menu Bottom Sheet Styles
+  actionModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(7, 27, 44, 0.65)',
+    justifyContent: 'flex-end'
+  },
+  actionMenuCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 36,
+    gap: 4
+  },
+  actionMenuHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA'
+    justifyContent: 'space-between',
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 6
   },
-  signOutText: {
-    fontSize: 12,
+  actionMenuTitle: {
+    fontSize: 16,
     fontFamily: systemFontBold,
-    color: '#EF4444'
+    color: '#0F172A'
+  },
+  actionMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC'
+  },
+  actionMenuIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  actionMenuLabel: {
+    fontSize: 14,
+    fontFamily: systemFontBold,
+    color: '#1E293B'
+  },
+  actionMenuSub: {
+    fontSize: 11,
+    fontFamily: systemFont,
+    color: '#64748B',
+    marginTop: 1
   },
 
   sectionHeader: {
