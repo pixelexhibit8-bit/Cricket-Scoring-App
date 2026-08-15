@@ -3,8 +3,10 @@ import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { systemFont, fontWeights } from '../../theme.js';
 
-export function ExtrasModal({ visible, onClose, onRecordBall }) {
+export function ExtrasModal({ visible, onClose, onRecordBall, handleRecordBall }) {
   if (!visible) return null;
+
+  const recordBall = onRecordBall || handleRecordBall || (() => {});
 
   const sections = [
     {
@@ -13,10 +15,10 @@ export function ExtrasModal({ visible, onClose, onRecordBall }) {
       color: '#B45309',
       bg: '#FFFBEB',
       items: [
-        { label: '2 WIDES', action: () => onRecordBall(1, 'wd') },
-        { label: '3 WIDES', action: () => onRecordBall(2, 'wd') },
-        { label: '4 WIDES', action: () => onRecordBall(3, 'wd') },
-        { label: '5 WIDES', action: () => onRecordBall(4, 'wd') }
+        { label: '2 WIDES', action: () => recordBall(1, 'wd') },
+        { label: '3 WIDES', action: () => recordBall(2, 'wd') },
+        { label: '4 WIDES', action: () => recordBall(3, 'wd') },
+        { label: '5 WIDES', action: () => recordBall(4, 'wd') }
       ]
     },
     {
@@ -25,10 +27,10 @@ export function ExtrasModal({ visible, onClose, onRecordBall }) {
       color: '#B45309',
       bg: '#FFFBEB',
       items: [
-        { label: 'NB +1', action: () => onRecordBall(1, 'nb') },
-        { label: 'NB +2', action: () => onRecordBall(2, 'nb') },
-        { label: 'NB +4', action: () => onRecordBall(4, 'nb') },
-        { label: 'NB +6', action: () => onRecordBall(6, 'nb') }
+        { label: 'NB +1', action: () => recordBall(1, 'nb') },
+        { label: 'NB +2', action: () => recordBall(2, 'nb') },
+        { label: 'NB +4', action: () => recordBall(4, 'nb') },
+        { label: 'NB +6', action: () => recordBall(6, 'nb') }
       ]
     },
     {
@@ -36,14 +38,14 @@ export function ExtrasModal({ visible, onClose, onRecordBall }) {
       icon: 'swap-horizontal-outline',
       color: '#475569',
       bg: '#F8FAFC',
-      items: [1, 2, 3, 4].map(runs => ({ label: `+${runs} BYE`, action: () => onRecordBall(runs, null, false, 'b') }))
+      items: [1, 2, 3, 4].map(runs => ({ label: `+${runs} BYE`, action: () => recordBall(runs, null, false, 'b') }))
     },
     {
       title: 'LEG BYES',
       icon: 'swap-horizontal-outline',
       color: '#475569',
       bg: '#F8FAFC',
-      items: [1, 2, 3, 4].map(runs => ({ label: `+${runs} LB`, action: () => onRecordBall(runs, null, false, 'lb') }))
+      items: [1, 2, 3, 4].map(runs => ({ label: `+${runs} LB`, action: () => recordBall(runs, null, false, 'lb') }))
     }
   ];
 
@@ -96,7 +98,7 @@ export function ExtrasModal({ visible, onClose, onRecordBall }) {
               <TouchableOpacity
                 onPress={() => {
                   onClose();
-                  onRecordBall(0, null, false, 'penalty');
+                  recordBall(0, null, false, 'penalty');
                 }}
                 style={{ minHeight: 46, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' }}
               >

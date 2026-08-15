@@ -71,6 +71,128 @@ export const SADOKAN_A_PLAYERS = [];
 export const SADOKAN_B_PLAYERS = [];
 export const SADOKAN_TEAM_NAMES = new Set();
 export const SADOKAN_PLAYER_POOL = [];
+export const computeLeaderboardRankings = (finishedMatches = [], localPlayersDb = []) => {
+  const playerStatsMap = {};
+
+  const ensurePlayer = (rawName) => {
+    if (!rawName || typeof rawName !== 'string') return null;
+    const name = rawName.trim();
+    if (!name) return null;
+    const key = name.toLowerCase();
+    if (!playerStatsMap[key]) {
+      const dbFound = (localPlayersDb || []).find(p => p && p.name && p.name.trim().toLowerCase() === key);
+      playerStatsMap[key] = {
+        name,
+        role: dbFound?.role || 'All-Rounder',
+        photoUrl: dbFound?.photoUrl || '',
+        city: dbFound?.city || dbFound?.location || '',
+        runs: 0,
+        balls: 0,
+        wickets: 0,
+        bowlingRuns: 0,
+        overs: 0,
+        fours: 0,
+        sixes: 0,
+        matches: 0,
+        highScore: 0
+      };
+    }
+    return playerStatsMap[key];
+  };
+
+  (finishedMatches || []).forEach(match => {
+    if (!match) return;
+    const matchPlayers = new Set();
+
+    [match.team1, match.team2].forEach(team => {
+      if (!team) return;
+      (team.batting || []).forEach(b => {
+        const p = ensurePlayer(b.name);
+        if (p) {
+          matchPlayers.add(p.name.toLowerCase());
+          p.runs += Number(b.runs || 0);
+          p.balls += Number(b.balls || 0);
+          p.fours += Number(b.fours || 0);
+          p.sixes += Number(b.sixes || 0);
+          if (Number(b.runs || 0) > p.highScore) p.highScore = Number(b.runs || 0);
+        }
+      });
+      (team.bowling || []).forEach(bw => {
+        const p = ensurePlayer(bw.name);
+        if (p) {
+          matchPlayers.add(p.name.toLowerCase());
+          p.wickets += Number(bw.wickets || 0);
+          p.bowlingRuns += Number(bw.runs || 0);
+          p.overs += parseFloat(String(bw.overs || '0')) || 0;
+        }
+      });
+    });
+
+    matchPlayers.forEach(pKey => {
+      if (playerStatsMap[pKey]) playerStatsMap[pKey].matches += 1;
+    });
+  });
+
+  const allPlayers = Object.values(playerStatsMap);
+
+  const topBatters = allPlayers
+    .filter(p => p.runs > 0 || p.matches > 0)
+    .sort((a, b) => b.runs - a.runs || b.balls - a.balls)
+    .slice(0, 50)
+    .map((p, index) => ({
+      rank: index + 1,
+      name: p.name,
+      runs: p.runs,
+      balls: p.balls,
+      matches: p.matches,
+      sr: p.balls > 0 ? ((p.runs / p.balls) * 100).toFixed(1) : '0.0',
+      photoUrl: p.photoUrl,
+      role: p.role,
+      city: p.city || 'Local'
+    }));
+
+  const topBowlers = allPlayers
+    .filter(p => p.wickets > 0 || p.overs > 0)
+    .sort((a, b) => b.wickets - a.wickets || a.bowlingRuns - b.bowlingRuns)
+    .slice(0, 50)
+    .map((p, index) => ({
+      rank: index + 1,
+      name: p.name,
+      wickets: p.wickets,
+      overs: p.overs.toFixed(1),
+      runs: p.bowlingRuns,
+      econ: p.overs > 0 ? (p.bowlingRuns / p.overs).toFixed(2) : '0.00',
+      photoUrl: p.photoUrl,
+      role: p.role,
+      city: p.city || 'Local'
+    }));
+
+  const topAllRounders = allPlayers
+    .map(p => ({
+      ...p,
+      pts: p.runs + (p.wickets * 25)
+    }))
+    .filter(p => p.pts > 0 || p.matches > 0)
+    .sort((a, b) => b.pts - a.pts)
+    .slice(0, 50)
+    .map((p, index) => ({
+      rank: index + 1,
+      name: p.name,
+      pts: `${p.pts} Pts`,
+      runs: p.runs,
+      wickets: p.wickets,
+      matches: p.matches,
+      photoUrl: p.photoUrl,
+      role: p.role,
+      city: p.city || 'Local'
+    }));
+
+  return { topBatters, topBowlers, topAllRounders };
+};
+
+export const TOP_BATTERS = [];
+export const TOP_BOWLERS = [];
+export const TOP_ALLROUNDERS = [];
 
 // ── Token Parsers ───────────────────────────────────────────────────────────
 export const getTokenNumber = (token) => {
@@ -335,37 +457,16 @@ export const hasDuplicateNames = (names = []) => {
 };
 
 export const isSadokanMatchSnapshot = (match) => {
-  const names = (match?.teams || []).map(team => team.name).filter(Boolean);
-  return names.length === 2 && names.every(name => SADOKAN_TEAM_NAMES.has(name));
+  if (!match || typeof match !== 'object') return false;
+  return Boolean(match?.matchTitle && Array.isArray(match?.innings) && match.innings.length > 0);
 };
 
 export const isSadokanFinishedMatch = (match) => {
   if (!match || typeof match !== 'object') return false;
   const t1 = match.team1?.name || match.teams?.[0]?.name;
   const t2 = match.team2?.name || match.teams?.[1]?.name;
-  if (!t1 || !t2 || t1 === 'Team 1' || t2 === 'Team 2' || t1 === 'TM' || t2 === 'TM') return false;
-
-  const parseRuns = (scoreStr) => {
-    if (!scoreStr || scoreStr === 'Yet to bat') return 0;
-    const m = String(scoreStr).match(/^(\d+)/);
-    return m ? parseInt(m[1], 10) : 0;
-  };
-
-  const t1ScoreRuns = parseRuns(match.team1?.score);
-  const t2ScoreRuns = parseRuns(match.team2?.score);
-
-  const hasActualMatchData = Boolean(
-    (match.team1?.runs || 0) > 0
-    || (match.team2?.runs || 0) > 0
-    || (match.team1?.legalBalls || 0) > 0
-    || (match.team2?.legalBalls || 0) > 0
-    || (match.team1?.overHistory || []).length > 0
-    || (match.team2?.overHistory || []).length > 0
-    || t1ScoreRuns > 0
-    || t2ScoreRuns > 0
-  );
-
-  return hasActualMatchData;
+  if (!t1 || !t2) return false;
+  return Boolean(match.team1 || match.teams?.length === 2);
 };
 
 export const makeInning = (battingTeamName, bowlingTeamName) => ({
@@ -634,5 +735,199 @@ export const buildFinishedMatch = (match, rosterByTeam = {}) => {
     team2,
     topBatter: allBatters[0] ? `${allBatters[0].name} ${allBatters[0].runs} (${allBatters[0].balls})` : '',
     topBowler: ''
+  };
+};
+
+export {
+  getTeamLogoSource,
+  getScorePartsFromText
+} from './teamUtils.js';
+
+export const escapeRegExp = (value = '') =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+export const parseFinishedScoreText = (scoreText = '') => {
+  const text = String(scoreText || '').trim();
+  const scoreMatch = text.match(/(\d+)\s*-\s*(\d+)/);
+  const oversMatch = text.match(/\(([^)]+)\)/);
+  const oversText = (oversMatch?.[1] || '0.0').replace(/\s*Ov$/i, '').trim();
+  return {
+    runs: Number(scoreMatch?.[1] || 0),
+    wickets: Number(scoreMatch?.[2] || 0),
+    legalBalls: parseOversToBalls(oversText)
+  };
+};
+
+export const getFinishedResultCardText = (match) => {
+  const rawResult = String(match?.resultText || match?.winner || '').replace(/!+$/g, '').trim();
+  if (!rawResult) return { title: 'Result', detail: '' };
+  if (/tie|tied/i.test(rawResult)) return { title: 'Match Tied', detail: '' };
+
+  const winnerTeam = [match?.team1, match?.team2].find(team => team?.name === match?.winnerTeamName);
+  const winnerCode = winnerTeam?.code || (match?.winnerTeamName ? match.winnerTeamName.slice(0, 2).toUpperCase() : '');
+  const detail = match?.winnerTeamName
+    ? rawResult.replace(new RegExp(`^${escapeRegExp(match.winnerTeamName)}\\s+won\\s*`, 'i'), '').trim()
+    : rawResult.replace(/^.*?\bwon\b\s*/i, '').trim();
+
+  return {
+    title: `${winnerCode || 'Team'} Won`,
+    detail
+  };
+};
+
+export const buildFinishedSnapshotInning = (battingTeam, bowlingTeam) => {
+  const parsedScore = parseFinishedScoreText(battingTeam?.score);
+  const activeBatters = (battingTeam?.batting || []).filter(player => player.dismissal === 'Not out');
+  const fallbackBatters = (battingTeam?.batting || []).filter(player => (player.runs || 0) > 0 || (player.balls || 0) > 0);
+  const striker = activeBatters[0] || fallbackBatters[0] || battingTeam?.batting?.[0] || null;
+  const nonStriker = activeBatters[1] || fallbackBatters.find(player => player.name !== striker?.name) || battingTeam?.batting?.find(player => player.name !== striker?.name) || null;
+  const bowlerRow = bowlingTeam?.bowling?.[0] || null;
+  const fallOfWicketsArr = battingTeam?.fallOfWickets || [];
+  const lastWicket = fallOfWicketsArr.length > 0 ? fallOfWicketsArr[fallOfWicketsArr.length - 1] : null;
+  const partnershipsArr = battingTeam?.partnerships || [];
+  const unbrokenPartnership = partnershipsArr.find(item => item.status === 'unbroken')
+    || (partnershipsArr.length > 0 ? partnershipsArr[partnershipsArr.length - 1] : null)
+    || null;
+
+  return {
+    battingTeam: {
+      name: battingTeam?.name || 'Team',
+      code: battingTeam?.code || (battingTeam?.name ? battingTeam.name.slice(0, 2).toUpperCase() : 'TM'),
+      runs: parsedScore.runs,
+      wickets: parsedScore.wickets
+    },
+    bowlingTeam: {
+      name: bowlingTeam?.name || 'Team',
+      code: bowlingTeam?.code || (bowlingTeam?.name ? bowlingTeam.name.slice(0, 2).toUpperCase() : 'TM')
+    },
+    totalLegalBalls: battingTeam?.legalBalls ?? parsedScore.legalBalls,
+    bowlerLegalBalls: parseOversToBalls(bowlerRow?.overs),
+    currentOverBalls: battingTeam?.currentOverBalls || [],
+    currentOverBowlerWickets: 0,
+    overHistory: battingTeam?.overHistory || [],
+    bowlingStats: Object.fromEntries((battingTeam?.bowling || []).map(row => [row.name, normalizeBowlingFigure(row, row.name)])),
+    striker,
+    nonStriker,
+    bowler: bowlerRow ? { name: bowlerRow.name, runs: bowlerRow.runs || 0, wickets: bowlerRow.wickets || 0, overs: bowlerRow.overs || '0.0' } : null,
+    dismissedPlayers: (battingTeam?.batting || []).filter(player => player.dismissal && player.dismissal !== 'Not out' && player.dismissal !== 'Did not bat').map(player => player.name),
+    partnershipRuns: unbrokenPartnership?.totalRuns || 0,
+    partnershipBalls: unbrokenPartnership?.totalBalls || 0,
+    partnershipHistory: battingTeam?.partnerships || [],
+    partnershipContributions: {},
+    lastWicket: lastWicket ? {
+      name: lastWicket.dismissedName || 'Wicket',
+      runs: 0,
+      balls: 0,
+      dismissal: lastWicket.dismissal || '',
+      teamScore: lastWicket.score,
+      teamWickets: parsedScore.wickets,
+      over: lastWicket.over || ''
+    } : null,
+    lastEvent: { type: 'result', label: 'Result' },
+    lastDelivery: null,
+    pendingBatterEnd: null,
+    status: 'complete'
+  };
+};
+
+export const buildFinishedLiveSnapshot = (finishedMatch) => {
+  const t1 = finishedMatch?.team1 || finishedMatch?.sourceMatch?.team1 || finishedMatch?.teams?.[0] || {};
+  const t2 = finishedMatch?.team2 || finishedMatch?.sourceMatch?.team2 || finishedMatch?.teams?.[1] || {};
+
+  if (finishedMatch?.sourceMatch?.innings?.length) {
+    const srcInn = finishedMatch.sourceMatch.innings;
+    const inn1 = srcInn[0];
+    const inn2 = srcInn[1];
+
+    const team1Data = {
+      ...t1,
+      name: inn1?.battingTeam?.name || t1.name || 'Team 1',
+      score: t1.score || `${inn1?.battingTeam?.runs || 0}-${inn1?.battingTeam?.wickets || 0}`,
+      runs: inn1?.battingTeam?.runs ?? t1.runs ?? 0,
+      wickets: inn1?.battingTeam?.wickets ?? t1.wickets ?? 0,
+      batting: (t1.batting?.length ? t1.batting : (inn1?.allBatters || inn1?.batting || [])),
+      bowling: (t1.bowling?.length ? t1.bowling : (inn2?.bowlingStats ? Object.values(inn2.bowlingStats) : inn1?.bowling || [])),
+      fallOfWickets: t1.fallOfWickets || inn1?.partnershipHistory || [],
+      partnerships: t1.partnerships || inn1?.partnershipHistory || [],
+      overHistory: t1.overHistory || inn1?.overHistory || []
+    };
+
+    const team2Data = {
+      ...t2,
+      name: inn2?.battingTeam?.name || t2.name || 'Team 2',
+      score: t2.score || `${inn2?.battingTeam?.runs || 0}-${inn2?.battingTeam?.wickets || 0}`,
+      runs: inn2?.battingTeam?.runs ?? t2.runs ?? 0,
+      wickets: inn2?.battingTeam?.wickets ?? t2.wickets ?? 0,
+      batting: (t2.batting?.length ? t2.batting : (inn2?.allBatters || inn2?.batting || [])),
+      bowling: (t2.bowling?.length ? t2.bowling : (inn1?.bowlingStats ? Object.values(inn1.bowlingStats) : inn2?.bowling || [])),
+      fallOfWickets: t2.fallOfWickets || inn2?.partnershipHistory || [],
+      partnerships: t2.partnerships || inn2?.partnershipHistory || [],
+      overHistory: t2.overHistory || inn2?.overHistory || []
+    };
+
+    return {
+      ...finishedMatch.sourceMatch,
+      phase: 'result',
+      resultText: finishedMatch.resultText || finishedMatch.winner || finishedMatch.sourceMatch.resultText || 'Match Completed',
+      winnerTeamName: finishedMatch.winnerTeamName || finishedMatch.sourceMatch.winnerTeamName || '',
+      inning: Math.max(1, Math.min(srcInn.length, finishedMatch.sourceMatch.inning || srcInn.length)),
+      team1: team1Data,
+      team2: team2Data,
+      teams: [team1Data, team2Data],
+      maxOvers: finishedMatch.maxOvers || finishedMatch.sourceMatch.maxOvers,
+      tossWinner: finishedMatch.tossWinner || finishedMatch.sourceMatch.tossWinner || getTossWinnerName(finishedMatch) || '',
+      tossDecision: finishedMatch.tossDecision || finishedMatch.sourceMatch.tossDecision || getTossDecisionText(finishedMatch, 'BAT'),
+      venue: finishedMatch.venue || finishedMatch.sourceMatch.venue || 'Local Ground',
+      umpireName: finishedMatch.umpireName || finishedMatch.sourceMatch.umpireName || 'Cric Scorer'
+    };
+  }
+
+  const team1Data = {
+    ...t1,
+    name: t1.name || 'Team 1',
+    batting: t1.batting || [],
+    bowling: t1.bowling || [],
+    fallOfWickets: t1.fallOfWickets || [],
+    partnerships: t1.partnerships || [],
+    overHistory: t1.overHistory || []
+  };
+
+  const team2Data = {
+    ...t2,
+    name: t2.name || 'Team 2',
+    batting: t2.batting || [],
+    bowling: t2.bowling || [],
+    fallOfWickets: t2.fallOfWickets || [],
+    partnerships: t2.partnerships || [],
+    overHistory: t2.overHistory || []
+  };
+
+  const innings = [
+    buildFinishedSnapshotInning(team1Data, team2Data),
+    buildFinishedSnapshotInning(team2Data, team1Data)
+  ].filter(inning => inning?.battingTeam?.name);
+
+  return {
+    matchTitle: finishedMatch?.title || `${team1Data.name} vs ${team2Data.name}`,
+    umpireName: finishedMatch?.umpireName || 'Cric Scorer',
+    venue: finishedMatch?.venue || 'Local Ground',
+    startedAt: finishedMatch?.sourceMatch?.startedAt || finishedMatch?.startedAt,
+    tossResult: finishedMatch?.tossResult,
+    tossWinner: finishedMatch?.tossWinner || getTossWinnerName(finishedMatch) || '',
+    tossDecision: finishedMatch?.tossDecision || getTossDecisionText(finishedMatch, 'BAT'),
+    maxOvers: finishedMatch?.maxOvers || 0,
+    team1: team1Data,
+    team2: team2Data,
+    teams: [team1Data, team2Data],
+    playingXI: {
+      [team1Data.name]: (team1Data.batting || []).map(player => player.name),
+      [team2Data.name]: (team2Data.batting || []).map(player => player.name)
+    },
+    inning: innings.length || 1,
+    innings,
+    phase: 'result',
+    target: null,
+    resultText: finishedMatch?.resultText || finishedMatch?.winner || 'Match Completed',
+    winnerTeamName: finishedMatch?.winnerTeamName || ''
   };
 };

@@ -25,21 +25,24 @@ import { PreInningsScorecard } from './src/components/PreInningsScorecard';
 import { WormGraph } from './src/components/WormGraph';
 import { ManhattanGraph } from './src/components/ManhattanGraph';
 import { AuthScreen } from './src/components/AuthScreen';
-import { PlayerProfileScreen } from './src/screens/PlayerProfileScreen.jsx';
+import { MyProfileScreen } from './src/screens/MyProfileScreen.jsx';
 import { AboutAppScreen } from './src/components/AboutAppScreen.jsx';
+import { PlayerAvatar } from './src/components/PlayerAvatar.jsx';
+import { LinearGradient } from 'expo-linear-gradient';
+import { AppBottomNav } from './src/components/navigation/AppBottomNav.jsx';
 import { TournamentScreen } from './src/components/TournamentScreen.jsx';
 import { ScorerPinModal } from './src/components/modals/ScorerPinModal.jsx';
+import { MatchCompleteModal } from './src/components/modals/MatchCompleteModal.jsx';
 import { BowlerChangeModal } from './src/components/modals/BowlerChangeModal.jsx';
 import { ExtrasModal } from './src/components/modals/ExtrasModal.jsx';
 import { WicketPendingModal } from './src/components/modals/WicketPendingModal.jsx';
 import { RunOutModal } from './src/components/modals/RunOutModal.jsx';
-import { MenuDrawerScreen } from './src/components/MenuDrawerScreen.jsx';
 import { SquadEditModal } from './src/components/modals/SquadEditModal.jsx';
 import { MatchSelectionScreen } from './src/components/MatchSelectionScreen.jsx';
 import { QuickMatchSetupScreen } from './src/screens/QuickMatchSetupScreen.jsx';
 import { fetchLocalPlayers } from './src/services/localPlayerService.js';
-import { PlayerAvatar } from './src/components/PlayerAvatar.jsx';
 import { TeamPickerModal } from './src/components/TeamPickerModal.jsx';
+import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
 import { useFonts } from 'expo-font';
 import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, syncPlayerToSupabase, fetchLiveMatchFromSupabase, subscribeToSupabaseLiveMatches } from './src/services/matchService.js';
 import { generateUUID } from './src/services/supabaseClient.js';
@@ -58,828 +61,76 @@ const nameFitProps = {
   minimumFontScale: 0.82
 };
 
-// â”€â”€ Voice Announcements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const speakBall = (runs, extraType, isWicket) => {
-  let msg = '';
-  if (isWicket) msg = 'Wicket!';
-  else if (extraType === 'wd') msg = runs > 0 ? `Wide, ${runs} run${runs > 1 ? 's' : ''}` : 'Wide ball!';
-  else if (extraType === 'nb') msg = runs > 0 ? `No ball, ${runs} run${runs > 1 ? 's' : ''}` : 'No ball!';
-  else if (runs === 0) msg = 'Dot ball';
-  else if (runs === 1) msg = 'One run';
-  else if (runs === 2) msg = 'Two runs';
-  else if (runs === 3) msg = 'Three runs';
-  else if (runs === 4) msg = 'FOUR!';
-  else if (runs === 6) msg = 'SIX!';
-  else msg = `${runs} runs`;
-  Speech.speak(msg, { language: 'en-IN', pitch: 1.1, rate: 0.95 });
-};
+import {
+  DEFAULT_UMPIRE_NAME,
+  speakBall,
+  speakScoreToken,
+  formatScoreTokenForPublic,
+  makeLastDelivery,
+  FINISHED_MATCHES_DB,
+  computeLeaderboardRankings,
+  MATCH_SYNC_URL,
+  STORAGE_KEY,
+  MAX_MATCH_OVERS,
+  SADOKAN_A_PLAYERS,
+  SADOKAN_B_PLAYERS,
+  SADOKAN_TEAM_NAMES,
+  SADOKAN_PLAYER_POOL,
+  getTokenNumber,
+  isWideToken,
+  isNoBallToken,
+  isPenaltyToken,
+  isByeToken,
+  isLegByeToken,
+  isWicketToken,
+  isLegalToken,
+  getTokenTeamRuns,
+  getTokenBowlerRuns,
+  sumDeliveryTokens,
+  countWicketTokens,
+  countLegalTokens,
+  getCurrentOverNumber,
+  getBallTokenVisual,
+  renderBallTokenChip,
+  renderEmptyBallSlot,
+  renderBallTimeline,
+  renderCompactOverTimeline,
+  getDisplayOverHistory,
+  sanitizeMatchForStorage,
+  normalizeOversInput,
+  getTossWinnerName,
+  getTossDecisionText,
+  getSearchBlob,
+  getCleanPlayerNames,
+  makeTeamCode,
+  getTeamShortCode,
+  hasDuplicateNames,
+  TOP_BATTERS,
+  TOP_BOWLERS,
+  TOP_ALLROUNDERS,
+  isValidMatchSnapshot,
+  isSadokanMatchSnapshot,
+  isValidFinishedMatch,
+  isSadokanFinishedMatch,
+  makeInning,
+  formatOvers,
+  parseOversToBalls,
+  makeBowlingFigure,
+  normalizeBowlingFigure,
+  getInningBowlingRows,
+  getBowlerFigureFromInning,
+  formatOrdinal,
+  formatMatchDateTime,
+  formatMatchDateLabel,
+  buildFinishedMatch,
+  parseFinishedScoreText,
+  getScorePartsFromText,
+  escapeRegExp,
+  getFinishedResultCardText,
+  buildFinishedSnapshotInning,
+  buildFinishedLiveSnapshot
+} from './src/utils/cricketUtils.js';
 
-const speakScoreToken = (token) => {
-  if (!token) return;
-  const normalized = String(token);
-  const extraType = isWideToken(normalized) ? 'wd' : isNoBallToken(normalized) ? 'nb' : null;
-  speakBall(getTokenNumber(normalized), extraType, isWicketToken(normalized));
-};
-
-const formatScoreTokenForPublic = (token) => {
-  const normalized = String(token || '').trim();
-  if (!normalized) return '';
-  if (isWicketToken(normalized)) return 'WICKET';
-
-  const runs = getTokenTeamRuns(normalized);
-  if (isPenaltyToken(normalized)) return '5 PENALTY RUNS';
-  if (isLegByeToken(normalized)) return `${runs} LEG BYE${runs === 1 ? '' : 'S'}`;
-  if (isByeToken(normalized)) return `${runs} BYE${runs === 1 ? '' : 'S'}`;
-  if (isWideToken(normalized)) return runs > 1 ? `${runs} WIDES` : 'WIDE';
-  if (isNoBallToken(normalized)) return runs > 1 ? `NO BALL + ${runs - 1}` : 'NO BALL';
-  if (runs === 0) return 'DOT BALL';
-  if (runs === 4) return 'FOUR';
-  if (runs === 6) return 'SIX';
-  return `${runs} RUN${runs === 1 ? '' : 'S'}`;
-};
-
-const makeLastDelivery = ({ ballLabel, runs, addedRuns, extraType, byeType, isWicket }) => {
-  let label = formatScoreTokenForPublic(ballLabel);
-  let type = 'runs';
-
-  if (isWicket) type = 'wicket';
-  else if (extraType || byeType) type = 'extra';
-  else if (runs === 0) type = 'dot';
-  else if (runs === 4 || runs === 6) type = 'boundary';
-
-  if (extraType === 'wd') label = addedRuns > 1 ? `${addedRuns} WIDES` : 'WIDE';
-  else if (extraType === 'nb') label = addedRuns > 1 ? `NO BALL + ${addedRuns - 1}` : 'NO BALL';
-  else if (byeType === 'b') label = `${addedRuns} BYE${addedRuns === 1 ? '' : 'S'}`;
-  else if (byeType === 'lb') label = `${addedRuns} LEG BYE${addedRuns === 1 ? '' : 'S'}`;
-  else if (byeType === 'penalty') label = '5 PENALTY RUNS';
-
-  return { token: ballLabel, label, type };
-};
-
-// â”€â”€â”€ SAMPLE DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-const FINISHED_MATCHES_DB = [];
-const MATCH_SYNC_URL = process.env.EXPO_PUBLIC_MATCH_SYNC_URL || '';
-const STORAGE_KEY = 'cricflow.mobile.match-state.v2';
-const MAX_MATCH_OVERS = 50;
-
-const SADOKAN_A_PLAYERS = [];
-const SADOKAN_B_PLAYERS = [];
-const SADOKAN_TEAM_NAMES = new Set();
-const SADOKAN_PLAYER_POOL = [];
-
-const getTokenNumber = (token) => {
-  const value = parseInt(String(token || '').replace(/[^\d]/g, '') || '0', 10);
-  return Number.isFinite(value) ? value : 0;
-};
-
-const isWideToken = (token) => /Wd$/i.test(String(token || ''));
-const isNoBallToken = (token) => /Nb$/i.test(String(token || ''));
-const isPenaltyToken = (token) => /Pen$/i.test(String(token || ''));
-const isByeToken = (token) => /\d+B$/i.test(String(token || ''));
-const isLegByeToken = (token) => /\d+LB$/i.test(String(token || ''));
-const isWicketToken = (token) => /^(\d+)?W$/i.test(String(token || ''));
-const isLegalToken = (token) => !isWideToken(token) && !isNoBallToken(token) && !isPenaltyToken(token);
-
-const getTokenTeamRuns = (token) => {
-  if (!token) return 0;
-  if (isPenaltyToken(token)) return 5;
-  if (isWideToken(token) || isNoBallToken(token)) return getTokenNumber(token) + 1;
-  if (isByeToken(token) || isLegByeToken(token)) return getTokenNumber(token) || 1;
-  return getTokenNumber(token);
-};
-
-const getTokenBowlerRuns = (token) => {
-  if (isByeToken(token) || isLegByeToken(token) || isPenaltyToken(token)) return 0;
-  return getTokenTeamRuns(token);
-};
-
-const sumDeliveryTokens = (tokens = [], runResolver = getTokenTeamRuns) =>
-  tokens.reduce((total, token) => total + runResolver(token), 0);
-
-const countWicketTokens = (tokens = []) =>
-  tokens.filter(token => isWicketToken(token)).length;
-
-const countLegalTokens = (tokens = []) =>
-  tokens.filter(token => isLegalToken(token)).length;
-
-const getCurrentOverNumber = (inning) => {
-  const legalBalls = inning?.totalLegalBalls || 0;
-  if (inning?.isOverComplete && legalBalls > 0) return Math.ceil(legalBalls / 6);
-  return Math.floor(legalBalls / 6) + 1;
-};
-
-const getBallTokenVisual = (token, variant = 'default') => {
-  const normalized = String(token || '');
-  const isStrong = isWicketToken(normalized) || normalized === '4' || normalized === '6';
-  if (isWicketToken(normalized)) return { backgroundColor: '#E11D48', textColor: '#FFFFFF', borderWidth: 0 };
-  if (normalized === '4') return { backgroundColor: variant === 'liveStrip' ? '#0E8CAB' : '#0284C7', textColor: '#FFFFFF', borderWidth: 0 };
-  if (normalized === '6') return { backgroundColor: variant === 'liveStrip' ? '#2F7D1B' : '#7C3AED', textColor: '#FFFFFF', borderWidth: 0 };
-  if (normalized === '0' && variant === 'liveStrip') return { backgroundColor: '#FFFFFF', textColor: '#0F172A', borderWidth: 1 };
-  return { backgroundColor: '#F1F5F9', textColor: '#334155', borderWidth: isStrong ? 0 : 1 };
-};
-
-const renderBallTokenChip = (token, index, size = 24, variant = 'default', keyPrefix = 'ball') => {
-  const visual = getBallTokenVisual(token, variant);
-  const chipFontSize = variant === 'liveStrip' ? 12 : 13;
-  return (
-    <View
-      key={`${keyPrefix}-${token}-${index}`}
-      style={{
-        minWidth: size,
-        height: size,
-        paddingHorizontal: 4,
-        borderRadius: size / 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: visual.backgroundColor,
-        borderWidth: visual.borderWidth,
-        borderColor: '#CBD5E1'
-      }}
-    >
-      <Text style={{ color: visual.textColor, fontSize: chipFontSize, fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>
-        {token}
-      </Text>
-    </View>
-  );
-};
-
-const renderEmptyBallSlot = (index, size = 28) => (
-  <View
-    key={`empty-ball-${index}`}
-    style={{
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-      borderWidth: 1,
-      borderColor: '#E5E7EB',
-      backgroundColor: '#FFFFFF'
-    }}
-  />
-);
-
-const renderBallTimeline = (balls = [], { size = 30, emptyText = 'Over starting...', contentPaddingRight = 16, startAtEnd = false, lockHorizontalGesture = true } = {}) => {
-  let timelineRef = null;
-  const shouldCaptureGesture = () => Boolean(lockHorizontalGesture && balls.length > 6);
-  const scrollToLatest = () => {
-    if (startAtEnd && timelineRef) {
-      requestAnimationFrame(() => timelineRef?.scrollToEnd({ animated: false }));
-    }
-  };
-
-  return balls.length > 0 ? (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      showsHorizontalScrollIndicator={false}
-      decelerationRate="fast"
-      directionalLockEnabled
-      ref={ref => { timelineRef = ref; }}
-      onLayout={scrollToLatest}
-      onContentSizeChange={scrollToLatest}
-      onStartShouldSetResponderCapture={shouldCaptureGesture}
-      onMoveShouldSetResponderCapture={shouldCaptureGesture}
-      contentContainerStyle={{ minHeight: size, alignItems: 'center', gap: 7, paddingRight: contentPaddingRight }}
-    >
-      {balls.map((ball, index) => renderBallTokenChip(ball, index, size))}
-    </ScrollView>
-  ) : (
-    <View style={{ minHeight: size, justifyContent: 'center' }}>
-      <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{emptyText}</Text>
-    </View>
-  );
-};
-
-const renderCompactOverTimeline = ({
-  previousOver,
-  currentOverNumber,
-  currentBalls = [],
-  currentRuns = sumDeliveryTokens(currentBalls),
-  size = 28,
-  contentPaddingRight = 12,
-  startAtEnd = false
-} = {}) => {
-  let timelineRef = null;
-  const previousBalls = previousOver?.balls || [];
-  const showPrevious = previousBalls.length > 0 && currentBalls.length > 0;
-  const currentLegalBalls = countLegalTokens(currentBalls);
-  const emptySlots = Math.max(0, 6 - currentLegalBalls);
-  const shouldCaptureGesture = () => showPrevious || currentBalls.length > 6;
-  const scrollToLatest = () => {
-    if (startAtEnd && timelineRef) {
-      requestAnimationFrame(() => timelineRef?.scrollToEnd({ animated: false }));
-    }
-  };
-
-  return (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      showsHorizontalScrollIndicator={false}
-      decelerationRate="fast"
-      directionalLockEnabled
-      ref={ref => { timelineRef = ref; }}
-      onLayout={scrollToLatest}
-      onContentSizeChange={scrollToLatest}
-      onStartShouldSetResponderCapture={shouldCaptureGesture}
-      onMoveShouldSetResponderCapture={shouldCaptureGesture}
-      contentContainerStyle={{ minHeight: size + 6, alignItems: 'center', gap: 5, paddingRight: contentPaddingRight }}
-    >
-      {showPrevious ? (
-        <>
-          {previousBalls.map((ball, index) => renderBallTokenChip(ball, index, size, 'liveStrip', 'previous'))}
-          <Text selectable style={{ color: '#475569', fontSize: 12, fontWeight: fontWeights.semibold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>
-            = {sumDeliveryTokens(previousBalls)}
-          </Text>
-          <View style={{ width: 1, height: size + 4, backgroundColor: '#E5E7EB', marginHorizontal: 7 }} />
-        </>
-      ) : null}
-      <Text style={{ color: '#334155', fontSize: 13, fontWeight: fontWeights.semibold, marginRight: 2, fontFamily: systemFont }}>
-        Over {currentOverNumber}
-      </Text>
-      {currentBalls.map((ball, index) => renderBallTokenChip(ball, index, size, 'liveStrip', 'current'))}
-      {Array.from({ length: emptySlots }).map((_, index) => renderEmptyBallSlot(index, size))}
-      {!showPrevious && currentBalls.length > 0 ? (
-        <Text selectable style={{ color: '#475569', fontSize: 12, fontWeight: fontWeights.semibold, fontVariant: ['tabular-nums'], marginLeft: 2, fontFamily: systemFont }}>
-          = {currentRuns}
-        </Text>
-      ) : null}
-    </ScrollView>
-  );
-};
-
-const getDisplayOverHistory = (inning) => {
-  const completed = inning?.overHistory || [];
-  const currentBalls = inning?.currentOverBalls || [];
-  if (!inning || inning.isOverComplete || currentBalls.length === 0) return completed;
-  return [
-    ...completed,
-    {
-      overNum: Math.floor((inning.totalLegalBalls || 0) / 6) + 1,
-      runs: sumDeliveryTokens(currentBalls),
-      wickets: countWicketTokens(currentBalls),
-      bowlerName: inning.bowler?.name || 'Bowler',
-      balls: currentBalls,
-      partial: true
-    }
-  ];
-};
-
-const sanitizeMatchForStorage = (match) => {
-  if (!match) return null;
-  const cleanMatch = JSON.parse(JSON.stringify(match));
-  delete cleanMatch.pendingPublicEvent;
-  delete cleanMatch._pendingWicket;
-  delete cleanMatch._pendingNewBowler;
-  return cleanMatch;
-};
-
-const normalizeOversInput = (value) => {
-  const parsed = Number(String(value || '').trim());
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_MATCH_OVERS) return null;
-  return parsed;
-};
-
-const getTossWinnerName = (match) => {
-  if (match?.tossWinner) return match.tossWinner;
-  const tossText = String(match?.tossResult || '');
-  return tossText.split(/ won/i)[0] || '';
-};
-
-const getTossDecisionText = (match, fallback = 'BAT') => {
-  const raw = String(match?.tossDecision || match?.tossResult || '').toUpperCase();
-  if (raw.includes('BOWL')) return 'BOWL';
-  if (raw.includes('BAT')) return 'BAT';
-  return fallback;
-};
-
-const getSearchBlob = (value) => {
-  try {
-    return JSON.stringify(value || {}).toLowerCase();
-  } catch (error) {
-    return '';
-  }
-};
-
-const getCleanPlayerNames = (names = []) => {
-  const seen = new Set();
-  return names
-    .map(name => String(name || '').trim())
-    .filter(name => {
-      const key = name.toLowerCase();
-      if (!name || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-};
-
-const makeTeamCode = (name = '') => {
-  const words = String(name).trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return words.slice(0, 2).map(word => word[0]).join('').toUpperCase();
-  return String(name).replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'TM';
-};
-
-const getTeamShortCode = (team, fallbackName = '') => {
-  const savedCode = String(team?.code || '').trim();
-  return savedCode || makeTeamCode(team?.name || fallbackName);
-};
-
-const hasDuplicateNames = (names = []) => {
-  const normalized = names.map(name => String(name || '').trim().toLowerCase()).filter(Boolean);
-  return new Set(normalized).size !== normalized.length;
-};
-
-const TOP_BATTERS = [];
-const TOP_BOWLERS = [];
-const TOP_ALLROUNDERS = [];
-
-// Generic validator — any 2 teams with valid innings data
-const isValidMatchSnapshot = (match) => {
-  if (!match || typeof match !== 'object') return false;
-  if (!Array.isArray(match.innings) || match.innings.length === 0) return false;
-  const names = (match?.teams || []).map(team => team.name).filter(Boolean);
-  return names.length === 2;
-};
-
-// Keep alias for backward compat
-const isSadokanMatchSnapshot = isValidMatchSnapshot;
-
-// Generic validator — any match with 2 real team names (not placeholders)
-const isValidFinishedMatch = (match) => {
-  if (!match || typeof match !== 'object') return false;
-  const t1 = match.team1?.name || match.teams?.[0]?.name;
-  const t2 = match.team2?.name || match.teams?.[1]?.name;
-  const isPlaceholder = (n) => !n || n === 'Team 1' || n === 'Team 2' || n === 'TM' || n === 'Team A' || n === 'Team B';
-  if (isPlaceholder(t1) || isPlaceholder(t2)) return false;
-
-  const parseRuns = (scoreStr) => {
-    if (!scoreStr || scoreStr === 'Yet to bat') return 0;
-    const m = String(scoreStr).match(/^(\d+)/);
-    return m ? parseInt(m[1], 10) : 0;
-  };
-
-  const hasActualMatchData = Boolean(
-    (match.team1?.runs || 0) > 0
-    || (match.team2?.runs || 0) > 0
-    || (match.team1?.legalBalls || 0) > 0
-    || (match.team2?.legalBalls || 0) > 0
-    || parseRuns(match.team1?.score) > 0
-    || parseRuns(match.team2?.score) > 0
-    || (Array.isArray(match.innings) && match.innings.length > 0)
-    || match.winner
-    || match.resultText
-    || match.winnerTeamName
-  );
-
-  return hasActualMatchData;
-};
-
-// Keep alias for backward compat
-const isSadokanFinishedMatch = isValidFinishedMatch;
-
-// â”€â”€â”€ HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-const makeInning = (battingTeamName, bowlingTeamName) => ({
-  battingTeam: { name: battingTeamName, code: battingTeamName.slice(0, 2).toUpperCase(), runs: 0, wickets: 0 },
-  bowlingTeam: { name: bowlingTeamName, code: bowlingTeamName.slice(0, 2).toUpperCase() },
-  totalLegalBalls: 0,
-  bowlerLegalBalls: 0,
-  currentOverBalls: [],
-  currentOverBowlerWickets: 0,
-  bowlingStats: {},
-  striker: null,
-  nonStriker: null,
-  bowler: null,
-  dismissedPlayers: [],
-  partnershipRuns: 0,
-  partnershipBalls: 0,
-  partnershipHistory: [],
-  partnershipContributions: {},
-  lastWicket: null,
-  lastEvent: null,
-  lastDelivery: null,
-  pendingBatterEnd: null,
-  status: 'active', // active | complete
-});
-
-const formatOvers = (legalBalls) => {
-  const ov = Math.floor(legalBalls / 6);
-  const b = legalBalls % 6;
-  return `${ov}.${b}`;
-};
-
-const parseOversToBalls = (overs) => {
-  const [overPart, ballPart = '0'] = String(overs || '0.0').split('.');
-  const oversNumber = Number.parseInt(overPart, 10) || 0;
-  const ballsNumber = Number.parseInt(ballPart, 10) || 0;
-  return (oversNumber * 6) + Math.min(Math.max(ballsNumber, 0), 5);
-};
-
-const makeBowlingFigure = ({ name, balls = 0, runs = 0, wickets = 0 } = {}) => ({
-  name: name || '',
-  balls: Number(balls) || 0,
-  runs: Number(runs) || 0,
-  wickets: Number(wickets) || 0,
-  overs: formatOvers(Number(balls) || 0)
-});
-
-const normalizeBowlingFigure = (figure = {}, fallbackName = '') => makeBowlingFigure({
-  name: figure.name || fallbackName,
-  balls: figure.balls ?? figure.legalBalls ?? parseOversToBalls(figure.overs),
-  runs: figure.runs,
-  wickets: figure.wickets
-});
-
-const getInningBowlingRows = (inning) => {
-  if (!inning) return [];
-  const figures = {};
-  const addFigure = (name, balls = 0, runs = 0, wickets = 0) => {
-    if (!name) return;
-    const current = figures[name] || makeBowlingFigure({ name });
-    figures[name] = makeBowlingFigure({
-      name,
-      balls: current.balls + (Number(balls) || 0),
-      runs: current.runs + (Number(runs) || 0),
-      wickets: current.wickets + (Number(wickets) || 0)
-    });
-  };
-
-  const storedStats = inning?.bowlingStats || {};
-  Object.entries(storedStats).forEach(([name, figure]) => {
-    if (!name || !figure) return;
-    const normalized = normalizeBowlingFigure(figure, name);
-    addFigure(normalized.name, normalized.balls, normalized.runs, normalized.wickets);
-  });
-
-  if (Object.keys(storedStats).length === 0) {
-    (inning?.overHistory || []).forEach(over => {
-      if (!over) return;
-      const balls = over.legalBalls ?? countLegalTokens(over.balls || []);
-      const runs = over.bowlerRuns ?? sumDeliveryTokens(over.balls || [], getTokenBowlerRuns);
-      const wickets = over.bowlerWickets ?? over.wickets ?? 0;
-      addFigure(over.bowlerName, balls, runs, wickets);
-    });
-    if (!inning?.isOverComplete && (inning?.currentOverBalls || []).length > 0) {
-      const balls = inning.currentOverBalls || [];
-      addFigure(
-        inning.bowler?.name,
-        countLegalTokens(balls),
-        sumDeliveryTokens(balls, getTokenBowlerRuns),
-        inning.currentOverBowlerWickets || countWicketTokens(balls)
-      );
-    }
-  }
-
-  if (inning?.bowler?.name && !figures[inning.bowler.name]) {
-    const current = normalizeBowlingFigure(
-      { ...inning.bowler, balls: inning.bowlerLegalBalls ?? parseOversToBalls(inning.bowler.overs) },
-      inning.bowler.name
-    );
-    addFigure(current.name, current.balls, current.runs, current.wickets);
-  }
-
-  return Object.values(figures || {}).map(figure => ({
-    ...figure,
-    econ: figure.balls > 0 ? ((figure.runs / figure.balls) * 6).toFixed(2) : '0.00'
-  }));
-};
-
-const getBowlerFigureFromInning = (inning, name) => {
-  const rows = getInningBowlingRows(inning);
-  return rows.find(row => row.name === name) || makeBowlingFigure({ name });
-};
-
-const formatOrdinal = (value) => {
-  const number = Number(value) || 0;
-  const mod100 = number % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${number}th`;
-  if (number % 10 === 1) return `${number}st`;
-  if (number % 10 === 2) return `${number}nd`;
-  if (number % 10 === 3) return `${number}rd`;
-  return `${number}th`;
-};
-
-const formatMatchDateTime = (startedAt) => {
-  const date = startedAt ? new Date(startedAt) : new Date();
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
-};
-
-const buildFinishedMatch = (match, rosterByTeam = {}) => {
-  const innings = match?.innings || [];
-  const getRecordedBatters = (inning, roster = []) => {
-    const recorded = (inning?.allBatters?.length
-      ? inning.allBatters
-      : [inning?.striker, inning?.nonStriker].filter(player => player?.name)
-    ).map(player => ({
-      ...player,
-      runs: player.runs || 0,
-      balls: player.balls || 0,
-      fours: player.fours || 0,
-      sixes: player.sixes || 0,
-      dismissal: player.dismissal || (player.isOut ? 'Out' : 'Not out'),
-      sr: player.balls > 0 ? ((player.runs / player.balls) * 100).toFixed(1) : '0.0'
-    }));
-    const recordedNames = new Set(recorded.map(player => player.name));
-    return [
-      ...recorded,
-      ...roster.filter(name => !recordedNames.has(name)).map(name => ({
-        name,
-        runs: 0,
-        balls: 0,
-        fours: 0,
-        sixes: 0,
-        dismissal: 'Did not bat',
-        sr: '0.0'
-      }))
-    ];
-  };
-
-  const getBowling = (inning) => getInningBowlingRows(inning);
-
-  const firstTeamName = innings[0]?.battingTeam?.name || match.team1_name || match.team1?.name || match.inn1BattingTeam || match.teams?.[0]?.name || 'Team 1';
-  const secondTeamName = innings[0]?.bowlingTeam?.name || match.team2_name || match.team2?.name || match.inn1BowlingTeam || match.teams?.[1]?.name || 'Team 2';
-
-  const normalizeTeamName = (t) => {
-    if (!t) return '';
-    if (typeof t === 'string') return t.trim().toLowerCase();
-    return (t.name || t.teamName || t.code || '').toString().trim().toLowerCase();
-  };
-
-  const buildTeam = (name) => {
-    const targetName = normalizeTeamName(name);
-    const battingInning = innings.find(inning => normalizeTeamName(inning?.battingTeam || inning?.battingTeamName) === targetName)
-      || (name === firstTeamName ? innings[0] : innings[1]);
-    const bowlingInning = innings.find(inning => normalizeTeamName(inning?.bowlingTeam || inning?.bowlingTeamName) === targetName)
-      || (name === firstTeamName ? innings[1] : innings[0]);
-    const teamMeta = match.teams?.find(team => normalizeTeamName(team) === targetName);
-    let cumulativePartnershipRuns = 0;
-    const partnerships = (battingInning?.partnershipHistory || []).map(partnership => {
-      cumulativePartnershipRuns += partnership.totalRuns || 0;
-      return {
-        ...partnership,
-        wkt: `${formatOrdinal(partnership.wicketNumber)} wicket`,
-        score: `${partnership.teamScore ?? cumulativePartnershipRuns}-${partnership.wicketNumber}`,
-        over: partnership.over || (battingInning.lastWicket?.name === partnership.dismissedName ? battingInning.lastWicket.over : '')
-      };
-    });
-    if ((battingInning?.partnershipRuns || 0) > 0) {
-      partnerships.push({
-        wkt: 'Unbroken',
-        p1: battingInning.striker?.name || '',
-        r1: battingInning.partnershipContributions?.[battingInning.striker?.name]?.runs || 0,
-        p2: battingInning.nonStriker?.name || '',
-        r2: battingInning.partnershipContributions?.[battingInning.nonStriker?.name]?.runs || 0,
-        totalRuns: battingInning.partnershipRuns,
-        totalBalls: battingInning.partnershipBalls || 0,
-        status: 'unbroken'
-      });
-    }
-
-    const runs = battingInning?.battingTeam?.runs ?? battingInning?.runs ?? 0;
-    const wickets = battingInning?.battingTeam?.wickets ?? battingInning?.wickets ?? 0;
-    const totalLegalBalls = battingInning?.totalLegalBalls ?? battingInning?.legalBalls ?? 0;
-    const teamCode = (typeof battingInning?.battingTeam === 'object' ? battingInning?.battingTeam?.code : null) || name.slice(0, 2).toUpperCase();
-
-    return {
-      name,
-      code: teamCode,
-      logoKey: teamMeta?.logoKey || (name === firstTeamName ? 'default-team-1' : 'default-team-2'),
-      logoUri: teamMeta?.logoUri,
-      score: battingInning
-        ? `${runs}-${wickets} (${formatOvers(totalLegalBalls)} Ov)`
-        : 'Yet to bat',
-      runs,
-      wickets,
-      legalBalls: totalLegalBalls,
-      batting: getRecordedBatters(battingInning, rosterByTeam[name] || match.playingXI?.[name] || []),
-      bowling: getBowling(battingInning),
-      fallOfWickets: partnerships.filter(partnership => partnership.status === 'out'),
-      partnerships,
-      overHistory: getDisplayOverHistory(battingInning),
-      currentOverBalls: battingInning?.currentOverBalls || []
-    };
-  };
-
-  const team1 = buildTeam(firstTeamName);
-  const team2 = buildTeam(secondTeamName);
-  const allBatters = [...(team1?.batting || []), ...(team2?.batting || [])]
-    .filter(player => (player?.balls || 0) > 0 || (player?.runs || 0) > 0)
-    .sort((a, b) => (b.runs || 0) - (a.runs || 0) || (a.balls || 0) - (b.balls || 0));
-  const allBowlers = [...(team1?.bowling || []), ...(team2?.bowling || [])]
-    .filter(b => (b?.wickets || 0) > 0 || (b?.balls || 0) > 0);
-
-  const calculateImpact = (player, isBowler = false) => {
-    if (isBowler) {
-      return (player.wickets || 0) * 25 + (player.balls > 0 ? Math.max(0, 30 - player.runs) : 0);
-    }
-    return (player.runs || 0) * 1.5 + (player.sixes || 0) * 2 + (player.fours || 0);
-  };
-
-  let bestImpact = -1;
-  let playerOfTheMatch = null;
-
-  allBatters.forEach(b => {
-    const score = calculateImpact(b, false);
-    if (score > bestImpact) {
-      bestImpact = score;
-      playerOfTheMatch = { name: b.name, runs: b.runs, balls: b.balls, type: 'batting', statText: `${b.runs} (${b.balls})` };
-    }
-  });
-
-  allBowlers.forEach(bw => {
-    const score = calculateImpact(bw, true);
-    if (score > bestImpact) {
-      bestImpact = score;
-      playerOfTheMatch = { name: bw.name, wickets: bw.wickets, runs: bw.runs, overs: bw.overs, type: 'bowling', statText: `${bw.wickets}-${bw.runs} (${bw.overs} Ov)` };
-    }
-  });
-
-  const winnerTeamName = match.winnerTeamName || [firstTeamName, secondTeamName].find(name => (match.resultText || match.winner || '').toLowerCase().includes(name.toLowerCase())) || '';
-  const finalInning = innings[innings.length - 1];
-  const lastCompletedOver = finalInning?.overHistory?.[finalInning.overHistory.length - 1];
-  const lastOver = (!finalInning?.isOverComplete && finalInning?.currentOverBalls?.length)
-    ? {
-      overNum: Math.floor((finalInning.totalLegalBalls || 0) / 6) + 1,
-      bowlerName: finalInning.bowler?.name || 'Bowler',
-      runs: sumDeliveryTokens(finalInning.currentOverBalls),
-      balls: finalInning.currentOverBalls
-    }
-    : lastCompletedOver;
-
-  return {
-    id: `finished-${match.startedAt || match.matchTitle}`,
-    title: match.matchTitle,
-    winner: match.resultText,
-    resultText: match.resultText,
-    winnerTeamName,
-    venue: match.venue || 'Venue not added',
-    date: formatMatchDateTime(match.startedAt),
-    maxOvers: match.maxOvers,
-    tossResult: match.tossResult,
-    tossWinner: match.tossWinner || (match.tossResult ? match.tossResult.split(' won')?.[0]?.trim() : ''),
-    tossDecision: match.tossDecision || getTossDecisionText(match, 'BAT'),
-    scorerPin: match.scorerPin || match.scorer_pin || '',
-    umpireName: match.umpireName || DEFAULT_UMPIRE_NAME,
-    team1,
-    team2,
-    topPerformers: allBatters.slice(0, 3),
-    topScorer: allBatters[0] || null,
-    playerOfTheMatch: playerOfTheMatch || (allBatters[0] ? { name: allBatters[0].name, runs: allBatters[0].runs, balls: allBatters[0].balls, type: 'batting', statText: `${allBatters[0].runs} (${allBatters[0].balls})` } : null),
-    lastOver,
-    sourceMatch: match
-  };
-};
-
-const parseFinishedScoreText = (scoreText = '') => {
-  const text = String(scoreText || '').trim();
-  const scoreMatch = text.match(/(\d+)\s*-\s*(\d+)/);
-  const oversMatch = text.match(/\(([^)]+)\)/);
-  const oversText = (oversMatch?.[1] || '0.0').replace(/\s*Ov$/i, '').trim();
-  return {
-    runs: Number(scoreMatch?.[1] || 0),
-    wickets: Number(scoreMatch?.[2] || 0),
-    legalBalls: parseOversToBalls(oversText)
-  };
-};
-
-const getScorePartsFromText = (scoreText = '') => {
-  const rawScore = String(scoreText || '').trim();
-  const match = rawScore.match(/^(.+?)(?:\s*\(([^)]+)\))?$/);
-  return {
-    score: match?.[1]?.trim() || rawScore,
-    overs: (match?.[2] || '').replace(/\s*Ov$/i, '').trim()
-  };
-};
-
-const escapeRegExp = (value = '') =>
-  String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const getFinishedResultCardText = (match) => {
-  const rawResult = String(match?.winner || '').replace(/!+$/g, '').trim();
-  if (!rawResult) return { title: 'Result', detail: '' };
-  if (/tie|tied/i.test(rawResult)) return { title: 'Match Tied', detail: '' };
-
-  const winnerTeam = [match?.team1, match?.team2].find(team => team?.name === match?.winnerTeamName);
-  const winnerCode = getTeamShortCode(winnerTeam, match?.winnerTeamName || '');
-  const detail = match?.winnerTeamName
-    ? rawResult.replace(new RegExp(`^${escapeRegExp(match.winnerTeamName)}\\s+won\\s*`, 'i'), '').trim()
-    : rawResult.replace(/^.*?\bwon\b\s*/i, '').trim();
-
-  return {
-    title: `${winnerCode || 'Team'} Won`,
-    detail
-  };
-};
-
-const buildFinishedSnapshotInning = (battingTeam, bowlingTeam) => {
-  const parsedScore = parseFinishedScoreText(battingTeam?.score);
-  const activeBatters = (battingTeam?.batting || []).filter(player => player.dismissal === 'Not out');
-  const fallbackBatters = (battingTeam?.batting || []).filter(player => (player.runs || 0) > 0 || (player.balls || 0) > 0);
-  const striker = activeBatters[0] || fallbackBatters[0] || battingTeam?.batting?.[0] || null;
-  const nonStriker = activeBatters[1] || fallbackBatters.find(player => player.name !== striker?.name) || battingTeam?.batting?.find(player => player.name !== striker?.name) || null;
-  const bowlerRow = bowlingTeam?.bowling?.[0] || null;
-  const fallOfWicketsArr = battingTeam?.fallOfWickets || [];
-  const lastWicket = fallOfWicketsArr.length > 0 ? fallOfWicketsArr[fallOfWicketsArr.length - 1] : null;
-  const partnershipsArr = battingTeam?.partnerships || [];
-  const unbrokenPartnership = partnershipsArr.find(item => item.status === 'unbroken')
-    || (partnershipsArr.length > 0 ? partnershipsArr[partnershipsArr.length - 1] : null)
-    || null;
-
-  return {
-    battingTeam: {
-      name: battingTeam?.name || 'Team',
-      code: battingTeam?.code || makeTeamCode(battingTeam?.name),
-      runs: parsedScore.runs,
-      wickets: parsedScore.wickets
-    },
-    bowlingTeam: {
-      name: bowlingTeam?.name || 'Team',
-      code: bowlingTeam?.code || makeTeamCode(bowlingTeam?.name)
-    },
-    totalLegalBalls: battingTeam?.legalBalls ?? parsedScore.legalBalls,
-    bowlerLegalBalls: parseOversToBalls(bowlerRow?.overs),
-    currentOverBalls: battingTeam?.currentOverBalls || [],
-    currentOverBowlerWickets: 0,
-    overHistory: battingTeam?.overHistory || [],
-    bowlingStats: Object.fromEntries(((bowlingTeam?.bowling?.length ? bowlingTeam.bowling : battingTeam?.bowling) || []).map(row => [row.name, normalizeBowlingFigure(row, row.name)])),
-    striker,
-    nonStriker,
-    bowler: bowlerRow ? { name: bowlerRow.name, runs: bowlerRow.runs || 0, wickets: bowlerRow.wickets || 0, overs: bowlerRow.overs || '0.0' } : null,
-    dismissedPlayers: (battingTeam?.batting || []).filter(player => player.dismissal && player.dismissal !== 'Not out' && player.dismissal !== 'Did not bat').map(player => player.name),
-    partnershipRuns: unbrokenPartnership?.totalRuns || 0,
-    partnershipBalls: unbrokenPartnership?.totalBalls || 0,
-    partnershipHistory: battingTeam?.partnerships || [],
-    partnershipContributions: {},
-    lastWicket: lastWicket ? {
-      name: lastWicket.dismissedName || 'Wicket',
-      runs: 0,
-      balls: 0,
-      dismissal: lastWicket.dismissal || '',
-      teamScore: lastWicket.score,
-      teamWickets: parsedScore.wickets,
-      over: lastWicket.over || ''
-    } : null,
-    lastEvent: { type: 'result', label: 'Result' },
-    lastDelivery: null,
-    pendingBatterEnd: null,
-    status: 'complete'
-  };
-};
-
-const buildFinishedLiveSnapshot = (finishedMatch) => {
-  if (!finishedMatch) return null;
-  const sourceMatch = finishedMatch.sourceMatch || (finishedMatch.innings?.length ? finishedMatch : null);
-  const built = buildFinishedMatch(sourceMatch || finishedMatch);
-
-  if (sourceMatch && sourceMatch.innings?.length) {
-    return {
-      ...sourceMatch,
-      team1: built.team1,
-      team2: built.team2,
-      phase: 'result',
-      resultText: finishedMatch.winner || finishedMatch.resultText || sourceMatch.resultText || built.winner,
-      inning: Math.max(1, Math.min(sourceMatch.innings.length, sourceMatch.inning || sourceMatch.innings.length)),
-      teams: sourceMatch.teams?.length ? sourceMatch.teams : [built.team1, built.team2],
-      maxOvers: finishedMatch.maxOvers || sourceMatch.maxOvers
-    };
-  }
-
-  const innings = [
-    buildFinishedSnapshotInning(built?.team1, built?.team2),
-    buildFinishedSnapshotInning(built?.team2, built?.team1)
-  ].filter(inning => inning?.battingTeam?.name);
-
-  return {
-    matchTitle: built?.title || `${built?.team1?.name || 'Team 1'} vs ${built?.team2?.name || 'Team 2'}`,
-    umpireName: built?.umpireName || DEFAULT_UMPIRE_NAME,
-    venue: built?.venue,
-    startedAt: built?.startedAt,
-    tossResult: built?.tossResult,
-    tossWinner: getTossWinnerName(built) || '',
-    tossDecision: getTossDecisionText(built, 'BAT'),
-    maxOvers: built?.maxOvers || 0,
-    teams: [built?.team1, built?.team2].filter(Boolean),
-    team1: built?.team1,
-    team2: built?.team2,
-    playingXI: {
-      [built?.team1?.name]: (built?.team1?.batting || []).map(player => player.name),
-      [built?.team2?.name]: (built?.team2?.batting || []).map(player => player.name)
-    },
-    inning: innings.length || 1,
-    innings,
-    phase: 'result',
-    target: null,
-    resultText: built?.winner || finishedMatch.winner || finishedMatch.resultText || ''
-  };
-};
 
 const PUBLIC_LIVE_TABS = [
   { id: 'info', label: 'Info', icon: 'information-circle-outline' },
@@ -946,13 +197,9 @@ const InningTeamTab = ({ name, selected, statusText, onPress }) => (
   </TouchableOpacity>
 );
 
-const getTeamLogoSource = (team) => {
+const getTeamLogoSource = (team, fallbackIndex = 0) => {
   if (team?.logoUri) return { uri: team.logoUri };
-  if (team?.logoKey === 'default-team-1') return require('./assets/default_team_1.png');
-  if (team?.logoKey === 'default-team-2') return require('./assets/default_team_2.png');
-  if (team?.logoKey === 'sadokan-a') return require('./assets/sadokan_a.png');
-  if (team?.logoKey === 'sadokan-b') return require('./assets/sadokan_b.png');
-  return require('./assets/default_team_1.png');
+  return require('./assets/logo.png');
 };
 
 const getPlayerPreview = (name) => {
@@ -1006,26 +253,58 @@ const PendingBattersSection = ({ title, players }) => {
 
 const ResultTeamBlock = ({ team, isWinner, align = 'left' }) => {
   const scoreParts = getScorePartsFromText(team?.score);
+  const teamCode = getTeamShortCode(team, team?.name);
+  const isLoser = !isWinner;
 
   return (
-    <View style={{ flex: 1, alignItems: align === 'left' ? 'flex-start' : 'flex-end' }}>
-      <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 10, maxWidth: '100%' }}>
-        <TeamIdentityMark team={team} size={50} />
-        <View style={{ flexShrink: 1, alignItems: align === 'left' ? 'flex-start' : 'flex-end' }}>
-          <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 5, maxWidth: '100%' }}>
-            <Text selectable {...nameFitProps} style={{ flexShrink: 1, color: isWinner ? '#BAE6FD' : '#8FB7CD', fontSize: typeScale.body, lineHeight: 16, includeFontPadding: false, fontWeight: fontWeights.semibold, fontFamily: systemFont }}>{team?.name || getTeamShortCode(team, team?.name)}</Text>
-            {isWinner ? <Ionicons name="trophy-outline" size={14} color="#38BDF8" /> : null}
-          </View>
-          <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'baseline', gap: 5, marginTop: 5, maxWidth: '100%' }}>
-            <Text selectable style={{ color: isWinner ? '#FFFFFF' : '#D8E8F2', fontSize: typeScale.keyAction, lineHeight: 24, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }} numberOfLines={1}>
-              {scoreParts.score}
+    <View style={{ flex: 1, flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 10 }}>
+      <TeamIdentityMark team={team} size={44} isLoser={isLoser} />
+      <View style={{ flex: 1, alignItems: align === 'left' ? 'flex-start' : 'flex-end', justifyContent: 'center' }}>
+        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 5 }}>
+          <Text
+            selectable
+            numberOfLines={1}
+            style={{
+              color: isWinner ? '#FFFFFF' : '#94A3B8',
+              fontSize: 16,
+              fontFamily: systemFontBold,
+              letterSpacing: 0.5
+            }}
+          >
+            {teamCode}
+          </Text>
+          {isWinner ? (
+            <MaterialCommunityIcons name="trophy" size={15} color="#F59E0B" />
+          ) : null}
+        </View>
+
+        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
+          <Text
+            selectable
+            style={{
+              color: '#FFFFFF',
+              fontSize: 19,
+              fontFamily: systemFontBold,
+              fontVariant: ['tabular-nums']
+            }}
+            numberOfLines={1}
+          >
+            {scoreParts.score}
+          </Text>
+          {scoreParts.overs ? (
+            <Text
+              selectable
+              style={{
+                color: '#94A3B8',
+                fontSize: 12,
+                fontFamily: systemFontMedium,
+                fontVariant: ['tabular-nums']
+              }}
+              numberOfLines={1}
+            >
+              {scoreParts.overs}
             </Text>
-            {scoreParts.overs ? (
-              <Text selectable style={{ color: '#9FC4D7', fontSize: typeScale.caption, lineHeight: 14, includeFontPadding: false, fontWeight: fontWeights.semibold, fontVariant: ['tabular-nums'], fontFamily: systemFont }} numberOfLines={1}>
-                {scoreParts.overs}
-              </Text>
-            ) : null}
-          </View>
+          ) : null}
         </View>
       </View>
     </View>
@@ -1034,15 +313,24 @@ const ResultTeamBlock = ({ team, isWinner, align = 'left' }) => {
 
 const MatchResultHero = ({ teamOne, teamTwo, winnerTeamName, resultText }) => (
   <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
-    <View style={{ minHeight: 132, paddingHorizontal: 16, paddingVertical: 24, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <ResultTeamBlock team={teamOne} isWinner={winnerTeamName === teamOne?.name} />
-      <View style={{ width: 34, alignItems: 'center', justifyContent: 'center' }}>
-        <MaterialCommunityIcons name="lightning-bolt" size={24} color="#A7EAFF" />
+    <View style={{ paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <ResultTeamBlock team={teamOne} isWinner={winnerTeamName === teamOne?.name || (resultText && resultText.toLowerCase().includes(teamOne?.name?.toLowerCase()))} align="left" />
+      <View style={{ width: 28, alignItems: 'center', justifyContent: 'center' }}>
+        <MaterialCommunityIcons name="lightning-bolt" size={22} color="#64748B" />
       </View>
-      <ResultTeamBlock team={teamTwo} isWinner={winnerTeamName === teamTwo?.name} align="right" />
+      <ResultTeamBlock team={teamTwo} isWinner={winnerTeamName === teamTwo?.name || (resultText && resultText.toLowerCase().includes(teamTwo?.name?.toLowerCase()))} align="right" />
     </View>
-    <View style={{ minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#071B2C', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#2B5C78' }}>
-      <Text selectable style={{ flexShrink: 1, color: '#E0F2FE', fontSize: typeScale.body, lineHeight: 17, includeFontPadding: false, fontWeight: fontWeights.bold, textAlign: 'center', fontFamily: systemFont }}>
+    <View style={{ paddingHorizontal: 16, paddingBottom: 12, alignItems: 'center', justifyContent: 'center' }}>
+      <Text
+        selectable
+        style={{
+          color: '#F59E0B',
+          fontSize: 13.5,
+          fontFamily: systemFontBold,
+          textAlign: 'center',
+          letterSpacing: 0.2
+        }}
+      >
         {resultText}
       </Text>
     </View>
@@ -1178,27 +466,10 @@ const FinishedMatchSummary = ({ match, onRematch }) => {
         </View>
       ))}
 
-      {/* QUICK REMATCH ACTION CARD */}
-      <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#CBD5E1', elevation: 2 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <MaterialCommunityIcons name="cached" size={20} color="#0284C7" />
-          <Text style={{ fontSize: 14, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFontBold }}>Play Another Match?</Text>
-        </View>
-        <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 14, fontFamily: systemFont }}>
-          Start a fresh rematch with the same teams ({match.team1?.name} & {match.team2?.name}) and pre-loaded player squads.
-        </Text>
-        <AppButton
-          title="PLAY REMATCH (SAME TEAMS)"
-          icon="cached"
-          variant="primary"
-          onPress={() => onRematch ? onRematch(match) : null}
-        />
-      </View>
     </View>
   );
 };
 
-const DEFAULT_UMPIRE_NAME = 'Cric Scorer';
 
 const WICKET_TYPES = [
   { id: 'bowled', label: 'Bowled', icon: 'radio-button-on' },
@@ -1222,7 +493,7 @@ export default function App() {
 
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded]);
 
@@ -1253,27 +524,7 @@ export default function App() {
 
   // Navigation
   const [currentScreen, setCurrentScreen] = useState('home');
-  const [bottomNavTab, setBottomNavTab] = useState('home'); // Default: 'home'
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const handleMenuNavigation = (targetScreen) => {
-    setIsMenuOpen(false);
-    if (targetScreen === 'scorerWizard') {
-      setCurrentScreen('matchSelection');
-    } else if (targetScreen === 'tournament') {
-      setCurrentScreen('tournament');
-    } else if (targetScreen === 'rankings') {
-      setBottomNavTab('matches');
-      setMatchesSubTab('playerStats');
-    } else if (targetScreen === 'fixtures') {
-      setBottomNavTab('matches');
-      setMatchesSubTab('live');
-    } else if (targetScreen === 'about') {
-      setCurrentScreen('about');
-    } else if (targetScreen === 'auth') {
-      setCurrentScreen('auth');
-    }
-  };
+  const [bottomNavTab, setBottomNavTab] = useState('matches'); // 'matches' | 'about'
   const [matchesSubTab, setMatchesSubTab] = useState('live'); // 'live' | 'finished' | 'playerStats'
   const [mainTab, setMainTab] = useState('live');
   const [publicLiveTab, setPublicLiveTab] = useState('live');
@@ -1487,7 +738,7 @@ export default function App() {
 
   // ── TRUE REAL-TIME WebSocket Subscription (zero delay via Supabase Realtime) ──
   useEffect(() => {
-    if (isScorerUnlocked) return; // Don't overwrite scorer's active local state
+    if (currentScreen === 'scorerWizard') return; // Don't overwrite scorer's active local state
 
     const onLiveUpdate = (matchData) => {
       if (!matchData || !matchData.matchTitle) return;
@@ -1511,7 +762,7 @@ export default function App() {
     return () => {
       unsubscribe();
     };
-  }, [isScorerUnlocked]);
+  }, [currentScreen]);
 
   useEffect(() => {
     let mounted = true;
@@ -1570,16 +821,8 @@ export default function App() {
   // Hardware Back Button Handler for Android
   useEffect(() => {
     const onBackPress = () => {
-      if (isMenuOpen) {
-        setIsMenuOpen(false);
-        return true;
-      }
       if (playingXiVisible) {
         setPlayingXiVisible(false);
-        return true;
-      }
-      if (scorerPinModalVisible) {
-        setScorerPinModalVisible(false);
         return true;
       }
       if (isEditSquadModalOpen) {
@@ -1630,7 +873,6 @@ export default function App() {
     bottomNavTab,
     wizardStep,
     playingXiVisible,
-    scorerPinModalVisible,
     isEditSquadModalOpen,
     extrasSheetVisible,
     wicketPending,
@@ -1852,8 +1094,8 @@ export default function App() {
       }).catch(() => { });
     }
 
-    const t1 = target.team1?.name || target.teams?.[0]?.name || team1Name || 'CricFlow Eleven';
-    const t2 = target.team2?.name || target.teams?.[1]?.name || team2Name || 'CricFlow Strikers';
+    const t1 = target.team1?.name || target.teams?.[0]?.name || team1Name || 'CricScorer Eleven';
+    const t2 = target.team2?.name || target.teams?.[1]?.name || team2Name || 'CricScorer Strikers';
     const r1 = target.sourceMatch?.playingXI?.[t1] || target.playingXI?.[t1] || (target.team1?.batting || []).map(p => p.name).filter(Boolean) || team1Roster;
     const r2 = target.sourceMatch?.playingXI?.[t2] || target.playingXI?.[t2] || (target.team2?.batting || []).map(p => p.name).filter(Boolean) || team2Roster;
 
@@ -1864,7 +1106,7 @@ export default function App() {
       team2Roster: Array.isArray(r2) && r2.length > 0 ? r2 : team2Roster,
       totalOvers: target.maxOvers || 5,
       venueName: target.venue && target.venue !== 'Venue not added' ? target.venue : '',
-      scorerPin: target.scorerPin || target.scorer_pin || '',
+      scorerPin: '',
       isRematch: true
     });
 
@@ -1886,6 +1128,13 @@ export default function App() {
 
   const [isScorerUnlocked, setIsScorerUnlocked] = useState(false);
   const [scorerPinModalVisible, setScorerPinModalVisible] = useState(false);
+  const [matchCompleteModalVisible, setMatchCompleteModalVisible] = useState(false);
+
+  useEffect(() => {
+    if (activeMatch && (activeMatch.phase === 'result' || activeMatch.resultText) && currentScreen === 'scorerWizard') {
+      setMatchCompleteModalVisible(true);
+    }
+  }, [activeMatch?.phase, activeMatch?.resultText, currentScreen]);
 
   const openScorerScreen = () => {
     if (activeMatch && (activeMatch.phase === 'playing' || activeMatch.phase === 'inningBreak') && isScorerUnlocked) {
@@ -4366,16 +3615,17 @@ export default function App() {
                 {pageTabId === 'info' && (
                   <MatchInfoPanel
                     rows={[
-                      { icon: 'trophy-outline', label: 'Match', value: f.title },
-                      { icon: 'calendar-outline', label: 'Date & time', value: f.date },
-                      { icon: 'swap-horizontal-outline', label: 'Toss', value: f.tossResult, emphasis: true },
-                      f.venue && f.venue !== 'Venue not added' ? { icon: 'location-outline', label: 'Venue', value: f.venue } : null,
-                      { icon: 'person-outline', label: 'Umpire', value: f.umpireName },
-                      { icon: 'checkmark-done-outline', label: 'Result', value: f.winner, emphasis: true, accent: true }
+                      { icon: 'trophy-outline', label: 'Match', value: f.title || `${f.team1?.name || 'Team 1'} vs ${f.team2?.name || 'Team 2'}` },
+                      { icon: 'calendar-outline', label: 'Date & time', value: f.date || formatMatchDateTime(f.completedAt || f.startedAt || f.date) },
+                      { icon: 'swap-horizontal-outline', label: 'Toss', value: f.tossResult || (f.tossWinner ? `${f.tossWinner} won the toss and elected to ${(f.tossDecision || 'bat').toUpperCase()}` : `${f.team1?.name || 'Team 1'} won the toss and elected to BAT`), emphasis: true },
+                      { icon: 'location-outline', label: 'Venue', value: (f.venue && f.venue !== 'Venue not added') ? f.venue : 'Local Ground' },
+                      { icon: 'person-outline', label: 'Umpire', value: f.umpireName || 'Cric Scorer' },
+                      { icon: 'partly-sunny-outline', label: 'Conditions', value: f.conditions || (weatherData ? `${weatherData.temp} C, ${weatherData.condition}` : '27 C, Humid & Overcast') },
+                      { icon: 'checkmark-done-outline', label: 'Result', value: f.winner || f.resultText, emphasis: true, accent: true }
                     ]}
                     teamOneName={f.team1?.name || 'Team 1'}
                     teamTwoName={f.team2?.name || 'Team 2'}
-                    playerCount={(f.team1?.batting?.length || 0) + (f.team2?.batting?.length || 0)}
+                    playerCount={(f.team1?.batting?.length || 0) + (f.team2?.batting?.length || 0) || (f.sourceMatch?.playingXI ? Object.values(f.sourceMatch.playingXI).flat().length : 4)}
                     onOpenPlayingXi={() => {
                       setPlayingXiTeamTab(1);
                       playingXiPagerScrollX.setValue(0);
@@ -4456,6 +3706,32 @@ export default function App() {
                           </View>
                         </View>
                       )}
+                    </View>
+
+                    {/* SCORER / MATCH REMATCH ACTION */}
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 10, marginTop: 4 }}>
+                      <Text style={{ fontSize: 13, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>Scorer Actions</Text>
+                      <TouchableOpacity
+                        onPress={() => handleRematch(f.sourceMatch || f)}
+                        style={{
+                          backgroundColor: '#0284C7',
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 10,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8
+                        }}
+                      >
+                        <MaterialCommunityIcons name="refresh" size={18} color="#FFFFFF" />
+                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }}>
+                          START REMATCH (SAME TEAMS)
+                        </Text>
+                      </TouchableOpacity>
+                      <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center', fontFamily: systemFont }}>
+                        Preloads both team squads so you can quickly adjust players, overs, PIN and start the next game.
+                      </Text>
                     </View>
                   </View>
                 )}
@@ -5096,7 +4372,7 @@ export default function App() {
       onPress={openLiveMatchCard}
     />
   );
-  const renderFinishedMatchListCard = (match) => {
+  const renderFinishedMatchListCard = (match, index = 0) => {
     const teamOneScore = getFinishedCardScoreParts(match.team1);
     const teamTwoScore = getFinishedCardScoreParts(match.team2);
     const resultCardText = getFinishedResultCardText(match);
@@ -5108,7 +4384,7 @@ export default function App() {
     const subtitleText = `${oversText}${venueText}${matchDateStr ? ` on ${matchDateStr}` : ''}`;
 
     return (
-      <View key={match.id} style={{ marginBottom: 12 }}>
+      <View key={`${match.id || match.title || 'match'}-${index}`} style={{ marginBottom: 12 }}>
         <MatchListScoreCard
           subtitle={subtitleText}
           teamOne={match.team1}
@@ -5285,9 +4561,14 @@ export default function App() {
           ) : currentScreen === 'finishedView' ? (
             renderFinishedView()
           ) : currentScreen === 'playerProfile' ? (
-            <PlayerProfileScreen
-              player={selectedPlayerProfile}
+            <MyProfileScreen
+              targetPlayer={selectedPlayerProfile}
               onBack={() => setCurrentScreen('home')}
+              finishedMatches={finishedArchive}
+              onSelectMatch={(m) => {
+                setSelectedMatch(m);
+                setCurrentScreen('finishedView');
+              }}
             />
           ) : currentScreen === 'scorerWizard' ? (
             <View style={styles.fullPage}>
@@ -5313,7 +4594,7 @@ export default function App() {
                     <Text style={{ color: '#38BDF8', fontSize: 11, fontFamily: systemFontBold }}>Log Out</Text>
                   </TouchableOpacity>
                 </View>
-              ) : (!activeMatch && (wizardStep === 0 || wizardStep === 1 || wizardStep === 2)) ? null : (
+              ) : (!activeMatch && (wizardStep === 0 || wizardStep === 1 || wizardStep === 2)) || (activeMatch && activeMatch.phase === 'result') ? null : (
                 <View style={styles.pageHeader}>
                   <TouchableOpacity
                     onPress={() => {
@@ -5490,77 +4771,88 @@ export default function App() {
                         : 'Scorer Login'}
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setIsMenuOpen(true)}
-                    style={{ paddingHorizontal: 4, paddingVertical: 4 }}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="menu" size={26} color="#FFFFFF" />
-                  </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Search */}
-              <View style={styles.searchContainer}>
-                <View style={styles.searchBox}>
-                  <Ionicons name="search" size={17} color="#0284C7" style={{ marginLeft: 12 }} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search player, team, ground..."
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholderTextColor="#94A3B8"
-                    returnKeyType="search"
+              {bottomNavTab === 'profile' && (
+                <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+                  <MyProfileScreen
+                    finishedMatches={finishedArchive}
+                    onSelectMatch={(m) => {
+                      setSelectedMatch(m);
+                      setCurrentScreen('finishedView');
+                    }}
                   />
-                  {Boolean(searchQuery) && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        setSearchQuery('');
-                        Keyboard.dismiss();
-                      }}
-                      style={{ padding: 8, marginRight: 4 }}
-                      activeOpacity={0.7}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Ionicons name="close-circle" size={18} color="#94A3B8" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              {/* MATCHES SUB-PILLS (SHOWN WHEN MATCHES TAB IS ACTIVE) */}
-              {bottomNavTab === 'matches' && (
-                <View style={{ flexDirection: 'row', backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 8, gap: 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-                  {[
-                    { id: 'live', label: 'Live', icon: 'radio-outline' },
-                    { id: 'finished', label: 'Finished', icon: 'trophy-outline' },
-                    { id: 'playerStats', label: 'Rankings', icon: 'stats-chart-outline' }
-                  ].map(t => {
-                    const active = matchesSubTab === t.id;
-                    return (
-                      <TouchableOpacity
-                        key={t.id}
-                        onPress={() => setMatchesSubTab(t.id)}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 8,
-                          borderRadius: 10,
-                          backgroundColor: active ? '#0284C7' : '#F1F5F9',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexDirection: 'row',
-                          gap: 5
-                        }}
-                      >
-                        <Ionicons name={t.icon} size={13} color={active ? '#FFFFFF' : '#475569'} />
-                        <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: active ? '#FFFFFF' : '#475569', fontFamily: systemFont }}>
-                          {t.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
                 </View>
               )}
+
+              {bottomNavTab === 'about' && (
+                <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+                  <AboutAppScreen />
+                </View>
+              )}
+
+              {bottomNavTab === 'matches' && (
+                <>
+                  {/* Search */}
+                  <View style={styles.searchContainer}>
+                    <View style={styles.searchBox}>
+                      <Ionicons name="search" size={17} color="#0284C7" style={{ marginLeft: 12 }} />
+                      <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search player, team, ground..."
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        placeholderTextColor="#94A3B8"
+                        returnKeyType="search"
+                      />
+                      {Boolean(searchQuery) && (
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSearchQuery('');
+                            Keyboard.dismiss();
+                          }}
+                          style={{ padding: 8, marginRight: 4 }}
+                          activeOpacity={0.7}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* MATCHES SUB-PILLS */}
+                  <View style={{ flexDirection: 'row', backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 8, gap: 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                    {[
+                      { id: 'live', label: 'Live', icon: 'radio-outline' },
+                      { id: 'finished', label: 'Finished', icon: 'trophy-outline' },
+                      { id: 'playerStats', label: 'Rankings', icon: 'stats-chart-outline' }
+                    ].map(t => {
+                      const active = matchesSubTab === t.id;
+                      return (
+                        <TouchableOpacity
+                          key={t.id}
+                          onPress={() => setMatchesSubTab(t.id)}
+                          style={{
+                            flex: 1,
+                            paddingVertical: 8,
+                            borderRadius: 10,
+                            backgroundColor: active ? '#0284C7' : '#F1F5F9',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexDirection: 'row',
+                            gap: 5
+                          }}
+                        >
+                          <Ionicons name={t.icon} size={13} color={active ? '#FFFFFF' : '#475569'} />
+                          <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: active ? '#FFFFFF' : '#475569', fontFamily: systemFont }}>
+                            {t.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
 
               <ScrollView
                 style={{ flex: 1, backgroundColor: '#F8FAFC' }}
@@ -5568,6 +4860,11 @@ export default function App() {
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
                 onScrollBeginDrag={Keyboard.dismiss}
+                scrollEventThrottle={16}
+                removeClippedSubviews={true}
+                overScrollMode="never"
+                decelerationRate="normal"
+                nestedScrollEnabled={true}
                 refreshControl={
                   <RefreshControl
                     refreshing={refreshing}
@@ -5688,7 +4985,7 @@ export default function App() {
                       {recentFinishedMatches.length > 0 ? (
                         <>
                           <Text style={[styles.sectionLabel, { marginTop: 14 }]}>RECENT MATCH RESULTS</Text>
-                          {recentFinishedMatches.map(m => renderFinishedMatchListCard(m))}
+                          {recentFinishedMatches.map((m, idx) => renderFinishedMatchListCard(m, idx))}
                         </>
                       ) : null}
                     </>
@@ -5720,7 +5017,7 @@ export default function App() {
                               <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{dateKey}</Text>
                               <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0', marginLeft: 4 }} />
                             </View>
-                            {groups[dateKey].map(f => renderFinishedMatchListCard(f))}
+                            {groups[dateKey].map((f, idx) => renderFinishedMatchListCard(f, idx))}
                           </View>
                         ));
                       })()}
@@ -5728,77 +5025,281 @@ export default function App() {
                   )}
 
                   {/* 3. RANKINGS LEADERBOARD VIEW */}
-                  {matchesSubTab === 'playerStats' && (
-                    <>
-                      <Text style={styles.sectionLabel}>PLAYER LEADERBOARD RANKINGS</Text>
-                      <View style={styles.subFilterRow}>
-                        <TouchableOpacity style={[styles.subFilterBtn, statsCategory === 'batters' && styles.subFilterActive]} onPress={() => setStatsCategory('batters')}>
-                          <MaterialCommunityIcons name="cricket" size={15} color={statsCategory === 'batters' ? '#FFFFFF' : '#475569'} />
-                          <Text style={[styles.subFilterText, statsCategory === 'batters' && { color: '#FFFFFF' }]}>Batters</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.subFilterBtn, statsCategory === 'bowlers' && styles.subFilterActive]} onPress={() => setStatsCategory('bowlers')}>
-                          <MaterialCommunityIcons name="baseball" size={15} color={statsCategory === 'bowlers' ? '#FFFFFF' : '#475569'} />
-                          <Text style={[styles.subFilterText, statsCategory === 'bowlers' && { color: '#FFFFFF' }]}>Bowlers</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.subFilterBtn, statsCategory === 'allrounders' && styles.subFilterActive]} onPress={() => setStatsCategory('allrounders')}>
-                          <MaterialCommunityIcons name="star-circle-outline" size={15} color={statsCategory === 'allrounders' ? '#FFFFFF' : '#475569'} />
-                          <Text style={[styles.subFilterText, statsCategory === 'allrounders' && { color: '#FFFFFF' }]}>All-Rounders</Text>
-                        </TouchableOpacity>
-                      </View>
-                      {statsCategory === 'batters' && TOP_BATTERS.map(b => (
-                        <View key={b.rank} style={styles.rankItem}>
-                          <View style={styles.rankBadge}><Text style={styles.rankBadgeText}>#{b.rank}</Text></View>
-                          <View style={{ flex: 1 }}><Text style={styles.rankName}>{b.name}</Text><Text style={styles.rankSub}>{b.team} - {b.badge}</Text></View>
-                          <Text style={styles.rankVal}>{b.runs} Runs</Text>
-                        </View>
-                      ))}
-                      {statsCategory === 'batters' && TOP_BATTERS.length === 0 && (
-                        <View style={[styles.idleCard, { borderRadius: 10 }]}>
-                          <Text style={styles.idleTitle}>No Batting Rankings Yet</Text>
-                        </View>
-                      )}
+                  {matchesSubTab === 'playerStats' && (() => {
+                    const { topBatters, topBowlers, topAllRounders } = computeLeaderboardRankings(finishedArchive, localPlayersList);
 
-                      {statsCategory === 'bowlers' && TOP_BOWLERS.map(b => (
-                        <View key={b.rank} style={styles.rankItem}>
-                          <View style={[styles.rankBadge, { backgroundColor: '#EDE9FE' }]}><Text style={[styles.rankBadgeText, { color: '#6D28D9' }]}>#{b.rank}</Text></View>
-                          <View style={{ flex: 1 }}><Text style={styles.rankName}>{b.name}</Text><Text style={styles.rankSub}>{b.team} - {b.badge}</Text></View>
-                          <Text style={[styles.rankVal, { color: '#6D28D9' }]}>{b.wickets} Wkts</Text>
+                    return (
+                      <>
+                        <Text style={styles.sectionLabel}>PLAYER LEADERBOARD RANKINGS</Text>
+                        <View style={styles.subFilterRow}>
+                          <TouchableOpacity style={[styles.subFilterBtn, statsCategory === 'batters' && styles.subFilterActive]} onPress={() => setStatsCategory('batters')}>
+                            <MaterialCommunityIcons name="cricket" size={15} color={statsCategory === 'batters' ? '#FFFFFF' : '#475569'} />
+                            <Text style={[styles.subFilterText, statsCategory === 'batters' && { color: '#FFFFFF' }]}>Batters</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={[styles.subFilterBtn, statsCategory === 'bowlers' && styles.subFilterActive]} onPress={() => setStatsCategory('bowlers')}>
+                            <MaterialCommunityIcons name="baseball" size={15} color={statsCategory === 'bowlers' ? '#FFFFFF' : '#475569'} />
+                            <Text style={[styles.subFilterText, statsCategory === 'bowlers' && { color: '#FFFFFF' }]}>Bowlers</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={[styles.subFilterBtn, statsCategory === 'allrounders' && styles.subFilterActive]} onPress={() => setStatsCategory('allrounders')}>
+                            <MaterialCommunityIcons name="star-circle-outline" size={15} color={statsCategory === 'allrounders' ? '#FFFFFF' : '#475569'} />
+                            <Text style={[styles.subFilterText, statsCategory === 'allrounders' && { color: '#FFFFFF' }]}>All-Rounders</Text>
+                          </TouchableOpacity>
                         </View>
-                      ))}
-                      {statsCategory === 'bowlers' && TOP_BOWLERS.length === 0 && (
-                        <View style={[styles.idleCard, { borderRadius: 10 }]}>
-                          <Text style={styles.idleTitle}>No Bowling Rankings Yet</Text>
-                        </View>
-                      )}
 
-                      {statsCategory === 'allrounders' && TOP_ALLROUNDERS.map(b => (
-                        <View key={b.rank} style={styles.rankItem}>
-                          <View style={[styles.rankBadge, { backgroundColor: '#FEF3C7' }]}><Text style={[styles.rankBadgeText, { color: '#B45309' }]}>#{b.rank}</Text></View>
-                          <View style={{ flex: 1 }}><Text style={styles.rankName}>{b.name}</Text><Text style={styles.rankSub}>{b.team} - {b.badge}</Text></View>
-                          <Text style={[styles.rankVal, { color: '#B45309' }]}>{b.pts}</Text>
+                        {/* COLUMN HEADER (CRICBUZZ / ICC STYLE) */}
+                        <View style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          marginTop: 2
+                        }}>
+                          <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#94A3B8', fontFamily: systemFontMedium, letterSpacing: 0.3 }}>
+                            Rank
+                          </Text>
+                          <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#94A3B8', fontFamily: systemFontMedium, letterSpacing: 0.3 }}>
+                            {statsCategory === 'batters' ? 'Runs (SR)' : (statsCategory === 'bowlers' ? 'Wkts (ECO)' : 'MVP Points')}
+                          </Text>
                         </View>
-                      ))}
-                      {statsCategory === 'allrounders' && TOP_ALLROUNDERS.length === 0 && (
-                        <View style={[styles.idleCard, { borderRadius: 10 }]}>
-                          <Text style={styles.idleTitle}>No All-Rounder Rankings Yet</Text>
-                        </View>
-                      )}
-                    </>
-                  )}
+
+                        {/* BATTERS */}
+                        {statsCategory === 'batters' && (topBatters && topBatters.length > 0) && (
+                          <View style={{
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: 14,
+                            borderWidth: 1,
+                            borderColor: '#E2E8F0',
+                            overflow: 'hidden',
+                            marginBottom: 16
+                          }}>
+                            {topBatters.map((b, idx) => {
+                              const isLast = idx === topBatters.length - 1;
+
+                              return (
+                                <TouchableOpacity
+                                  key={`bat-${b.name}-${b.rank}`}
+                                  activeOpacity={0.7}
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 12,
+                                    paddingHorizontal: 16,
+                                    borderBottomWidth: isLast ? 0 : 1,
+                                    borderBottomColor: '#F1F5F9'
+                                  }}
+                                  onPress={() => {
+                                    const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
+                                      || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
+                                    const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
+                                    if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
+                                    setSelectedPlayerName(b.name);
+                                    setCurrentScreen('playerProfile');
+                                  }}
+                                >
+                                  <Text style={{
+                                    width: 28,
+                                    fontSize: 15,
+                                    fontWeight: fontWeights.bold,
+                                    color: b.rank <= 3 ? '#0F172A' : '#475569',
+                                    fontFamily: systemFontBold
+                                  }}>
+                                    {b.rank}
+                                  </Text>
+
+                                  <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
+
+                                  <View style={{ flex: 1, marginLeft: 14 }}>
+                                    <Text style={{ fontSize: 15.5, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFontBold }} numberOfLines={1}>
+                                      {b.name}
+                                    </Text>
+                                    <Text style={{ fontSize: 12.5, color: '#64748B', marginTop: 2, fontFamily: systemFontMedium }} numberOfLines={1}>
+                                      {b.city || 'Sadokan'}
+                                    </Text>
+                                  </View>
+
+                                  <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={{ fontSize: 15.5, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFontBold }}>
+                                      {b.runs}
+                                    </Text>
+                                    <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
+                                      SR {b.sr}
+                                    </Text>
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        )}
+                        {statsCategory === 'batters' && (!topBatters || topBatters.length === 0) && (
+                          <View style={[styles.idleCard, { borderRadius: 10 }]}>
+                            <Text style={styles.idleTitle}>No Batting Rankings Yet</Text>
+                            <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 4, fontFamily: systemFont }}>Play ground matches to rank top batters automatically</Text>
+                          </View>
+                        )}
+
+                        {/* BOWLERS */}
+                        {statsCategory === 'bowlers' && (topBowlers && topBowlers.length > 0) && (
+                          <View style={{
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: 14,
+                            borderWidth: 1,
+                            borderColor: '#E2E8F0',
+                            overflow: 'hidden',
+                            marginBottom: 16
+                          }}>
+                            {topBowlers.map((b, idx) => {
+                              const isLast = idx === topBowlers.length - 1;
+
+                              return (
+                                <TouchableOpacity
+                                  key={`bowl-${b.name}-${b.rank}`}
+                                  activeOpacity={0.7}
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 12,
+                                    paddingHorizontal: 16,
+                                    borderBottomWidth: isLast ? 0 : 1,
+                                    borderBottomColor: '#F1F5F9'
+                                  }}
+                                  onPress={() => {
+                                    const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
+                                      || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
+                                    const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
+                                    if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
+                                    setSelectedPlayerName(b.name);
+                                    setCurrentScreen('playerProfile');
+                                  }}
+                                >
+                                  <Text style={{
+                                    width: 28,
+                                    fontSize: 15,
+                                    fontWeight: fontWeights.bold,
+                                    color: b.rank <= 3 ? '#0F172A' : '#475569',
+                                    fontFamily: systemFontBold
+                                  }}>
+                                    {b.rank}
+                                  </Text>
+
+                                  <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
+
+                                  <View style={{ flex: 1, marginLeft: 14 }}>
+                                    <Text style={{ fontSize: 15.5, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFontBold }} numberOfLines={1}>
+                                      {b.name}
+                                    </Text>
+                                    <Text style={{ fontSize: 12.5, color: '#64748B', marginTop: 2, fontFamily: systemFontMedium }} numberOfLines={1}>
+                                      {b.city || 'Sadokan'}
+                                    </Text>
+                                  </View>
+
+                                  <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={{ fontSize: 15.5, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFontBold }}>
+                                      {b.wickets} Wkts
+                                    </Text>
+                                    <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
+                                      ECO {b.econ}
+                                    </Text>
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        )}
+                        {statsCategory === 'bowlers' && (!topBowlers || topBowlers.length === 0) && (
+                          <View style={[styles.idleCard, { borderRadius: 10 }]}>
+                            <Text style={styles.idleTitle}>No Bowling Rankings Yet</Text>
+                            <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 4, fontFamily: systemFont }}>Play ground matches to rank top bowlers automatically</Text>
+                          </View>
+                        )}
+
+                        {/* ALL-ROUNDERS */}
+                        {statsCategory === 'allrounders' && (topAllRounders && topAllRounders.length > 0) && (
+                          <View style={{
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: 14,
+                            borderWidth: 1,
+                            borderColor: '#E2E8F0',
+                            overflow: 'hidden',
+                            marginBottom: 16
+                          }}>
+                            {topAllRounders.map((b, idx) => {
+                              const isLast = idx === topAllRounders.length - 1;
+
+                              return (
+                                <TouchableOpacity
+                                  key={`all-${b.name}-${b.rank}`}
+                                  activeOpacity={0.7}
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 12,
+                                    paddingHorizontal: 16,
+                                    borderBottomWidth: isLast ? 0 : 1,
+                                    borderBottomColor: '#F1F5F9'
+                                  }}
+                                  onPress={() => {
+                                    const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
+                                      || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
+                                    const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
+                                    if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
+                                    setSelectedPlayerName(b.name);
+                                    setCurrentScreen('playerProfile');
+                                  }}
+                                >
+                                  <Text style={{
+                                    width: 28,
+                                    fontSize: 15,
+                                    fontWeight: fontWeights.bold,
+                                    color: b.rank <= 3 ? '#0F172A' : '#475569',
+                                    fontFamily: systemFontBold
+                                  }}>
+                                    {b.rank}
+                                  </Text>
+
+                                  <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
+
+                                  <View style={{ flex: 1, marginLeft: 14 }}>
+                                    <Text style={{ fontSize: 15.5, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFontBold }} numberOfLines={1}>
+                                      {b.name}
+                                    </Text>
+                                    <Text style={{ fontSize: 12.5, color: '#64748B', marginTop: 2, fontFamily: systemFontMedium }} numberOfLines={1}>
+                                      {b.city || 'Sadokan'}
+                                    </Text>
+                                  </View>
+
+                                  <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={{ fontSize: 15.5, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFontBold }}>
+                                      {b.pts}
+                                    </Text>
+                                    <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
+                                      MVP Points
+                                    </Text>
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        )}
+                        {statsCategory === 'allrounders' && (!topAllRounders || topAllRounders.length === 0) && (
+                          <View style={[styles.idleCard, { borderRadius: 10 }]}>
+                            <Text style={styles.idleTitle}>No All-Rounder Rankings Yet</Text>
+                            <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 4, fontFamily: systemFont }}>Play ground matches to rank top all-rounders automatically</Text>
+                          </View>
+                        )}
+                      </>
+                    );
+                  })()}
                 </View>
-
-                {/* 3. TOURNAMENT TAB */}
-                {bottomNavTab === 'tournament' && (
-                  <TournamentScreen finishedMatches={finishedArchive} activeMatch={activeMatch} />
-                )}
-
-                {/* 4. ABOUT APP TAB */}
-                {bottomNavTab === 'about' && (
-                  <AboutAppScreen />
-                )}
-
               </ScrollView>
-            </View>
+            </>
+          )}
+
+          {/* PROFESSIONAL BOTTOM NAVIGATION BAR */}
+          <AppBottomNav
+            activeTab={bottomNavTab}
+            onTabChange={setBottomNavTab}
+          />
+        </View>
           )}
 
         </SafeAreaView>
@@ -5875,6 +5376,7 @@ export default function App() {
         <ExtrasModal
           visible={extrasSheetVisible}
           onClose={() => setExtrasSheetVisible(false)}
+          onRecordBall={handleRecordBall}
           handleRecordBall={handleRecordBall}
         />
 
@@ -6154,11 +5656,22 @@ export default function App() {
           onSelectStartNewMatch={handleStartNewMatchSetup}
         />
 
-        <MenuDrawerScreen
-          visible={isMenuOpen}
-          onClose={() => setIsMenuOpen(false)}
-          onNavigate={handleMenuNavigation}
+        <MatchCompleteModal
+          visible={matchCompleteModalVisible}
+          match={activeMatch}
+          onClose={() => setMatchCompleteModalVisible(false)}
+          onStartRematch={() => {
+            setMatchCompleteModalVisible(false);
+            handleRematch(activeMatch);
+          }}
+          onViewScorecard={() => {
+            setMatchCompleteModalVisible(false);
+            setFinishedTab('scorecard');
+          }}
         />
+
+        {/* Global Floating Toast for entire CricFlow App */}
+        <CricGlobalToast />
       </View>
     </SafeAreaProvider>
   );

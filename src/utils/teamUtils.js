@@ -9,13 +9,15 @@ export const getTeamShortCode = (team, fallbackName = '') => {
   return savedCode || makeTeamCode(team?.name || fallbackName);
 };
 
+export const DEFAULT_TEAM_1_LOGO_URL = 'https://res.cloudinary.com/aov9a8tl/image/upload/v1786749090/cricflow_default_team_1.png';
+export const DEFAULT_TEAM_2_LOGO_URL = 'https://res.cloudinary.com/aov9a8tl/image/upload/v1786749091/cricflow_default_team_2.png';
+export const DEFAULT_APP_LOGO_URL = 'https://res.cloudinary.com/aov9a8tl/image/upload/v1786749092/cricflow_app_logo.png';
+
 export const getTeamLogoSource = (team) => {
   if (team?.logoUri) return { uri: team.logoUri };
-  if (team?.logoKey === 'default-team-1') return require('../../assets/default_team_1.png');
-  if (team?.logoKey === 'default-team-2') return require('../../assets/default_team_2.png');
-  if (team?.logoKey === 'sadokan-a') return require('../../assets/sadokan_a.png');
-  if (team?.logoKey === 'sadokan-b') return require('../../assets/sadokan_b.png');
-  return require('../../assets/default_team_1.png');
+  if (team?.logoKey === 'default-team-1') return { uri: DEFAULT_TEAM_1_LOGO_URL };
+  if (team?.logoKey === 'default-team-2') return { uri: DEFAULT_TEAM_2_LOGO_URL };
+  return { uri: DEFAULT_APP_LOGO_URL };
 };
 
 export const getScorePartsFromText = (scoreText = '') => {

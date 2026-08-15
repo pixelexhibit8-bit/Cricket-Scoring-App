@@ -3,19 +3,24 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
+    "@expo/metro-runtime": "~57.0.10",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.112.2",
     "expo": "~57.0.12",
     "expo-font": "~57.0.1",
     "expo-image-picker": "~57.0.9",
+    "expo-linear-gradient": "~57.0.1",
     "expo-speech": "~57.0.1",
     "expo-splash-screen": "~57.0.6",
     "expo-status-bar": "~57.0.1",
+    "firebase": "^12.17.1",
     "pg": "^8.23.0",
     "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "0.86.2",
-    "react-native-safe-area-context": "~5.7.0"
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-web": "^0.21.2"
   },
   "scripts": {
     "start": "expo start",

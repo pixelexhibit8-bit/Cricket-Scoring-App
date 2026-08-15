@@ -21,9 +21,9 @@ const DEFAULT_LOCAL_PLAYERS = [];
  * Fetch all local players (Combines Supabase local_players table + AsyncStorage fallback)
  */
 export const fetchLocalPlayers = async () => {
-  let localDbPlayers = [];
+  let localDbPlayers = null;
 
-  // 1. Try Supabase fetch if configured
+  // 1. Try Supabase fetch if configured (Authoritative Cloud Source of Truth)
   if (isSupabaseConfigured() && supabase) {
     try {
       const { data, error } = await supabase
@@ -31,12 +31,12 @@ export const fetchLocalPlayers = async () => {
         .select('*')
         .order('name', { ascending: true });
 
-      if (!error && Array.isArray(data) && data.length > 0) {
+      if (!error && Array.isArray(data)) {
         localDbPlayers = data.map(row => ({
           id: row.id,
           name: row.name,
           role: row.role || 'All-Rounder',
-          photoUrl: row.photo_url || row.photoUrl || PRESET_PLAYER_AVATARS[0].url,
+          photoUrl: row.photo_url || row.photoUrl || '',
           phone: row.phone || ''
         }));
       }
@@ -45,41 +45,24 @@ export const fetchLocalPlayers = async () => {
     }
   }
 
-  // 2. Fetch from AsyncStorage cache
+  // 2. If Supabase responded successfully, update local cache to match authoritative cloud state (Deletions are respected!)
+  if (localDbPlayers !== null) {
+    try {
+      await AsyncStorage.setItem(LOCAL_PLAYERS_STORAGE_KEY, JSON.stringify(localDbPlayers));
+    } catch {}
+    syncPlayersToPhotoRegistry(localDbPlayers);
+    return localDbPlayers;
+  }
+
+  // 3. Offline Fallback: If network is unreachable, read from AsyncStorage cache
   let cachedPlayers = [];
   try {
     const cachedStr = await AsyncStorage.getItem(LOCAL_PLAYERS_STORAGE_KEY);
     cachedPlayers = cachedStr ? JSON.parse(cachedStr) : [];
   } catch (err) {}
 
-  // 3. Merge cached & supabase without duplicates
-  const playerMap = new Map();
-  [...DEFAULT_LOCAL_PLAYERS, ...cachedPlayers, ...localDbPlayers].forEach(p => {
-    if (p && p.name) {
-      playerMap.set(p.name.toLowerCase().trim(), p);
-    }
-  });
-
-  const allCombined = Array.from(playerMap.values());
-
-  // 4. Auto-sync missing cached players up to Supabase database
-  if (isSupabaseConfigured() && supabase && cachedPlayers.length > 0) {
-    const remoteNames = new Set(localDbPlayers.map(p => p.name.toLowerCase().trim()));
-    const missingInRemote = cachedPlayers.filter(p => p && p.name && !remoteNames.has(p.name.toLowerCase().trim()));
-    if (missingInRemote.length > 0) {
-      const payload = missingInRemote.map(p => ({
-        id: p.id || generateUUID(),
-        name: p.name.trim(),
-        role: p.role || 'All-Rounder',
-        photo_url: p.photoUrl || p.photo_url || '',
-        phone: p.phone || ''
-      }));
-      supabase.from('local_players').upsert(payload, { onConflict: 'name' }).then(() => {}).catch(() => {});
-    }
-  }
-
-  syncPlayersToPhotoRegistry(allCombined);
-  return allCombined;
+  syncPlayersToPhotoRegistry(cachedPlayers);
+  return cachedPlayers;
 };
 
 export const resolveDirectImageUrl = async (url) => {

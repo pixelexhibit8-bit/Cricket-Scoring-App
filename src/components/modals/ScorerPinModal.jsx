@@ -94,9 +94,6 @@ export function ScorerPinModal({ visible, activeMatch, onClose, onSuccessContinu
     onClose();
   };
 
-  const team1Name = activeMatch?.team1?.name || activeMatch?.teams?.[0]?.name || 'Team 1';
-  const team2Name = activeMatch?.team2?.name || activeMatch?.teams?.[1]?.name || 'Team 2';
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
@@ -119,16 +116,6 @@ export function ScorerPinModal({ visible, activeMatch, onClose, onSuccessContinu
           <Text style={styles.subtitle}>
             Enter 6-digit match PIN to unlock scoring console
           </Text>
-
-          {/* Active Live Match Pill (If Running) */}
-          {isMatchLive && (
-            <View style={styles.matchPill}>
-              <View style={styles.liveDot} />
-              <Text style={styles.matchPillText} numberOfLines={1}>
-                {team1Name} vs {team2Name}
-              </Text>
-            </View>
-          )}
 
           {/* 6-Digit Passcode Box & Invisible Input Layer */}
           <TouchableOpacity

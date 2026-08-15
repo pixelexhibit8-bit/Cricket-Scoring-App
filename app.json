@@ -2,6 +2,7 @@
   "expo": {
     "name": "Cric Scorer",
     "slug": "CricFlowMobile",
+    "scheme": "cricflowmobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

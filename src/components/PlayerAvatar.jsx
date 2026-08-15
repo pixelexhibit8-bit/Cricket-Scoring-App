@@ -3,6 +3,21 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import { systemFont, fontWeights } from '../theme.js';
 import { getPlayerPhotoFromRegistry, resolveDirectImageUrl } from '../services/playerPhotoStore.js';
 
+export const DEFAULT_PLAYER_AVATAR_URL = 'https://res.cloudinary.com/aov9a8tl/image/upload/v1786749377/Logo_Grey.png';
+
+/**
+ * On-the-fly Cloudinary Image Optimizer & Dynamic Resizer
+ * Adds automatic format (WebP/AVIF), auto compression (q_auto), and exact width scaling (w_XX).
+ */
+export const optimizeCloudinaryUrl = (url, size = 36) => {
+  if (!url || typeof url !== 'string') return url;
+  if (!url.includes('cloudinary.com') || url.includes('/w_')) return url;
+
+  const targetWidth = Math.min(600, Math.max(64, Math.round(size * 2))); // 2x for Retina sharpness
+  const transformation = `w_${targetWidth},c_fill,q_auto,f_auto`;
+  return url.replace('/image/upload/', `/image/upload/${transformation}/`);
+};
+
 export const PlayerAvatar = ({ name, photoUrl, size = 36, style }) => {
   const [loadError, setLoadError] = useState(false);
   const [resolvedUri, setResolvedUri] = useState('');
@@ -30,10 +45,11 @@ export const PlayerAvatar = ({ name, photoUrl, size = 36, style }) => {
   const isValidUrl = targetUri.startsWith('http://') || targetUri.startsWith('https://') || targetUri.startsWith('data:') || targetUri.startsWith('file:');
 
   if (isValidUrl && !loadError) {
+    const optimizedUri = optimizeCloudinaryUrl(targetUri, size);
     return (
       <View style={[{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', backgroundColor: '#E2E8F0' }, style]}>
         <Image
-          source={{ uri: targetUri }}
+          source={{ uri: optimizedUri }}
           style={{ width: '100%', height: '100%', borderRadius: size / 2 }}
           resizeMode="cover"
           onError={() => setLoadError(true)}
@@ -42,7 +58,9 @@ export const PlayerAvatar = ({ name, photoUrl, size = 36, style }) => {
     );
   }
 
-  // CricHeroes Style Grayscale Silhouette / App Logo Fallback
+  // Cloudinary Logo_Grey Default Fallback for all players without custom DP
+  const defaultOptimizedUrl = optimizeCloudinaryUrl(DEFAULT_PLAYER_AVATAR_URL, size);
+
   return (
     <View
       style={[
@@ -52,21 +70,21 @@ export const PlayerAvatar = ({ name, photoUrl, size = 36, style }) => {
           borderRadius: size / 2,
           backgroundColor: '#E2E8F0',
           alignItems: 'center',
-          justify: 'center',
+          justifyContent: 'center',
           overflow: 'hidden'
         },
         style
       ]}
     >
       <Image
-        source={require('../../assets/logo.png')}
+        source={{ uri: defaultOptimizedUrl }}
         style={{
-          width: '70%',
-          height: '70%',
-          opacity: 0.45,
-          tintColor: '#64748B'
+          width: '100%',
+          height: '100%',
+          borderRadius: size / 2
         }}
-        resizeMode="contain"
+        resizeMode="cover"
+        defaultSource={require('../../assets/logo.png')}
       />
     </View>
   );

@@ -28,17 +28,19 @@ export const MatchListScoreCard = ({
 }) => {
   const renderTeamRow = (team, score, overs, muted = false) => {
     const isActive = activeTeamName === team?.name;
-    const isWinner = winnerTeamName === team?.name;
-    const scoreColor = isWinner || isActive ? '#0284C7' : '#0F172A';
+    const isWinner = Boolean(winnerTeamName && winnerTeamName === team?.name);
+    const isFinished = Boolean(winnerTeamName);
+    const isLoser = isFinished && !isWinner;
+    const scoreColor = isWinner || isActive ? '#0284C7' : (isLoser ? '#94A3B8' : '#0F172A');
 
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <TeamIdentityMark team={team} size={30} />
+        <TeamIdentityMark team={team} size={30} isLoser={isLoser} />
         <Text
           style={{
             fontSize: 15,
-            fontWeight: fontWeights.bold,
-            color: muted ? '#64748B' : '#0F172A',
+            fontWeight: isWinner ? fontWeights.bold : (isLoser ? fontWeights.medium : fontWeights.bold),
+            color: isLoser ? '#94A3B8' : (muted ? '#64748B' : '#0F172A'),
             minWidth: 42,
             fontFamily: systemFont
           }}
@@ -107,10 +109,6 @@ export const MatchListScoreCard = ({
         padding: 16,
         borderWidth: 1,
         borderColor: '#E2E8F0',
-        shadowColor: '#000',
-        shadowOpacity: 0.04,
-        shadowRadius: 6,
-        elevation: 2,
         gap: 12
       }}
     >

@@ -25,6 +25,7 @@ import { syncPlayersToPhotoRegistry, registerPlayerPhoto } from '../services/pla
 import { generateUUID } from '../services/supabaseClient.js';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
+import { showToast } from '../services/toastService.js';
 
 const DEFAULT_TEAM_A_ROSTER = [];
 const DEFAULT_TEAM_B_ROSTER = [];
@@ -47,8 +48,8 @@ export function QuickMatchSetupScreen({
   const [wizardStep, setWizardStep] = useState(1);
 
   // Default App-Branded Team Names or Rematch Initial Data
-  const [team1Name, setTeam1Name] = useState(initialSetup?.team1Name || 'CricFlow Eleven');
-  const [team2Name, setTeam2Name] = useState(initialSetup?.team2Name || 'CricFlow Strikers');
+  const [team1Name, setTeam1Name] = useState(initialSetup?.team1Name || 'CricScorer Eleven');
+  const [team2Name, setTeam2Name] = useState(initialSetup?.team2Name || 'CricScorer Strikers');
 
   const [team1Roster, setTeam1Roster] = useState(initialSetup?.team1Roster || DEFAULT_TEAM_A_ROSTER);
   const [team2Roster, setTeam2Roster] = useState(initialSetup?.team2Roster || DEFAULT_TEAM_B_ROSTER);
@@ -63,7 +64,7 @@ export function QuickMatchSetupScreen({
   const [scorerPin, setScorerPin] = useState(initialSetup?.scorerPin || '');
 
   // Toss State
-  const [tossWinner, setTossWinner] = useState(initialSetup?.team1Name || 'CricFlow Eleven');
+  const [tossWinner, setTossWinner] = useState(initialSetup?.team1Name || 'CricScorer Eleven');
   const [tossDecision, setTossDecision] = useState('BAT');
 
   // Synchronize when initialSetup is updated dynamically
@@ -75,7 +76,7 @@ export function QuickMatchSetupScreen({
       if (Array.isArray(initialSetup.team2Roster) && initialSetup.team2Roster.length > 0) setTeam2Roster(initialSetup.team2Roster);
       if (initialSetup.totalOvers) setTotalOvers(String(initialSetup.totalOvers));
       if (initialSetup.venueName !== undefined) setVenueName(initialSetup.venueName);
-      if (initialSetup.scorerPin !== undefined) setScorerPin(initialSetup.scorerPin);
+      if (initialSetup.scorerPin) setScorerPin(initialSetup.scorerPin);
       if (initialSetup.ballType) setBallType(initialSetup.ballType);
       if (initialSetup.pitchType) setPitchType(initialSetup.pitchType);
       if (initialSetup.team1Name) setTossWinner(initialSetup.team1Name);
@@ -115,7 +116,7 @@ export function QuickMatchSetupScreen({
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow gallery access to select a player photo.');
+        showToast('Please allow gallery access to select a photo', 'error');
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -134,7 +135,7 @@ export function QuickMatchSetupScreen({
         targetSetter(dataUri);
       }
     } catch (err) {
-      Alert.alert('Gallery Error', err.message || 'Could not pick image');
+      showToast(err.message || 'Could not pick image', 'error');
     }
   };
 
@@ -142,7 +143,7 @@ export function QuickMatchSetupScreen({
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow camera access to capture a player photo.');
+        showToast('Please allow camera access to capture a photo', 'error');
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -160,7 +161,7 @@ export function QuickMatchSetupScreen({
         targetSetter(dataUri);
       }
     } catch (err) {
-      Alert.alert('Camera Error', err.message || 'Could not take photo');
+      showToast(err.message || 'Could not take photo', 'error');
     }
   };
 
@@ -375,16 +376,20 @@ export function QuickMatchSetupScreen({
 
   const handleFinalStartMatch = () => {
     if (!step3Striker || !step3NonStriker || !step3Bowler) {
-      Alert.alert('Missing Openers', 'Please select Striker, Non-Striker and Opening Bowler to start match.');
+      showToast('Please select Striker, Non-Striker and Opening Bowler', 'error', 'Missing Openers');
       return;
     }
     if (step3Striker === step3NonStriker) {
-      Alert.alert('Invalid Openers', 'Striker and Non-Striker must be two different players.');
+      showToast('Striker and Non-Striker must be two different players', 'error', 'Invalid Openers');
       return;
     }
-    const finalTeam1 = team1Name.trim() || 'CricFlow Eleven';
-    const finalTeam2 = team2Name.trim() || 'CricFlow Strikers';
-    const resolvedPin = (scorerPin && scorerPin.trim().length === 6) ? scorerPin.trim() : '998322';
+    if (!scorerPin || scorerPin.trim().length !== 6) {
+      showToast('A valid 6-digit Scorer PIN is compulsory to start match', 'error', 'PIN Required');
+      return;
+    }
+    const finalTeam1 = team1Name.trim() || 'CricScorer Eleven';
+    const finalTeam2 = team2Name.trim() || 'CricScorer Strikers';
+    const resolvedPin = scorerPin.trim();
 
     if (onStartMatch) {
       onStartMatch({
@@ -407,8 +412,8 @@ export function QuickMatchSetupScreen({
     }
   };
 
-  const activeT1 = team1Name.trim() || 'CricFlow Eleven';
-  const activeT2 = team2Name.trim() || 'CricFlow Strikers';
+  const activeT1 = team1Name.trim() || 'CricScorer Eleven';
+  const activeT2 = team2Name.trim() || 'CricScorer Strikers';
   const battingTeamName = tossDecision === 'BAT' ? tossWinner : (tossWinner === activeT1 ? activeT2 : activeT1);
   const bowlingTeamName = battingTeamName === activeT1 ? activeT2 : activeT1;
   const bRoster = battingTeamName === activeT1 ? team1Roster : team2Roster;
@@ -443,17 +448,11 @@ export function QuickMatchSetupScreen({
             {/* Title & Subtitle */}
             <View>
               <Text style={{ color: '#0F172A', fontSize: 20, fontWeight: fontWeights.bold, fontFamily: systemFontBold }}>
-                {initialSetup?.isRematch ? 'Rematch Setup' : 'Quick Match Setup'}
+                Quick Match Setup
               </Text>
               <Text style={{ color: '#64748B', fontSize: 11, fontWeight: fontWeights.bold, marginTop: 3, fontFamily: systemFont }}>
-                {initialSetup?.isRematch ? 'Teams & rosters pre-loaded from previous match' : 'Set teams, overs & details for local scoring'}
+                Set teams, overs & details for local scoring
               </Text>
-              {initialSetup?.isRematch ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E0F2FE', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, alignSelf: 'flex-start', marginTop: 8 }}>
-                  <MaterialCommunityIcons name="cached" size={16} color="#0284C7" />
-                  <Text style={{ color: '#0369A1', fontSize: 11, fontFamily: systemFontBold }}>Rematch: Same Teams & Squads Active</Text>
-                </View>
-              ) : null}
             </View>
 
             {/* ULTRA-CLEAN HORIZONTAL MATCHUP CARD (LEFT - CENTER VS - RIGHT) */}
@@ -462,62 +461,91 @@ export function QuickMatchSetupScreen({
                 PLAYING TEAMS
               </Text>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2 }}>
                 {/* LEFT SIDE: TEAM 1 LOGO + NAME UNDER LOGO */}
-                <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+                <View style={{ flex: 1, alignItems: 'center', gap: 8 }}>
                   <Image
-                    source={require('../../assets/default_team_1.png')}
-                    style={{ width: 64, height: 64, resizeMode: 'contain' }}
+                    source={require('../../assets/logo.png')}
+                    style={{ width: 60, height: 60, resizeMode: 'contain' }}
                   />
-                  <TextInput
-                    style={{
-                      width: '100%',
-                      fontSize: 14,
-                      fontWeight: fontWeights.bold,
-                      color: '#0F172A',
-                      fontFamily: systemFontBold,
-                      textAlign: 'center',
-                      paddingVertical: 4
-                    }}
-                    value={team1Name}
-                    onChangeText={setTeam1Name}
-                    placeholder="Team 1 Name"
-                    placeholderTextColor="#94A3B8"
-                    autoCapitalize="words"
-                  />
+                  <View style={{
+                    width: '100%',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 10,
+                    borderWidth: 1.5,
+                    borderColor: '#CBD5E1',
+                    paddingHorizontal: 8,
+                    paddingVertical: 4
+                  }}>
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        fontSize: 13,
+                        fontWeight: fontWeights.bold,
+                        color: '#0F172A',
+                        fontFamily: systemFontBold,
+                        textAlign: 'center',
+                        paddingVertical: 2
+                      }}
+                      value={team1Name}
+                      onChangeText={setTeam1Name}
+                      placeholder="Team 1 Name"
+                      placeholderTextColor="#94A3B8"
+                      autoCapitalize="words"
+                    />
+                    <Ionicons name="pencil" size={13} color="#0284C7" />
+                  </View>
                 </View>
 
                 {/* CENTER SIDE: LITTLE BIG VS LOGO BADGE */}
-                <View style={{ paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' }}>
-                  <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#071B2C', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#38BDF8', elevation: 3 }}>
-                    <Text style={{ fontSize: 13, fontWeight: fontWeights.bold, color: '#FFFFFF', fontFamily: systemFontBold }}>VS</Text>
+                <View style={{ paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#071B2C', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#38BDF8', elevation: 3 }}>
+                    <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#FFFFFF', fontFamily: systemFontBold }}>VS</Text>
                   </View>
                 </View>
 
                 {/* RIGHT SIDE: TEAM 2 LOGO + NAME UNDER LOGO */}
-                <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+                <View style={{ flex: 1, alignItems: 'center', gap: 8 }}>
                   <Image
-                    source={require('../../assets/default_team_2.png')}
-                    style={{ width: 64, height: 64, resizeMode: 'contain' }}
+                    source={require('../../assets/logo.png')}
+                    style={{ width: 60, height: 60, resizeMode: 'contain' }}
                   />
-                  <TextInput
-                    style={{
-                      width: '100%',
-                      fontSize: 14,
-                      fontWeight: fontWeights.bold,
-                      color: '#0F172A',
-                      fontFamily: systemFontBold,
-                      textAlign: 'center',
-                      paddingVertical: 4
-                    }}
-                    value={team2Name}
-                    onChangeText={setTeam2Name}
-                    placeholder="Team 2 Name"
-                    placeholderTextColor="#94A3B8"
-                    autoCapitalize="words"
-                  />
+                  <View style={{
+                    width: '100%',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 10,
+                    borderWidth: 1.5,
+                    borderColor: '#CBD5E1',
+                    paddingHorizontal: 8,
+                    paddingVertical: 4
+                  }}>
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        fontSize: 13,
+                        fontWeight: fontWeights.bold,
+                        color: '#0F172A',
+                        fontFamily: systemFontBold,
+                        textAlign: 'center',
+                        paddingVertical: 2
+                      }}
+                      value={team2Name}
+                      onChangeText={setTeam2Name}
+                      placeholder="Team 2 Name"
+                      placeholderTextColor="#94A3B8"
+                      autoCapitalize="words"
+                    />
+                    <Ionicons name="pencil" size={13} color="#0284C7" />
+                  </View>
                 </View>
               </View>
+              <Text style={{ fontSize: 10, color: '#64748B', fontFamily: systemFontMedium, textAlign: 'center' }}>
+                Tap on any team name above to rename it
+              </Text>
             </View>
 
             {/* ULTRA-MINIMAL SQUAD BUTTONS */}
@@ -562,10 +590,7 @@ export function QuickMatchSetupScreen({
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', width: 44 }}>
-                    <Image source={require('../../assets/default_team_1.png')} style={{ width: 26, height: 26, resizeMode: 'contain', zIndex: 2 }} />
-                    <Image source={require('../../assets/default_team_2.png')} style={{ width: 26, height: 26, resizeMode: 'contain', marginLeft: -12, zIndex: 1 }} />
-                  </View>
+                  <Image source={require('../../assets/logo.png')} style={{ width: 26, height: 26, resizeMode: 'contain' }} />
                   <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontBold }}>
                     VIEW SQUADS
                   </Text>
@@ -619,7 +644,7 @@ export function QuickMatchSetupScreen({
 
             {/* Set 6-Digit Scorer PIN */}
             <View>
-              <Text style={styles.labelHeader}>Set 6-Digit Scorer PIN (Security Lock)</Text>
+              <Text style={styles.labelHeader}>Enter 6-Digit Scorer PIN (Required) *</Text>
               <TextInput
                 style={[styles.input, { marginTop: 4 }]}
                 value={scorerPin}
@@ -631,19 +656,33 @@ export function QuickMatchSetupScreen({
                 }}
                 keyboardType="number-pad"
                 maxLength={6}
-                placeholder="998322"
+                placeholder="Enter 6-digit PIN"
                 placeholderTextColor="#94A3B8"
               />
-              <Text style={{ fontSize: 10, color: '#64748B', marginTop: 4, fontFamily: systemFont }}>
-                Leave blank to use default backup PIN (998322).
+              <Text style={{ fontSize: 11, color: scorerPin.trim().length === 6 ? '#16A34A' : '#DC2626', marginTop: 4, fontFamily: systemFontMedium }}>
+                {scorerPin.trim().length === 6
+                  ? '6-digit PIN set. Remember this PIN to resume or edit scoring.'
+                  : 'A 6-digit PIN is required to secure and start the match.'}
               </Text>
             </View>
 
             {/* NEXT: COIN TOSS BUTTON */}
             <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: (team1Name.trim() && team2Name.trim() && totalOvers) ? '#0284C7' : '#94A3B8', marginTop: 4 }]}
+              style={[
+                styles.primaryBtn,
+                {
+                  backgroundColor: (team1Name.trim() && team2Name.trim() && totalOvers && scorerPin && scorerPin.trim().length === 6) ? '#0284C7' : '#94A3B8',
+                  marginTop: 6
+                }
+              ]}
               disabled={!team1Name.trim() || !team2Name.trim() || !totalOvers}
-              onPress={() => setWizardStep(2)}
+              onPress={() => {
+                if (!scorerPin || scorerPin.trim().length !== 6) {
+                  showToast('Please enter a 6-digit Scorer PIN to proceed', 'error', 'Scorer PIN Required');
+                  return;
+                }
+                setWizardStep(2);
+              }}
             >
               <Text style={styles.btnText}>NEXT: COIN TOSS</Text>
               <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
@@ -685,7 +724,7 @@ export function QuickMatchSetupScreen({
               <View style={{ paddingHorizontal: 16, paddingVertical: 16, backgroundColor: '#071B2C', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 {/* Team 1 Info */}
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Image source={require('../../assets/default_team_1.png')} style={{ width: 38, height: 38, resizeMode: 'contain' }} />
+                  <Image source={require('../../assets/logo.png')} style={{ width: 38, height: 38, resizeMode: 'contain' }} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: fontWeights.bold, fontFamily: systemFontBold }} numberOfLines={1}>{activeT1}</Text>
                     <Text style={{ color: '#38BDF8', fontSize: 11, fontWeight: fontWeights.bold, fontFamily: systemFont, marginTop: 1 }}>{team1Roster.length} Players</Text>
@@ -703,7 +742,7 @@ export function QuickMatchSetupScreen({
                     <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: fontWeights.bold, fontFamily: systemFontBold }} numberOfLines={1}>{activeT2}</Text>
                     <Text style={{ color: '#FB7185', fontSize: 11, fontWeight: fontWeights.bold, fontFamily: systemFont, marginTop: 1 }}>{team2Roster.length} Players</Text>
                   </View>
-                  <Image source={require('../../assets/default_team_2.png')} style={{ width: 38, height: 38, resizeMode: 'contain' }} />
+                  <Image source={require('../../assets/logo.png')} style={{ width: 38, height: 38, resizeMode: 'contain' }} />
                 </View>
               </View>
 
@@ -874,7 +913,7 @@ export function QuickMatchSetupScreen({
             </SafeAreaView>
           </Modal>
 
-      {/* ADD NEW PLAYER POPUP MODAL */}
+      {/* ADD NEW PLAYER POPUP MODAL (Clean CricFlow Theme) */}
       <Modal
         visible={addPlayerModalVisible}
         transparent
@@ -884,120 +923,120 @@ export function QuickMatchSetupScreen({
         <TouchableOpacity
           activeOpacity={1}
           onPress={() => setAddPlayerModalVisible(false)}
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
+          style={{ flex: 1, backgroundColor: 'rgba(7, 27, 44, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
         >
           <TouchableOpacity
             activeOpacity={1}
-            style={{ width: '100%', maxWidth: 360, backgroundColor: '#071B2C', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#1E3A5F', gap: 14 }}
+            style={{
+              width: '100%',
+              maxWidth: 380,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 18,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              gap: 14,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.12,
+              shadowRadius: 16,
+              elevation: 8
+            }}
           >
+            {/* Modal Header */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 16, color: '#FFFFFF', fontFamily: systemFontBold }}>
-                Add New Player
-              </Text>
-              <TouchableOpacity onPress={() => setAddPlayerModalVisible(false)}>
-                <Ionicons name="close" size={20} color="#94A3B8" />
+              <View>
+                <Text style={{ fontSize: 17, color: '#0F172A', fontFamily: systemFontBold }}>
+                  Add New Player
+                </Text>
+                <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFont, marginTop: 2 }}>
+                  Add player to ground squad & roster
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setAddPlayerModalVisible(false)}
+                style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Ionicons name="close" size={18} color="#64748B" />
               </TouchableOpacity>
             </View>
 
             {/* PLAYER NAME INPUT */}
-            <View style={{ gap: 4 }}>
-              <Text style={{ fontSize: 11, color: '#BAE6FD', fontFamily: systemFontMedium }}>Player Name *</Text>
+            <View style={{ gap: 5 }}>
+              <Text style={{ fontSize: 11, color: '#475569', fontFamily: systemFontBold, letterSpacing: 0.3 }}>FULL NAME *</Text>
               <TextInput
-                style={{ backgroundColor: '#0F2942', borderRadius: 10, borderWidth: 1, borderColor: '#1E3A5F', paddingHorizontal: 12, height: 42, color: '#FFFFFF', fontSize: 13, fontFamily: systemFont }}
-                placeholder="Player Name (e.g. Rahul)..."
-                placeholderTextColor="#64748B"
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  paddingHorizontal: 14,
+                  height: 44,
+                  color: '#0F172A',
+                  fontSize: 13,
+                  fontFamily: systemFont
+                }}
+                placeholder="Enter player full name"
+                placeholderTextColor="#94A3B8"
                 value={newPlayerInput}
                 onChangeText={setNewPlayerInput}
                 maxLength={36}
+                autoFocus
               />
             </View>
 
             {/* MOBILE NUMBER INPUT */}
-            <View style={{ gap: 4 }}>
-              <Text style={{ fontSize: 11, color: '#BAE6FD', fontFamily: systemFontMedium }}>Mobile Number (Optional)</Text>
-              <TextInput
-                style={{ backgroundColor: '#0F2942', borderRadius: 10, borderWidth: 1, borderColor: '#1E3A5F', paddingHorizontal: 12, height: 42, color: '#FFFFFF', fontSize: 13, fontFamily: systemFont }}
-                placeholder="Mobile No. (e.g. 9829012345)..."
-                placeholderTextColor="#64748B"
-                value={newPlayerPhoneInput}
-                onChangeText={setNewPlayerPhoneInput}
-                keyboardType="phone-pad"
-                maxLength={15}
-              />
-            </View>
-
-            {/* ROLE SELECTOR PILLS */}
-            <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 11, color: '#BAE6FD', fontFamily: systemFontMedium }}>Player Role</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {[
-                  { id: 'All-Rounder', label: '⭐ All-Rounder' },
-                  { id: 'Batsman', label: '🏑 Batsman' },
-                  { id: 'Bowler', label: '⚡ Bowler' },
-                  { id: 'WK-Batsman', label: '🧤 WK-Batsman' }
-                ].map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    onPress={() => setNewPlayerRoleInput(item.id)}
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                      borderRadius: 8,
-                      backgroundColor: newPlayerRoleInput === item.id ? '#0284C7' : '#0F2942',
-                      borderWidth: 1,
-                      borderColor: newPlayerRoleInput === item.id ? '#38BDF8' : '#1E3A5F'
-                    }}
-                  >
-                    <Text style={{ fontSize: 11, color: newPlayerRoleInput === item.id ? '#FFFFFF' : '#94A3B8', fontFamily: systemFontBold }}>
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* PHOTO PICKER OPTIONS */}
-            <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 11, color: '#BAE6FD', fontFamily: systemFontMedium }}>Player Photo (Optional)</Text>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity
-                  onPress={() => takePhotoFromCamera(setSelectedLocalImageUri)}
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#0F2942', height: 40, borderRadius: 10, borderWidth: 1, borderColor: '#1E3A5F' }}
-                >
-                  <Ionicons name="camera" size={16} color="#38BDF8" />
-                  <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#FFFFFF', fontFamily: systemFont }}>Camera</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => pickImageFromGallery(setSelectedLocalImageUri)}
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#0F2942', height: 40, borderRadius: 10, borderWidth: 1, borderColor: '#1E3A5F' }}
-                >
-                  <Ionicons name="images" size={16} color="#38BDF8" />
-                  <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#FFFFFF', fontFamily: systemFont }}>Gallery</Text>
-                </TouchableOpacity>
-              </View>
-              {selectedLocalImageUri ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                  <Image source={{ uri: selectedLocalImageUri }} style={{ width: 28, height: 28, borderRadius: 14 }} />
-                  <Text style={{ fontSize: 11, color: '#38BDF8', fontFamily: systemFontBold }}>Photo Selected</Text>
+            <View style={{ gap: 5 }}>
+              <Text style={{ fontSize: 11, color: '#475569', fontFamily: systemFontBold, letterSpacing: 0.3 }}>MOBILE NUMBER (OPTIONAL)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#CBD5E1' }}>
+                  <Text style={{ color: '#0F172A', fontWeight: fontWeights.bold, fontSize: 12, fontFamily: systemFont }}>🇮🇳 +91</Text>
                 </View>
-              ) : null}
+                <TextInput
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    paddingHorizontal: 12,
+                    height: 44,
+                    color: '#0F172A',
+                    fontSize: 13,
+                    fontFamily: systemFont
+                  }}
+                  placeholder="10-digit mobile number"
+                  placeholderTextColor="#94A3B8"
+                  value={newPlayerPhoneInput}
+                  onChangeText={setNewPlayerPhoneInput}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                />
+              </View>
             </View>
 
             {/* ACTION BUTTONS */}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
               <TouchableOpacity
                 onPress={() => setAddPlayerModalVisible(false)}
-                style={{ flex: 1, height: 42, borderRadius: 8, backgroundColor: '#1E293B', alignItems: 'center', justifyContent: 'center' }}
+                style={{ flex: 1, height: 44, borderRadius: 10, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text style={{ color: '#94A3B8', fontSize: 12, fontFamily: systemFontBold }}>CANCEL</Text>
+                <Text style={{ color: '#64748B', fontSize: 12, fontFamily: systemFontBold }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAddNewPlayerToPool}
                 disabled={isAddingPlayer || !newPlayerInput.trim()}
-                style={{ flex: 1, height: 42, borderRadius: 8, backgroundColor: (isAddingPlayer || !newPlayerInput.trim()) ? '#64748B' : '#0284C7', alignItems: 'center', justifyContent: 'center' }}
+                style={{
+                  flex: 1.6,
+                  height: 44,
+                  borderRadius: 10,
+                  backgroundColor: (isAddingPlayer || !newPlayerInput.trim()) ? '#94A3B8' : '#0284C7',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
               >
                 <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>
-                  {isAddingPlayer ? 'SAVING...' : 'SAVE PLAYER'}
+                  {isAddingPlayer ? 'Saving...' : 'Save Player'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1170,7 +1209,7 @@ export function QuickMatchSetupScreen({
             <View style={{ width: bannerWidth || 360, paddingHorizontal: 16, gap: 12 }}>
               {/* HERO BANNER CARD */}
               <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#BAE6FD', alignItems: 'center', gap: 4, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 }}>
-                <Image source={require('../../assets/default_team_1.png')} style={{ width: 56, height: 56, resizeMode: 'contain' }} />
+                <Image source={require('../../assets/logo.png')} style={{ width: 56, height: 56, resizeMode: 'contain' }} />
                 <Text style={{ color: '#0F172A', fontSize: 18, fontFamily: systemFontBold, textAlign: 'center' }}>
                   {team1Name}
                 </Text>
@@ -1236,7 +1275,7 @@ export function QuickMatchSetupScreen({
             <View style={{ width: bannerWidth || 360, paddingHorizontal: 16, gap: 12 }}>
               {/* HERO BANNER CARD */}
               <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#FECDD3', alignItems: 'center', gap: 4, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 }}>
-                <Image source={require('../../assets/default_team_2.png')} style={{ width: 56, height: 56, resizeMode: 'contain' }} />
+                <Image source={require('../../assets/logo.png')} style={{ width: 56, height: 56, resizeMode: 'contain' }} />
                 <Text style={{ color: '#0F172A', fontSize: 18, fontFamily: systemFontBold, textAlign: 'center' }}>
                   {team2Name}
                 </Text>

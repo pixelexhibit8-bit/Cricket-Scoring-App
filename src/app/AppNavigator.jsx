@@ -20,6 +20,7 @@ import { WormGraph } from '../components/WormGraph';
 import { ManhattanGraph } from '../components/ManhattanGraph';
 import { useFonts } from 'expo-font';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
+import { computeLeaderboardRankings } from '../utils/cricketUtils.js';
 import { fetchLocalPlayers } from '../services/localPlayerService.js';
 import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, syncPlayerToSupabase, fetchLiveMatchFromSupabase, subscribeToSupabaseLiveMatches } from '../services/matchService.js';
 import { systemFont, systemFontMedium, systemFontBold, typeScale, fontWeights, publicType, themeColors } from '../theme.js';
@@ -845,13 +846,9 @@ const InningTeamTab = ({ name, selected, statusText, onPress }) => (
   </TouchableOpacity>
 );
 
-const getTeamLogoSource = (team) => {
+const getTeamLogoSource = (team, fallbackIndex = 0) => {
   if (team?.logoUri) return { uri: team.logoUri };
-  if (team?.logoKey === 'default-team-1') return require('../../assets/default_team_1.png');
-  if (team?.logoKey === 'default-team-2') return require('../../assets/default_team_2.png');
-  if (team?.logoKey === 'sadokan-a') return require('../../assets/sadokan_a.png');
-  if (team?.logoKey === 'sadokan-b') return require('../../assets/sadokan_b.png');
-  return require('../../assets/default_team_1.png');
+  return require('../../assets/logo.png');
 };
 
 const getPlayerPreview = (name) => {
@@ -911,26 +908,58 @@ const PendingBattersSection = ({ title, players }) => {
 
 const ResultTeamBlock = ({ team, isWinner, align = 'left' }) => {
   const scoreParts = getScorePartsFromText(team?.score);
+  const teamCode = getTeamShortCode(team, team?.name);
+  const isLoser = !isWinner;
 
   return (
-    <View style={{ flex: 1, alignItems: align === 'left' ? 'flex-start' : 'flex-end' }}>
-      <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 10, maxWidth: '100%' }}>
-        <TeamIdentityMark team={team} size={50} />
-        <View style={{ flexShrink: 1, alignItems: align === 'left' ? 'flex-start' : 'flex-end' }}>
-          <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 5, maxWidth: '100%' }}>
-            <Text selectable {...nameFitProps} style={{ flexShrink: 1, color: isWinner ? '#BAE6FD' : '#8FB7CD', fontSize: typeScale.body, lineHeight: 16, includeFontPadding: false, fontWeight: fontWeights.semibold, fontFamily: systemFont }}>{team?.name || getTeamShortCode(team, team?.name)}</Text>
-            {isWinner ? <Ionicons name="trophy-outline" size={14} color="#38BDF8" /> : null}
-          </View>
-          <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'baseline', gap: 5, marginTop: 5, maxWidth: '100%' }}>
-            <Text selectable style={{ color: isWinner ? '#FFFFFF' : '#D8E8F2', fontSize: typeScale.keyAction, lineHeight: 24, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }} numberOfLines={1}>
-              {scoreParts.score}
+    <View style={{ flex: 1, flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 10 }}>
+      <TeamIdentityMark team={team} size={44} isLoser={isLoser} />
+      <View style={{ flex: 1, alignItems: align === 'left' ? 'flex-start' : 'flex-end', justifyContent: 'center' }}>
+        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 5 }}>
+          <Text
+            selectable
+            numberOfLines={1}
+            style={{
+              color: isWinner ? '#FFFFFF' : '#94A3B8',
+              fontSize: 16,
+              fontFamily: systemFontBold,
+              letterSpacing: 0.5
+            }}
+          >
+            {teamCode}
+          </Text>
+          {isWinner ? (
+            <MaterialCommunityIcons name="trophy" size={15} color="#F59E0B" />
+          ) : null}
+        </View>
+
+        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
+          <Text
+            selectable
+            style={{
+              color: '#FFFFFF',
+              fontSize: 19,
+              fontFamily: systemFontBold,
+              fontVariant: ['tabular-nums']
+            }}
+            numberOfLines={1}
+          >
+            {scoreParts.score}
+          </Text>
+          {scoreParts.overs ? (
+            <Text
+              selectable
+              style={{
+                color: '#94A3B8',
+                fontSize: 12,
+                fontFamily: systemFontMedium,
+                fontVariant: ['tabular-nums']
+              }}
+              numberOfLines={1}
+            >
+              {scoreParts.overs}
             </Text>
-            {scoreParts.overs ? (
-              <Text selectable style={{ color: '#9FC4D7', fontSize: typeScale.caption, lineHeight: 14, includeFontPadding: false, fontWeight: fontWeights.semibold, fontVariant: ['tabular-nums'], fontFamily: systemFont }} numberOfLines={1}>
-                {scoreParts.overs}
-              </Text>
-            ) : null}
-          </View>
+          ) : null}
         </View>
       </View>
     </View>
@@ -939,15 +968,24 @@ const ResultTeamBlock = ({ team, isWinner, align = 'left' }) => {
 
 const MatchResultHero = ({ teamOne, teamTwo, winnerTeamName, resultText }) => (
   <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
-    <View style={{ minHeight: 132, paddingHorizontal: 16, paddingVertical: 24, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <ResultTeamBlock team={teamOne} isWinner={winnerTeamName === teamOne?.name} />
-      <View style={{ width: 34, alignItems: 'center', justifyContent: 'center' }}>
-        <MaterialCommunityIcons name="lightning-bolt" size={24} color="#A7EAFF" />
+    <View style={{ paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <ResultTeamBlock team={teamOne} isWinner={winnerTeamName === teamOne?.name || (resultText && resultText.toLowerCase().includes(teamOne?.name?.toLowerCase()))} align="left" />
+      <View style={{ width: 28, alignItems: 'center', justifyContent: 'center' }}>
+        <MaterialCommunityIcons name="lightning-bolt" size={22} color="#64748B" />
       </View>
-      <ResultTeamBlock team={teamTwo} isWinner={winnerTeamName === teamTwo?.name} align="right" />
+      <ResultTeamBlock team={teamTwo} isWinner={winnerTeamName === teamTwo?.name || (resultText && resultText.toLowerCase().includes(teamTwo?.name?.toLowerCase()))} align="right" />
     </View>
-    <View style={{ minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#071B2C', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#2B5C78' }}>
-      <Text selectable style={{ flexShrink: 1, color: '#E0F2FE', fontSize: typeScale.body, lineHeight: 17, includeFontPadding: false, fontWeight: fontWeights.bold, textAlign: 'center', fontFamily: systemFont }}>
+    <View style={{ paddingHorizontal: 16, paddingBottom: 12, alignItems: 'center', justifyContent: 'center' }}>
+      <Text
+        selectable
+        style={{
+          color: '#F59E0B',
+          fontSize: 13.5,
+          fontFamily: systemFontBold,
+          textAlign: 'center',
+          letterSpacing: 0.2
+        }}
+      >
         {resultText}
       </Text>
     </View>
@@ -1525,8 +1563,8 @@ export function AppNavigator() {
       }).catch(() => { });
     }
 
-    const t1 = target.team1?.name || target.teams?.[0]?.name || team1Name || 'CricFlow Eleven';
-    const t2 = target.team2?.name || target.teams?.[1]?.name || team2Name || 'CricFlow Strikers';
+    const t1 = target.team1?.name || target.teams?.[0]?.name || team1Name || 'CricScorer Eleven';
+    const t2 = target.team2?.name || target.teams?.[1]?.name || team2Name || 'CricScorer Strikers';
     const r1 = target.sourceMatch?.playingXI?.[t1] || target.playingXI?.[t1] || (target.team1?.batting || []).map(p => p.name).filter(Boolean) || team1Roster;
     const r2 = target.sourceMatch?.playingXI?.[t2] || target.playingXI?.[t2] || (target.team2?.batting || []).map(p => p.name).filter(Boolean) || team2Roster;
 
@@ -3447,7 +3485,8 @@ export function AppNavigator() {
         </View>
       );
     }
-    const viewTeam = (finishedInningIndex === 0 ? f?.team1 : f?.team2) || {
+    const finishedLiveMatch = buildFinishedLiveSnapshot(f);
+    const viewTeam = (finishedInningIndex === 0 ? finishedLiveMatch.team1 : finishedLiveMatch.team2) || {
       name: 'Team',
       score: '0-0',
       batting: [],
@@ -3456,7 +3495,8 @@ export function AppNavigator() {
       fallOfWickets: [],
       partnerships: []
     };
-    const finishedLiveMatch = buildFinishedLiveSnapshot(f);
+    const opponentTeam = (finishedInningIndex === 0 ? finishedLiveMatch.team2 : finishedLiveMatch.team1) || {};
+    const finishedBowlingRows = (opponentTeam?.bowling?.length ? opponentTeam.bowling : viewTeam?.bowling) || [];
     const finishedBattingRows = (viewTeam.batting || []).filter(player => player.dismissal !== 'Did not bat');
     const finishedDeclaredRoster = finishedLiveMatch.playingXI?.[viewTeam.name]
       || f.sourceMatch?.playingXI?.[viewTeam.name]
@@ -3722,16 +3762,17 @@ export function AppNavigator() {
                 {pageTabId === 'info' && (
                   <MatchInfoPanel
                     rows={[
-                      { icon: 'trophy-outline', label: 'Match', value: f.title },
-                      { icon: 'calendar-outline', label: 'Date & time', value: f.date },
-                      { icon: 'swap-horizontal-outline', label: 'Toss', value: f.tossResult, emphasis: true },
-                      f.venue && f.venue !== 'Venue not added' ? { icon: 'location-outline', label: 'Venue', value: f.venue } : null,
-                      { icon: 'person-outline', label: 'Umpire', value: f.umpireName },
-                      { icon: 'checkmark-done-outline', label: 'Result', value: f.winner, emphasis: true, accent: true }
+                      { icon: 'trophy-outline', label: 'Match', value: f.title || `${f.team1?.name || 'Team 1'} vs ${f.team2?.name || 'Team 2'}` },
+                      { icon: 'calendar-outline', label: 'Date & time', value: f.date || formatMatchDateTime(f.completedAt || f.startedAt || f.date) },
+                      { icon: 'swap-horizontal-outline', label: 'Toss', value: f.tossResult || (f.tossWinner ? `${f.tossWinner} won the toss and elected to ${(f.tossDecision || 'bat').toUpperCase()}` : `${f.team1?.name || 'Team 1'} won the toss and elected to BAT`), emphasis: true },
+                      { icon: 'location-outline', label: 'Venue', value: (f.venue && f.venue !== 'Venue not added') ? f.venue : 'Local Ground' },
+                      { icon: 'person-outline', label: 'Umpire', value: f.umpireName || 'Cric Scorer' },
+                      { icon: 'partly-sunny-outline', label: 'Conditions', value: f.conditions || (weatherData ? `${weatherData.temp} C, ${weatherData.condition}` : '27 C, Humid & Overcast') },
+                      { icon: 'checkmark-done-outline', label: 'Result', value: f.winner || f.resultText, emphasis: true, accent: true }
                     ]}
-                    teamOneName={f.team1.name}
-                    teamTwoName={f.team2.name}
-                    playerCount={f.team1.batting.length + f.team2.batting.length}
+                    teamOneName={f.team1?.name || 'Team 1'}
+                    teamTwoName={f.team2?.name || 'Team 2'}
+                    playerCount={(f.team1?.batting?.length || 0) + (f.team2?.batting?.length || 0) || (f.sourceMatch?.playingXI ? Object.values(f.sourceMatch.playingXI).flat().length : 4)}
                     onOpenPlayingXi={() => {
                       setPlayingXiTeamTab(1);
                       playingXiPagerScrollX.setValue(0);
@@ -4605,7 +4646,7 @@ export function AppNavigator() {
                     </Text>
                   </TouchableOpacity>
                 </View>
-              ) : (
+              ) : (activeMatch && activeMatch.phase === 'result') ? null : (
                 <View style={styles.pageHeader}>
                   <TouchableOpacity onPress={() => { setCurrentScreen('home'); setWizardStep(1); }} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={20} color="#0F172A" />
@@ -4964,9 +5005,9 @@ export function AppNavigator() {
               visibleFinishedMatches={visibleFinishedMatches}
               finishedArchive={finishedArchive}
               activeMatch={activeMatch}
-              topBatters={TOP_BATTERS}
-              topBowlers={TOP_BOWLERS}
-              topAllrounders={TOP_ALLROUNDERS}
+              TOP_BATTERS={computeLeaderboardRankings(finishedArchive, localPlayersDb).topBatters}
+              TOP_BOWLERS={computeLeaderboardRankings(finishedArchive, localPlayersDb).topBowlers}
+              TOP_ALLROUNDERS={computeLeaderboardRankings(finishedArchive, localPlayersDb).topAllRounders}
               styles={styles}
             />
           )}

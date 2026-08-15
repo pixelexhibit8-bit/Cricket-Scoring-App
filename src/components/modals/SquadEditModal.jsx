@@ -8,6 +8,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, typeScale, fontWeights } from '../../theme.js';
 import { saveLocalPlayer } from '../../services/localPlayerService.js';
 import { generateUUID } from '../../services/supabaseClient.js';
+import { showToast } from '../../services/toastService.js';
 
 const ROLES = ['Batsman', 'Bowler', 'All-Rounder', 'WK-Batsman'];
 
@@ -38,7 +39,7 @@ export function SquadEditModal({
 
   const handleSave = async () => {
     if (!newName.trim()) {
-      Alert.alert('Name Required', 'Please enter player name.');
+      showToast('Please enter player name', 'error', 'Name Required');
       return;
     }
     setIsSaving(true);
@@ -52,9 +53,10 @@ export function SquadEditModal({
       };
       await saveLocalPlayer(playerObj);
       onPlayerAdded && onPlayerAdded(playerObj.name, activeTeam);
+      showToast(`${playerObj.name} added to squad!`, 'success');
       resetForm();
     } catch (e) {
-      Alert.alert('Error', 'Could not save player.');
+      showToast('Could not save player', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -205,41 +207,16 @@ export function SquadEditModal({
 
                   {/* Mobile */}
                   <View style={{ gap: 4 }}>
-                    <Text style={{ fontSize: typeScale.caption, fontFamily: systemFontBold, color: '#64748B' }}>MOBILE NUMBER</Text>
+                    <Text style={{ fontSize: typeScale.caption, fontFamily: systemFontBold, color: '#64748B' }}>MOBILE NUMBER (OPTIONAL)</Text>
                     <TextInput
                       style={{ height: 46, borderRadius: 10, borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 14, backgroundColor: '#F8FAFC', fontSize: typeScale.body, color: '#0F172A', fontFamily: systemFont }}
-                      placeholder="10-digit mobile"
+                      placeholder="10-digit mobile number"
                       placeholderTextColor="#94A3B8"
                       value={newPhone}
                       onChangeText={setNewPhone}
                       keyboardType="phone-pad"
                       maxLength={10}
                     />
-                  </View>
-
-                  {/* Role */}
-                  <View style={{ gap: 6 }}>
-                    <Text style={{ fontSize: typeScale.caption, fontFamily: systemFontBold, color: '#64748B' }}>ROLE</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      {ROLES.map(r => (
-                        <TouchableOpacity
-                          key={r}
-                          onPress={() => setNewRole(r)}
-                          style={{
-                            paddingHorizontal: 12,
-                            paddingVertical: 7,
-                            borderRadius: 20,
-                            borderWidth: 1.5,
-                            borderColor: newRole === r ? '#0284C7' : '#CBD5E1',
-                            backgroundColor: newRole === r ? '#EFF6FF' : '#F8FAFC'
-                          }}
-                        >
-                          <Text style={{ fontSize: 12, fontFamily: newRole === r ? systemFontBold : systemFontMedium, color: newRole === r ? '#0284C7' : '#64748B' }}>
-                            {r}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
                   </View>
 
                   {/* Actions */}
