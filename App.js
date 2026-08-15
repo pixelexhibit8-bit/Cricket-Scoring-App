@@ -44,6 +44,7 @@ import { QuickMatchSetupScreen } from './src/screens/QuickMatchSetupScreen.jsx';
 import { fetchLocalPlayers } from './src/services/localPlayerService.js';
 import { TeamPickerModal } from './src/components/TeamPickerModal.jsx';
 import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
+import { AppSplashScreen } from './src/components/common/AppSplashScreen.jsx';
 import { useFonts } from 'expo-font';
 import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, syncPlayerToSupabase, fetchLiveMatchFromSupabase, subscribeToSupabaseLiveMatches } from './src/services/matchService.js';
 import { generateUUID } from './src/services/supabaseClient.js';
@@ -491,6 +492,8 @@ export default function App() {
     'SFProDisplay-Medium': require('./assets/fonts/SFProDisplay-Medium.otf'),
     'SFProDisplay-Bold': require('./assets/fonts/SFProDisplay-Bold.otf')
   });
+
+  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -5193,6 +5196,11 @@ export default function App() {
 
         {/* Global Floating Toast for entire CricFlow App */}
         <CricGlobalToast />
+
+        {/* Premium Brand Animated Splash Screen */}
+        {showAnimatedSplash && (
+          <AppSplashScreen onFinish={() => setShowAnimatedSplash(false)} />
+        )}
       </View>
     </SafeAreaProvider>
   );
