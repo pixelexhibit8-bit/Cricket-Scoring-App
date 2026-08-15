@@ -91,8 +91,13 @@ export async function savePlayerProfile(profileData) {
     // Sync to Supabase if connected
     if (supabase && updated.name) {
       try {
+        // If user changed / formatted their name (e.g. Bastiram Suthar -> Basti Ram Suthar), delete old unformatted row
+        if (existing.name && existing.name.trim() !== updated.name.trim()) {
+          await supabase.from('local_players').delete().eq('name', existing.name.trim()).catch(() => {});
+        }
+
         const fullPayload = {
-          name: updated.name,
+          name: updated.name.trim(),
           role: updated.role || 'All-Rounder',
           batting_style: updated.battingStyle || updated.batting_style || 'Right Hand Bat',
           bowling_style: updated.bowlingStyle || updated.bowling_style || 'Right Arm Medium',
@@ -110,7 +115,7 @@ export async function savePlayerProfile(profileData) {
           console.warn('Full upsert notice, trying basic payload:', error.message);
           // Fallback to basic columns if custom columns not added yet
           await supabase.from('local_players').upsert({
-            name: updated.name,
+            name: updated.name.trim(),
             role: updated.role || 'All-Rounder',
             photo_url: updated.photoUrl || updated.photo_url || null,
             phone: updated.phone || ''

@@ -18,7 +18,7 @@ export const PRESET_PLAYER_AVATARS = [
 const DEFAULT_LOCAL_PLAYERS = [];
 
 /**
- * Fetch all local players (Combines Supabase local_players table + AsyncStorage fallback)
+ * Fetch all local players (Combines Supabase local_players table + AsyncStorage fallback with smart deduplication)
  */
 export const fetchLocalPlayers = async () => {
   let localDbPlayers = null;
@@ -45,13 +45,38 @@ export const fetchLocalPlayers = async () => {
     }
   }
 
-  // 2. If Supabase responded successfully, update local cache to match authoritative cloud state (Deletions are respected!)
+  // Helper to deduplicate players by normalized name / phone
+  const deduplicatePlayers = (players) => {
+    if (!Array.isArray(players)) return [];
+    const seen = new Map();
+    for (const p of players) {
+      if (!p || !p.name) continue;
+      // Key by phone if available, or normalized lowercased name without spaces
+      const normName = String(p.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const key = p.phone ? `phone_${p.phone.replace(/\D/g, '')}` : `name_${normName}`;
+      
+      const existing = seen.get(key);
+      if (!existing) {
+        seen.set(key, p);
+      } else {
+        // Keep the more complete record (e.g. has photo or longer formatted name)
+        const preferCurrent = (p.photoUrl && !existing.photoUrl) || (p.name.length > existing.name.length);
+        if (preferCurrent) {
+          seen.set(key, { ...existing, ...p });
+        }
+      }
+    }
+    return Array.from(seen.values());
+  };
+
+  // 2. If Supabase responded successfully, deduplicate and update local cache
   if (localDbPlayers !== null) {
+    const cleanPlayers = deduplicatePlayers(localDbPlayers);
     try {
-      await AsyncStorage.setItem(LOCAL_PLAYERS_STORAGE_KEY, JSON.stringify(localDbPlayers));
+      await AsyncStorage.setItem(LOCAL_PLAYERS_STORAGE_KEY, JSON.stringify(cleanPlayers));
     } catch {}
-    syncPlayersToPhotoRegistry(localDbPlayers);
-    return localDbPlayers;
+    syncPlayersToPhotoRegistry(cleanPlayers);
+    return cleanPlayers;
   }
 
   // 3. Offline Fallback: If network is unreachable, read from AsyncStorage cache
@@ -61,8 +86,9 @@ export const fetchLocalPlayers = async () => {
     cachedPlayers = cachedStr ? JSON.parse(cachedStr) : [];
   } catch (err) {}
 
-  syncPlayersToPhotoRegistry(cachedPlayers);
-  return cachedPlayers;
+  const cleanCached = deduplicatePlayers(cachedPlayers);
+  syncPlayersToPhotoRegistry(cleanCached);
+  return cleanCached;
 };
 
 export const resolveDirectImageUrl = async (url) => {
