@@ -210,16 +210,56 @@ export function MyProfileScreen({
       const pName = typeof targetPlayer === 'string'
         ? targetPlayer
         : (targetPlayer.name || targetPlayer.fullName || targetPlayer.playerName || 'Cricket Player');
-      setProfile({
-        name: pName,
-        role: targetPlayer.role || 'All-Rounder',
-        battingStyle: targetPlayer.battingStyle || 'Right Hand Bat',
-        bowlingStyle: targetPlayer.bowlingStyle || 'Right Arm Medium',
-        city: targetPlayer.city || 'Sadokan',
-        jerseyNumber: targetPlayer.jerseyNumber || '',
-        dob: targetPlayer.dob || '',
-        photoUrl: targetPlayer.photoUrl || targetPlayer.avatar || ''
-      });
+      
+      const directPhoto = targetPlayer.photoUrl || targetPlayer.avatar || targetPlayer.photo_url || '';
+      
+      // Fetch rich profile from Supabase local_players table
+      try {
+        let dbP = null;
+        if (supabase) {
+          const { data } = await supabase
+            .from('local_players')
+            .select('*')
+            .ilike('name', pName.trim())
+            .limit(1)
+            .maybeSingle();
+          if (data) dbP = data;
+        }
+
+        const finalPhoto = dbP?.photo_url || dbP?.photoUrl || directPhoto || '';
+        const finalBatting = dbP?.batting_style || dbP?.battingStyle || targetPlayer.battingStyle || 'Right Hand Bat';
+        const finalBowling = dbP?.bowling_style || dbP?.bowlingStyle || targetPlayer.bowlingStyle || 'Right Arm Medium';
+        const finalRole = dbP?.role || targetPlayer.role || 'All-Rounder';
+        const finalCity = dbP?.city || targetPlayer.city || 'Sadokan';
+        const finalJersey = dbP?.jersey_number || dbP?.jerseyNumber || targetPlayer.jerseyNumber || '';
+        const finalDob = dbP?.dob || targetPlayer.dob || '';
+
+        if (finalPhoto) {
+          registerPlayerPhoto(pName, finalPhoto);
+        }
+
+        setProfile({
+          name: pName,
+          role: finalRole,
+          battingStyle: finalBatting,
+          bowlingStyle: finalBowling,
+          city: finalCity,
+          jerseyNumber: finalJersey,
+          dob: finalDob,
+          photoUrl: finalPhoto
+        });
+      } catch (e) {
+        setProfile({
+          name: pName,
+          role: targetPlayer.role || 'All-Rounder',
+          battingStyle: targetPlayer.battingStyle || 'Right Hand Bat',
+          bowlingStyle: targetPlayer.bowlingStyle || 'Right Arm Medium',
+          city: targetPlayer.city || 'Sadokan',
+          jerseyNumber: targetPlayer.jerseyNumber || '',
+          dob: targetPlayer.dob || '',
+          photoUrl: directPhoto || ''
+        });
+      }
       setLoading(false);
       return;
     }
