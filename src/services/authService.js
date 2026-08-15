@@ -221,7 +221,10 @@ export async function sendPhoneOtp(rawPhone) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phoneNumber: fullPhone
+          phoneNumber: fullPhone,
+          clientType: 'CLIENT_TYPE_ANDROID',
+          androidInstallApp: true,
+          packageName: 'com.cricscorer.app'
         })
       }
     );
