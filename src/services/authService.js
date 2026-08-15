@@ -209,21 +209,22 @@ export async function sendPhoneOtp(rawPhone) {
 
   const fullPhone = `+91${cleanPhone}`;
 
-  if (supabase && supabase.auth) {
-    try {
-      const { data, error } = await supabase.auth.signInWithOtp({
-        phone: fullPhone
-      });
-      if (error && !error.message.includes('Signups not allowed')) {
-        console.warn('Supabase SMS notice:', error.message);
-      }
-      return { success: true, phone: cleanPhone, fullPhone, data };
-    } catch (err) {
-      console.warn('Supabase OTP send fallback:', err);
-    }
+  if (!supabase || !supabase.auth) {
+    throw new Error('Authentication service is currently offline. Please check your connection.');
   }
 
-  return { success: true, phone: cleanPhone, fullPhone };
+  const { data, error } = await supabase.auth.signInWithOtp({
+    phone: fullPhone
+  });
+
+  if (error) {
+    if (error.message.includes('Unsupported phone provider') || error.message.includes('provider is not enabled')) {
+      throw new Error('SMS service is not enabled in Supabase yet. Please configure an SMS provider in Supabase Dashboard or sign in with Google.');
+    }
+    throw new Error(error.message || 'Could not send SMS verification code. Please try again.');
+  }
+
+  return { success: true, phone: cleanPhone, fullPhone, data };
 }
 
 /**
@@ -238,43 +239,40 @@ export async function verifyPhoneOtp(rawPhone, otpToken) {
   }
 
   const fullPhone = `+91${cleanPhone}`;
-  let supabaseUserId = null;
 
-  // 1. Verify with Supabase Auth if connected
-  if (supabase && supabase.auth) {
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: fullPhone,
-        token: token,
-        type: 'sms'
-      });
-      if (!error && data?.user) {
-        supabaseUserId = data.user.id;
-      }
-    } catch (err) {
-      console.warn('Supabase OTP verify fallback:', err);
-    }
+  if (!supabase || !supabase.auth) {
+    throw new Error('Authentication service is currently offline. Please check your connection.');
   }
 
-  // 2. Lookup existing player profile by phone in local_players
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone: fullPhone,
+    token: token,
+    type: 'sms'
+  });
+
+  if (error || !data?.user) {
+    throw new Error(error?.message || 'Invalid or expired OTP code. Please enter the correct code sent to your phone.');
+  }
+
+  const supabaseUserId = data.user.id;
+
+  // Lookup existing player profile by phone in local_players
   let existingProfile = null;
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('local_players')
-        .select('*')
-        .eq('phone', cleanPhone)
-        .limit(1);
-      if (!error && Array.isArray(data) && data.length > 0) {
-        existingProfile = data[0];
-      }
-    } catch (e) {
-      console.warn('Profile search by phone fallback:', e);
+  try {
+    const { data: profileData } = await supabase
+      .from('local_players')
+      .select('*')
+      .eq('phone', cleanPhone)
+      .limit(1);
+    if (Array.isArray(profileData) && profileData.length > 0) {
+      existingProfile = profileData[0];
     }
+  } catch (e) {
+    console.warn('Profile search by phone:', e);
   }
 
-  const userId = supabaseUserId || `phone_${cleanPhone}`;
-  const userName = existingProfile?.name || 'Cricket Player';
+  const userId = supabaseUserId;
+  const userName = existingProfile?.name || data.user.user_metadata?.full_name || 'Cricket Player';
 
   const userObj = {
     id: userId,
