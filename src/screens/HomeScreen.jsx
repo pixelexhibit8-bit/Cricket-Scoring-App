@@ -62,13 +62,8 @@ export function HomeScreen({
     const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(name) : { name, role: extraProps.role || 'Local Player', photoUrl: extraProps.photoUrl, city: extraProps.city });
     
     if (setSelectedPlayerName) setSelectedPlayerName(name);
-    
-    if (typeof onOpenPlayerProfile === 'function') {
-      onOpenPlayerProfile(profile);
-    } else {
-      if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
-      if (setCurrentScreen) setCurrentScreen('playerProfile');
-    }
+    if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
+    if (setCurrentScreen) setCurrentScreen('playerProfile');
   };
   const homeTabs = [
     { id: 'live', label: 'Live', icon: 'radio-outline' },
@@ -233,8 +228,132 @@ export function HomeScreen({
         </View>
       )}
 
-      {/* BODY (ABOUT TAB OR MATCHES SWIPE PAGER) */}
-      {bottomNavTab === 'about' ? (
+      {/* BODY (SEARCH RESULTS, ABOUT TAB, OR MATCHES SWIPE PAGER) */}
+      {Boolean(searchQuery && searchQuery.trim().length > 0) ? (
+        <ScrollView
+          style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+          contentContainerStyle={[styles.tabContent, { paddingBottom: 40 }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {(() => {
+            const q = searchQuery.toLowerCase().trim();
+            const qClean = q.replace(/\D/g, '');
+
+            // 1. Search Players
+            const allPlayersMap = new Map();
+            (localPlayersList || []).forEach(p => { if (p?.name) allPlayersMap.set(p.name.trim().toLowerCase(), p); });
+            (MASTER_PLAYERS_DB || []).forEach(p => { if (p?.name && !allPlayersMap.has(p.name.trim().toLowerCase())) allPlayersMap.set(p.name.trim().toLowerCase(), p); });
+            (setupPlayerNames || []).forEach(name => {
+              if (name && !allPlayersMap.has(name.trim().toLowerCase())) {
+                allPlayersMap.set(name.trim().toLowerCase(), { name, role: 'Local Player' });
+              }
+            });
+
+            const matchedPlayers = Array.from(allPlayersMap.values()).filter(p => {
+              const name = (p.name || '').toLowerCase();
+              const role = (p.role || '').toLowerCase();
+              const city = (p.city || '').toLowerCase();
+              const phone = String(p.phone || p.mobile || '').replace(/\D/g, '');
+              return name.includes(q) || role.includes(q) || city.includes(q) || (qClean.length > 0 && phone.includes(qClean));
+            });
+
+            // 2. Search Finished & Live Matches
+            const matchedFinished = (visibleFinishedMatches || []).filter(m => {
+              const t1 = (m.teams?.[0]?.name || m.innings?.[0]?.battingTeam?.name || m.inn1BattingTeam || '').toLowerCase();
+              const t2 = (m.teams?.[1]?.name || m.innings?.[0]?.bowlingTeam?.name || m.inn1BowlingTeam || '').toLowerCase();
+              const title = (m.matchTitle || m.title || '').toLowerCase();
+              const venue = (m.venue || m.venueName || m.ground || '').toLowerCase();
+              return t1.includes(q) || t2.includes(q) || title.includes(q) || venue.includes(q);
+            });
+
+            const isLiveMatchMatch = activeMatch && (() => {
+              const t1 = (activeMatch.innings?.[0]?.battingTeam?.name || activeMatch.teams?.[0]?.name || '').toLowerCase();
+              const t2 = (activeMatch.innings?.[0]?.bowlingTeam?.name || activeMatch.teams?.[1]?.name || '').toLowerCase();
+              const title = (activeMatch.matchTitle || '').toLowerCase();
+              const venue = (activeMatch.venueName || '').toLowerCase();
+              return t1.includes(q) || t2.includes(q) || title.includes(q) || venue.includes(q);
+            })();
+
+            const totalResults = matchedPlayers.length + matchedFinished.length + (isLiveMatchMatch ? 1 : 0);
+
+            if (totalResults === 0) {
+              return (
+                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 24, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                  <Ionicons name="search-outline" size={32} color="#94A3B8" />
+                  <Text style={{ fontSize: 15, fontFamily: systemFontMedium, color: '#0F172A' }}>
+                    No results found
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', fontFamily: systemFont, lineHeight: 18 }}>
+                    No player, team, ground, or match found matching "{searchQuery}"
+                  </Text>
+                </View>
+              );
+            }
+
+            return (
+              <View style={{ gap: 16 }}>
+                {/* MATCHES SECTION */}
+                {(isLiveMatchMatch || matchedFinished.length > 0) && (
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
+                      <Ionicons name="trophy-outline" size={15} color="#0284C7" />
+                      <Text style={[styles.sectionLabel, { marginBottom: 0 }]}>
+                        MATCHES ({ (isLiveMatchMatch ? 1 : 0) + matchedFinished.length })
+                      </Text>
+                    </View>
+                    {isLiveMatchMatch && renderActiveMatchListCard && renderActiveMatchListCard()}
+                    {matchedFinished.map(f => renderFinishedMatchListCard && renderFinishedMatchListCard(f))}
+                  </View>
+                )}
+
+                {/* PLAYERS SECTION */}
+                {matchedPlayers.length > 0 && (
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
+                      <Ionicons name="people-outline" size={15} color="#0284C7" />
+                      <Text style={[styles.sectionLabel, { marginBottom: 0 }]}>
+                        PLAYERS ({matchedPlayers.length})
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
+                      {matchedPlayers.slice(0, 15).map((p, idx) => {
+                        const isLast = idx === Math.min(matchedPlayers.length - 1, 14);
+                        return (
+                          <TouchableOpacity
+                            key={`search-p-${p.name}-${idx}`}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingHorizontal: 14,
+                              paddingVertical: 12,
+                              gap: 12,
+                              borderBottomWidth: isLast ? 0 : 1,
+                              borderBottomColor: '#F1F5F9'
+                            }}
+                            onPress={() => handlePlayerPress(p.name, { role: p.role, photoUrl: p.photoUrl, city: p.city })}
+                          >
+                            <PlayerAvatar name={p.name} photoUrl={p.photoUrl} size={42} />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#0F172A' }}>
+                                {p.name}
+                              </Text>
+                              <Text style={{ fontSize: 11.5, color: '#64748B', fontFamily: systemFont, marginTop: 2 }}>
+                                {p.role || 'Local Player'} {p.city ? `• ${p.city}` : ''}
+                              </Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </View>
+            );
+          })()}
+        </ScrollView>
+      ) : bottomNavTab === 'about' ? (
         <ScrollView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
           <AboutAppScreen />
         </ScrollView>
@@ -281,62 +400,6 @@ export function HomeScreen({
                 />
               }
             >
-              {/* SEARCH RESULTS IF SEARCHING */}
-              {searchNeedle.length > 0 && (() => {
-                const matchedPlayers = setupPlayerNames.filter(pName => {
-                  if (!searchNeedle) return false;
-                  const q = searchNeedle.toLowerCase().trim();
-                  const qClean = q.replace(/\D/g, '');
-                  const dbMatch = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === pName.trim().toLowerCase());
-                  const phone = dbMatch?.phone || dbMatch?.mobile || '';
-                  const phoneClean = String(phone).replace(/\D/g, '');
-                  const matchName = pName.toLowerCase().includes(q);
-                  const matchPhoneRaw = Boolean(phone && String(phone).toLowerCase().includes(q));
-                  const matchPhoneClean = Boolean(qClean.length > 0 && phoneClean.length > 0 && phoneClean.includes(qClean));
-                  return matchName || matchPhoneRaw || matchPhoneClean;
-                });
-
-                if (matchedPlayers.length === 0) {
-                  return (
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12, alignItems: 'center', gap: 8 }}>
-                      <Ionicons name="search-outline" size={24} color="#94A3B8" />
-                      <Text style={{ fontSize: 13, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>
-                        No Player Found
-                      </Text>
-                      <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center', fontFamily: systemFontMedium }}>
-                        No player matching "{searchNeedle}" in name or mobile number
-                      </Text>
-                    </View>
-                  );
-                }
-
-                return (
-                  <View style={{ marginBottom: 12 }}>
-                    <Text style={[styles.sectionLabel, { marginBottom: 6 }]}>PLAYERS ({matchedPlayers.length})</Text>
-                    {matchedPlayers.slice(0, 5).map(pName => (
-                      <TouchableOpacity
-                        key={pName}
-                        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 6, gap: 10 }}
-                        onPress={() => {
-                          const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === pName.trim().toLowerCase())
-                            || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === pName.trim().toLowerCase());
-                          const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(pName) : { name: pName, role: 'Local Player' });
-                          if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
-                          setSelectedPlayerName(pName);
-                          setCurrentScreen('playerProfile');
-                        }}
-                      >
-                        {renderSetupPlayerPhoto && renderSetupPlayerPhoto(pName, 32)}
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 13, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{pName}</Text>
-                          <Text style={{ fontSize: 11, color: '#0284C7', fontFamily: systemFontBold, marginTop: 1 }}>Local Player</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={16} color="#0284C7" />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                );
-              })()}
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
                 <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont, letterSpacing: 0.5, textTransform: 'uppercase' }}>

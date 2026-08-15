@@ -202,6 +202,20 @@ export function MyProfileScreen({
   }, [quickPlayerName, quickPhone]);
 
   const loadUserSession = async () => {
+    if (targetPlayer) {
+      setProfile({
+        name: targetPlayer.name || targetPlayer.fullName || 'Cricket Player',
+        role: targetPlayer.role || 'All-Rounder',
+        battingStyle: targetPlayer.battingStyle || 'Right Hand Bat',
+        bowlingStyle: targetPlayer.bowlingStyle || 'Right Arm Medium',
+        city: targetPlayer.city || 'Local Ground',
+        jerseyNumber: targetPlayer.jerseyNumber || '',
+        dob: targetPlayer.dob || '',
+        photoUrl: targetPlayer.photoUrl || targetPlayer.avatar || ''
+      });
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const user = await getCurrentUser();
@@ -457,7 +471,7 @@ export function MyProfileScreen({
   }
 
   // ─── 1. SIGN IN SCREEN (PHONE OTP OR GOOGLE) ───
-  if (!currentUser) {
+  if (!currentUser && !isPublicView) {
     return (
       <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
         <ScrollView style={styles.container} contentContainerStyle={styles.authContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
