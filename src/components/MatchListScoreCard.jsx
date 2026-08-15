@@ -4,6 +4,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import TeamIdentityMark from './TeamIdentityMark';
 import { getTeamShortCode } from '../utils/teamUtils';
 import { systemFont, systemFontMedium, systemFontBold, fontWeights, typeScale } from '../theme';
+import { ScalePressable, FadeSlideIn } from './motion/MotionSystem';
 
 export const MatchListScoreCard = ({
   subtitle,
@@ -24,7 +25,8 @@ export const MatchListScoreCard = ({
   footerText,
   footerColor = '#B45309',
   topRightIcon = 'notifications-outline',
-  onPress
+  onPress,
+  delay = 0
 }) => {
   const renderTeamRow = (team, score, overs, muted = false) => {
     const isActive = activeTeamName === team?.name;
@@ -96,24 +98,25 @@ export const MatchListScoreCard = ({
   };
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.82}
-      onPress={onPress}
-      style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        gap: 12
-      }}
-    >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-        <Text style={{ fontSize: 12, color: '#64748B', flex: 1, fontFamily: systemFontMedium }} numberOfLines={1}>
-          {subtitle}
-        </Text>
-        {topRightIcon ? <Ionicons name={topRightIcon} size={18} color="#64748B" /> : null}
-      </View>
+    <FadeSlideIn delay={delay} distance={8}>
+      <ScalePressable
+        activeScale={0.98}
+        onPress={onPress}
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 16,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
+          gap: 12
+        }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontSize: 12, color: '#64748B', flex: 1, fontFamily: systemFontMedium }} numberOfLines={1}>
+            {subtitle}
+          </Text>
+          {topRightIcon ? <Ionicons name={topRightIcon} size={18} color="#64748B" /> : null}
+        </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View style={{ flex: 1, gap: 10 }}>
@@ -187,7 +190,8 @@ export const MatchListScoreCard = ({
           {footerText}
         </Text>
       ) : null}
-    </TouchableOpacity>
+      </ScalePressable>
+    </FadeSlideIn>
   );
 };
 

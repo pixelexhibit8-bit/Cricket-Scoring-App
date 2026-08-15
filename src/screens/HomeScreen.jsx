@@ -17,6 +17,7 @@ import { AppBottomNav } from '../components/navigation/AppBottomNav.jsx';
 import { AboutAppScreen } from '../components/AboutAppScreen.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
 
 export function HomeScreen({
   openScorerScreen,
@@ -463,52 +464,53 @@ export function HomeScreen({
                   {TOP_BATTERS.map((b, idx) => {
                     const isLast = idx === TOP_BATTERS.length - 1;
                     return (
-                      <TouchableOpacity
-                        key={`bat-${b.name}-${b.rank}`}
-                        activeOpacity={0.7}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingVertical: 12,
-                          paddingHorizontal: 16,
-                          borderBottomWidth: isLast ? 0 : 1,
-                          borderBottomColor: '#F1F5F9'
-                        }}
-                        onPress={() => {
-                          const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
-                            || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
-                          const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
-                          if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
-                          setSelectedPlayerName(b.name);
-                          setCurrentScreen('playerProfile');
-                        }}
-                      >
-                        <Text style={{
-                          width: 28,
-                          fontSize: 15,
-                          color: b.rank <= 3 ? '#0F172A' : '#64748B',
-                          fontFamily: systemFontMedium
-                        }}>
-                          {b.rank}
-                        </Text>
-                        <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
-                        <View style={{ flex: 1, marginLeft: 14 }}>
-                          <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
-                            {b.name}
+                      <FadeSlideIn key={`bat-${b.name}-${b.rank}`} delay={Math.min(idx * 30, 240)} distance={6}>
+                        <ScalePressable
+                          activeScale={0.985}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: 12,
+                            paddingHorizontal: 16,
+                            borderBottomWidth: isLast ? 0 : 1,
+                            borderBottomColor: '#F1F5F9'
+                          }}
+                          onPress={() => {
+                            const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
+                              || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
+                            const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
+                            if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
+                            setSelectedPlayerName(b.name);
+                            setCurrentScreen('playerProfile');
+                          }}
+                        >
+                          <Text style={{
+                            width: 28,
+                            fontSize: 15,
+                            color: b.rank <= 3 ? '#0F172A' : '#64748B',
+                            fontFamily: systemFontMedium
+                          }}>
+                            {b.rank}
                           </Text>
-                          <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
-                            {b.city || 'Sadokan'}
-                          </Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }}>
-                            {b.runs}
-                          </Text>
-                          <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
-                            SR {b.sr}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
+                          <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
+                          <View style={{ flex: 1, marginLeft: 14 }}>
+                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                              {b.name}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
+                              {b.city || 'Sadokan'}
+                            </Text>
+                          </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }}>
+                              {b.runs}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
+                              SR {b.sr}
+                            </Text>
+                          </View>
+                        </ScalePressable>
+                      </FadeSlideIn>
                     );
                   })}
                 </View>
@@ -527,52 +529,53 @@ export function HomeScreen({
                   {TOP_BOWLERS.map((b, idx) => {
                     const isLast = idx === TOP_BOWLERS.length - 1;
                     return (
-                      <TouchableOpacity
-                        key={`bowl-${b.name}-${b.rank}`}
-                        activeOpacity={0.7}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingVertical: 12,
-                          paddingHorizontal: 16,
-                          borderBottomWidth: isLast ? 0 : 1,
-                          borderBottomColor: '#F1F5F9'
-                        }}
-                        onPress={() => {
-                          const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
-                            || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
-                          const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
-                          if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
-                          setSelectedPlayerName(b.name);
-                          setCurrentScreen('playerProfile');
-                        }}
-                      >
-                        <Text style={{
-                          width: 28,
-                          fontSize: 15,
-                          color: b.rank <= 3 ? '#0F172A' : '#64748B',
-                          fontFamily: systemFontMedium
-                        }}>
-                          {b.rank}
-                        </Text>
-                        <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
-                        <View style={{ flex: 1, marginLeft: 14 }}>
-                          <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
-                            {b.name}
+                      <FadeSlideIn key={`bowl-${b.name}-${b.rank}`} delay={Math.min(idx * 30, 240)} distance={6}>
+                        <ScalePressable
+                          activeScale={0.985}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: 12,
+                            paddingHorizontal: 16,
+                            borderBottomWidth: isLast ? 0 : 1,
+                            borderBottomColor: '#F1F5F9'
+                          }}
+                          onPress={() => {
+                            const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
+                              || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
+                            const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
+                            if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
+                            setSelectedPlayerName(b.name);
+                            setCurrentScreen('playerProfile');
+                          }}
+                        >
+                          <Text style={{
+                            width: 28,
+                            fontSize: 15,
+                            color: b.rank <= 3 ? '#0F172A' : '#64748B',
+                            fontFamily: systemFontMedium
+                          }}>
+                            {b.rank}
                           </Text>
-                          <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
-                            {b.city || 'Sadokan'}
-                          </Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }}>
-                            {b.wickets} Wkts
-                          </Text>
-                          <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
-                            ECO {b.econ}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
+                          <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
+                          <View style={{ flex: 1, marginLeft: 14 }}>
+                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                              {b.name}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
+                              {b.city || 'Sadokan'}
+                            </Text>
+                          </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }}>
+                              {b.wickets} Wkts
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
+                              ECO {b.econ}
+                            </Text>
+                          </View>
+                        </ScalePressable>
+                      </FadeSlideIn>
                     );
                   })}
                 </View>
@@ -591,52 +594,53 @@ export function HomeScreen({
                   {TOP_ALLROUNDERS.map((b, idx) => {
                     const isLast = idx === TOP_ALLROUNDERS.length - 1;
                     return (
-                      <TouchableOpacity
-                        key={`all-${b.name}-${b.rank}`}
-                        activeOpacity={0.7}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingVertical: 12,
-                          paddingHorizontal: 16,
-                          borderBottomWidth: isLast ? 0 : 1,
-                          borderBottomColor: '#F1F5F9'
-                        }}
-                        onPress={() => {
-                          const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
-                            || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
-                          const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
-                          if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
-                          setSelectedPlayerName(b.name);
-                          setCurrentScreen('playerProfile');
-                        }}
-                      >
-                        <Text style={{
-                          width: 28,
-                          fontSize: 15,
-                          color: b.rank <= 3 ? '#0F172A' : '#64748B',
-                          fontFamily: systemFontMedium
-                        }}>
-                          {b.rank}
-                        </Text>
-                        <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
-                        <View style={{ flex: 1, marginLeft: 14 }}>
-                          <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
-                            {b.name}
+                      <FadeSlideIn key={`all-${b.name}-${b.rank}`} delay={Math.min(idx * 30, 240)} distance={6}>
+                        <ScalePressable
+                          activeScale={0.985}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: 12,
+                            paddingHorizontal: 16,
+                            borderBottomWidth: isLast ? 0 : 1,
+                            borderBottomColor: '#F1F5F9'
+                          }}
+                          onPress={() => {
+                            const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
+                              || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
+                            const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
+                            if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
+                            setSelectedPlayerName(b.name);
+                            setCurrentScreen('playerProfile');
+                          }}
+                        >
+                          <Text style={{
+                            width: 28,
+                            fontSize: 15,
+                            color: b.rank <= 3 ? '#0F172A' : '#64748B',
+                            fontFamily: systemFontMedium
+                          }}>
+                            {b.rank}
                           </Text>
-                          <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
-                            {b.city || 'Sadokan'}
-                          </Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }}>
-                            {b.pts}
-                          </Text>
-                          <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
-                            MVP Points
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
+                          <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
+                          <View style={{ flex: 1, marginLeft: 14 }}>
+                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                              {b.name}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
+                              {b.city || 'Sadokan'}
+                            </Text>
+                          </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }}>
+                              {b.pts}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
+                              MVP Points
+                            </Text>
+                          </View>
+                        </ScalePressable>
+                      </FadeSlideIn>
                     );
                   })}
                 </View>

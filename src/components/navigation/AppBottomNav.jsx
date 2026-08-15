@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { systemFontMedium, systemFontBold } from '../../theme.js';
 
+import { ScalePressable } from '../motion/MotionSystem.jsx';
+
 export function AppBottomNav({ activeTab, onTabChange }) {
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 6 : 4);
@@ -38,11 +40,11 @@ export function AppBottomNav({ activeTab, onTabChange }) {
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
-            <TouchableOpacity
+            <ScalePressable
               key={tab.id}
               onPress={() => onTabChange(tab.id)}
               style={styles.tabButton}
-              activeOpacity={0.7}
+              activeScale={0.92}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
             >
@@ -68,7 +70,7 @@ export function AppBottomNav({ activeTab, onTabChange }) {
               >
                 {tab.label}
               </Text>
-            </TouchableOpacity>
+            </ScalePressable>
           );
         })}
       </View>
