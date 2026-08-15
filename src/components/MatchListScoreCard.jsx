@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import TeamIdentityMark from './TeamIdentityMark';
 import { getTeamShortCode } from '../utils/teamUtils';
-import { systemFont, fontWeights, typeScale } from '../theme';
+import { systemFont, systemFontMedium, systemFontBold, fontWeights, typeScale } from '../theme';
 
 export const MatchListScoreCard = ({
   subtitle,
@@ -39,10 +39,9 @@ export const MatchListScoreCard = ({
         <Text
           style={{
             fontSize: 15,
-            fontWeight: isWinner ? fontWeights.bold : (isLoser ? fontWeights.medium : fontWeights.bold),
             color: isLoser ? '#94A3B8' : (muted ? '#64748B' : '#0F172A'),
             minWidth: 42,
-            fontFamily: systemFont
+            fontFamily: systemFontMedium
           }}
           numberOfLines={1}
         >
@@ -55,10 +54,9 @@ export const MatchListScoreCard = ({
               selectable
               style={{
                 color: scoreColor,
-                fontSize: typeScale.keyAction,
-                fontWeight: fontWeights.bold,
+                fontSize: 16.5,
                 fontVariant: ['tabular-nums'],
-                fontFamily: systemFont
+                fontFamily: systemFontMedium
               }}
               numberOfLines={1}
             >
@@ -70,9 +68,8 @@ export const MatchListScoreCard = ({
                 style={{
                   color: '#64748B',
                   fontSize: 13,
-                  fontWeight: fontWeights.medium,
                   fontVariant: ['tabular-nums'],
-                  fontFamily: systemFont
+                  fontFamily: systemFontMedium
                 }}
                 numberOfLines={1}
               >
@@ -87,8 +84,7 @@ export const MatchListScoreCard = ({
             style={{
               color: muted ? '#94A3B8' : '#64748B',
               fontSize: 13,
-              fontWeight: fontWeights.medium,
-              fontFamily: systemFont
+              fontFamily: systemFontMedium
             }}
             numberOfLines={1}
           >
@@ -113,7 +109,7 @@ export const MatchListScoreCard = ({
       }}
     >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: fontWeights.medium, flex: 1, fontFamily: systemFont }} numberOfLines={1}>
+        <Text style={{ fontSize: 12, color: '#64748B', flex: 1, fontFamily: systemFontMedium }} numberOfLines={1}>
           {subtitle}
         </Text>
         {topRightIcon ? <Ionicons name={topRightIcon} size={18} color="#64748B" /> : null}
@@ -128,20 +124,19 @@ export const MatchListScoreCard = ({
         <View style={{ width: 1, height: 48, backgroundColor: '#F1F5F9', marginHorizontal: 14 }} />
 
         {resultTitle ? (
-          <View style={{ width: 104, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
             <Text
               selectable
               style={{
-                fontSize: 16,
-                lineHeight: 20,
-                fontWeight: fontWeights.semibold,
+                fontSize: 13.5,
+                lineHeight: 18,
                 color: resultColor,
                 textAlign: 'center',
-                fontFamily: systemFont
+                fontFamily: systemFontMedium
               }}
-              numberOfLines={1}
+              numberOfLines={2}
               adjustsFontSizeToFit
-              minimumFontScale={0.82}
+              minimumFontScale={0.85}
             >
               {resultTitle}
             </Text>
@@ -151,25 +146,24 @@ export const MatchListScoreCard = ({
                 style={{
                   fontSize: 12,
                   lineHeight: 16,
-                  fontWeight: fontWeights.medium,
                   color: '#64748B',
                   textAlign: 'center',
-                  marginTop: 4,
-                  fontFamily: systemFont
+                  marginTop: 3,
+                  fontFamily: systemFontMedium
                 }}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.82}
+                minimumFontScale={0.85}
               >
                 {resultDetail}
               </Text>
             ) : null}
           </View>
         ) : (
-          <View style={{ width: 104, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: statusDotColor }} />
-              <Text style={{ fontSize: 15, fontWeight: fontWeights.bold, color: statusColor, fontFamily: systemFont }}>
+              <Text style={{ fontSize: 14.5, color: statusColor, fontFamily: systemFontMedium }}>
                 {statusLabel}
               </Text>
             </View>
@@ -182,9 +176,8 @@ export const MatchListScoreCard = ({
           selectable
           style={{
             fontSize: 12,
-            fontWeight: fontWeights.semibold,
             color: footerColor,
-            fontFamily: systemFont,
+            fontFamily: systemFontMedium,
             paddingTop: 4,
             borderTopWidth: 1,
             borderTopColor: '#F8FAFC'
@@ -199,3 +192,4 @@ export const MatchListScoreCard = ({
 };
 
 export default MatchListScoreCard;
+
