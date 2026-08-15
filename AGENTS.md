@@ -36,6 +36,11 @@ This is a **Cricket App (CricFlow)**. ALWAYS use the installed icon libraries:
 - Sub-filter buttons must have BOTH an icon AND a text label
 - No duplicate icons + emoji for the same element
 
+# Typography & Font Weight Rule - STRICT
+- In Leaderboard Rankings, lists, table rows, and player details, ALWAYS use clean Regular/Medium typography (`systemFont` / `systemFontMedium`).
+- NEVER use heavy bold fonts (`systemFontBold` or `fontWeight: 'bold'`) across table rows, ranking numbers, names, or values.
+- Keep the typography sleek, minimal, and modern without aggressive bolding.
+
 # Tab Swipe Interaction - STRICT
 
 - Every page-level tab interface in the Expo app must support horizontal swipe as well as tab presses.

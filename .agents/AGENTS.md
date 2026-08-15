@@ -25,3 +25,8 @@
 - Break large screens into reusable feature components.
 - Do not dump inline modals, styles, or large helper functions into screen or entry point files.
 
+## 4. Typography & Font Weight Rule (STRICT)
+- In Leaderboard Rankings, lists, table rows, and player cards, ALWAYS use clean Regular/Medium typography (`systemFont` / `systemFontMedium`).
+- NEVER use heavy bold fonts (`systemFontBold` or `fontWeight: 'bold'`) across table rows, ranking numbers, names, or values.
+- Keep the typography sleek, minimal, and modern without aggressive bolding.
+

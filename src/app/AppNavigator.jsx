@@ -37,20 +37,20 @@ const nameFitProps = {
   minimumFontScale: 0.82
 };
 
-// â”€â”€ Voice Announcements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Voice Announcements (Indian Female Voice Engine) ──────────────────────────
 const speakBall = (runs, extraType, isWicket) => {
   let msg = '';
-  if (isWicket) msg = 'Wicket!';
-  else if (extraType === 'wd') msg = runs > 0 ? `Wide, ${runs} run${runs > 1 ? 's' : ''}` : 'Wide ball!';
-  else if (extraType === 'nb') msg = runs > 0 ? `No ball, ${runs} run${runs > 1 ? 's' : ''}` : 'No ball!';
+  if (isWicket) msg = 'Wicket! Out!';
+  else if (extraType === 'wd') msg = runs > 0 ? `Wide ball, plus ${runs} run` : 'Wide ball!';
+  else if (extraType === 'nb') msg = runs > 0 ? `No ball, plus ${runs} run` : 'No ball!';
   else if (runs === 0) msg = 'Dot ball';
-  else if (runs === 1) msg = 'One run';
-  else if (runs === 2) msg = 'Two runs';
-  else if (runs === 3) msg = 'Three runs';
-  else if (runs === 4) msg = 'FOUR!';
-  else if (runs === 6) msg = 'SIX!';
-  else msg = `${runs} runs`;
-  Speech.speak(msg, { language: 'en-IN', pitch: 1.1, rate: 0.95 });
+  else if (runs === 1) msg = 'Ek run';
+  else if (runs === 2) msg = 'Do run';
+  else if (runs === 3) msg = 'Teen run';
+  else if (runs === 4) msg = 'Chaar run! Chauka!';
+  else if (runs === 6) msg = 'Chhe run! Shaandaar Chhakka!';
+  else msg = `${runs} run`;
+  Speech.speak(msg, { language: 'hi-IN', pitch: 1.18, rate: 0.92 });
 };
 
 const speakScoreToken = (token) => {
@@ -5781,9 +5781,9 @@ const styles = StyleSheet.create({
   idleBtn: { backgroundColor: '#0284C7', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginTop: 4 },
   idleBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: fontWeights.bold, fontFamily: systemFont },
   subFilterRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  subFilterBtn: { flex: 1, flexDirection: 'column', alignItems: 'center', gap: 3, paddingVertical: 9, backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1, borderColor: '#CBD5E1' },
+  subFilterBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1, borderColor: '#CBD5E1' },
   subFilterActive: { backgroundColor: '#0284C7', borderColor: '#0284C7' },
-  subFilterText: { fontSize: 10, fontWeight: fontWeights.bold, color: '#475569', fontFamily: systemFont },
+  subFilterText: { fontSize: 13.5, fontWeight: fontWeights.bold, color: '#475569', fontFamily: systemFontBold },
   rankItem: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', gap: 10 },
   rankBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#E0F2FE', justifyContent: 'center', alignItems: 'center' },
   rankBadgeText: { color: '#0369A1', fontWeight: fontWeights.bold, fontSize: 11, fontFamily: systemFont },

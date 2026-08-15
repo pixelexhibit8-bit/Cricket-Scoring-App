@@ -3,20 +3,20 @@ import { View, Text, ScrollView } from 'react-native';
 import * as Speech from 'expo-speech';
 import { systemFont, systemFontBold, fontWeights } from '../theme.js';
 
-// ── Voice Announcements ────────────────────────────────────────────────────────
+// ── Voice Announcements (Indian Female Voice Engine) ──────────────────────────
 export const speakBall = (runs, extraType, isWicket) => {
   let msg = '';
-  if (isWicket) msg = 'Wicket!';
-  else if (extraType === 'wd') msg = runs > 0 ? `Wide, ${runs} run${runs > 1 ? 's' : ''}` : 'Wide ball!';
-  else if (extraType === 'nb') msg = runs > 0 ? `No ball, ${runs} run${runs > 1 ? 's' : ''}` : 'No ball!';
+  if (isWicket) msg = 'Wicket! Out!';
+  else if (extraType === 'wd') msg = runs > 0 ? `Wide ball, plus ${runs} run` : 'Wide ball!';
+  else if (extraType === 'nb') msg = runs > 0 ? `No ball, plus ${runs} run` : 'No ball!';
   else if (runs === 0) msg = 'Dot ball';
-  else if (runs === 1) msg = 'One run';
-  else if (runs === 2) msg = 'Two runs';
-  else if (runs === 3) msg = 'Three runs';
-  else if (runs === 4) msg = 'FOUR!';
-  else if (runs === 6) msg = 'SIX!';
-  else msg = `${runs} runs`;
-  Speech.speak(msg, { language: 'en-IN', pitch: 1.1, rate: 0.95 });
+  else if (runs === 1) msg = 'Ek run';
+  else if (runs === 2) msg = 'Do run';
+  else if (runs === 3) msg = 'Teen run';
+  else if (runs === 4) msg = 'Chaar run! Chauka!';
+  else if (runs === 6) msg = 'Chhe run! Shaandaar Chhakka!';
+  else msg = `${runs} run`;
+  Speech.speak(msg, { language: 'hi-IN', pitch: 1.18, rate: 0.92 });
 };
 
 export const speakScoreToken = (token) => {

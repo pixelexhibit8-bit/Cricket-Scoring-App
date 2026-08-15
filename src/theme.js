@@ -75,10 +75,10 @@ export const typeScale = {
 
 export const fontWeights = {
   regular: 'normal',
-  medium: '500',
-  semibold: '600',
-  bold: '700',
-  strong: 'bold'
+  medium: Platform.OS === 'ios' ? '500' : 'normal',
+  semibold: Platform.OS === 'ios' ? '600' : 'normal',
+  bold: Platform.OS === 'ios' ? '700' : 'normal',
+  strong: Platform.OS === 'ios' ? 'bold' : 'normal'
 };
 
 export const publicType = {
