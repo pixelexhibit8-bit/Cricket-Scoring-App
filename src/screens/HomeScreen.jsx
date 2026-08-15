@@ -196,7 +196,7 @@ export function HomeScreen({
       </View>
 
       {/* MATCHES SUB-TABS (SCORECARD SWIPER STYLE UNDERLINE TABS) */}
-      {bottomNavTab === 'matches' && (
+      {(bottomNavTab === 'matches' || bottomNavTab === 'home' || !bottomNavTab) && (
         <View style={{
           backgroundColor: '#FFFFFF',
           borderBottomWidth: 1,

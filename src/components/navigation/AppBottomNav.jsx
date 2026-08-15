@@ -38,7 +38,9 @@ export function AppBottomNav({ activeTab, onTabChange }) {
     <View style={[styles.container, { paddingBottom: bottomPadding }]}>
       <View style={styles.navRow}>
         {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
+          const isActive = activeTab === tab.id 
+            || (tab.id === 'matches' && (activeTab === 'home' || !activeTab))
+            || (tab.id === 'home' && (activeTab === 'matches' || !activeTab));
           return (
             <ScalePressable
               key={tab.id}
