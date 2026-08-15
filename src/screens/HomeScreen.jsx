@@ -49,11 +49,27 @@ export function HomeScreen({
   MASTER_PLAYERS_DB = [],
   getSetupPlayerProfile,
   setSelectedPlayerProfile,
+  onOpenPlayerProfile,
   styles,
   isScorerUnlocked
 }) {
   const { width: screenWidth } = useWindowDimensions();
   const homePagerRef = useRef(null);
+
+  const handlePlayerPress = (name, extraProps = {}) => {
+    const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === String(name).trim().toLowerCase())
+      || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === String(name).trim().toLowerCase());
+    const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(name) : { name, role: extraProps.role || 'Local Player', photoUrl: extraProps.photoUrl, city: extraProps.city });
+    
+    if (setSelectedPlayerName) setSelectedPlayerName(name);
+    
+    if (typeof onOpenPlayerProfile === 'function') {
+      onOpenPlayerProfile(profile);
+    } else {
+      if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
+      if (setCurrentScreen) setCurrentScreen('playerProfile');
+    }
+  };
   const homeTabs = [
     { id: 'live', label: 'Live', icon: 'radio-outline' },
     { id: 'finished', label: 'Finished', icon: 'trophy-outline' },
@@ -420,19 +436,49 @@ export function HomeScreen({
               }
             >
               <Text style={styles.sectionLabel}>PLAYER LEADERBOARD RANKINGS</Text>
-              <View style={styles.subFilterRow}>
-                <TouchableOpacity style={[styles.subFilterBtn, statsCategory === 'batters' && styles.subFilterActive]} onPress={() => setStatsCategory('batters')}>
-                  <MaterialCommunityIcons name="cricket" size={15} color={statsCategory === 'batters' ? '#FFFFFF' : '#475569'} />
-                  <Text style={[styles.subFilterText, statsCategory === 'batters' && { color: '#FFFFFF' }]}>Batters</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.subFilterBtn, statsCategory === 'bowlers' && styles.subFilterActive]} onPress={() => setStatsCategory('bowlers')}>
-                  <MaterialCommunityIcons name="baseball" size={15} color={statsCategory === 'bowlers' ? '#FFFFFF' : '#475569'} />
-                  <Text style={[styles.subFilterText, statsCategory === 'bowlers' && { color: '#FFFFFF' }]}>Bowlers</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.subFilterBtn, statsCategory === 'allrounders' && styles.subFilterActive]} onPress={() => setStatsCategory('allrounders')}>
-                  <MaterialCommunityIcons name="star-circle-outline" size={15} color={statsCategory === 'allrounders' ? '#FFFFFF' : '#475569'} />
-                  <Text style={[styles.subFilterText, statsCategory === 'allrounders' && { color: '#FFFFFF' }]}>All-Rounders</Text>
-                </TouchableOpacity>
+
+              {/* Sub-Category Pills: Batters, Bowlers, All-rounders */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                {[
+                  { id: 'batters', label: 'Batters', icon: 'cricket', isMCI: true },
+                  { id: 'bowlers', label: 'Bowlers', icon: 'baseball', isMCI: true },
+                  { id: 'allrounders', label: 'All-Rounders', icon: 'star-circle-outline', isMCI: true }
+                ].map(cat => {
+                  const isActive = statsCategory === cat.id;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      activeOpacity={0.7}
+                      onPress={() => setStatsCategory(cat.id)}
+                      style={{
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        paddingVertical: 9,
+                        paddingHorizontal: 8,
+                        borderRadius: 10,
+                        backgroundColor: isActive ? '#0284C7' : '#FFFFFF',
+                        borderWidth: 1,
+                        borderColor: isActive ? '#0284C7' : '#E2E8F0'
+                      }}
+                    >
+                      {cat.isMCI ? (
+                        <MaterialCommunityIcons name={cat.icon} size={15} color={isActive ? '#FFFFFF' : '#64748B'} />
+                      ) : (
+                        <Ionicons name={cat.icon} size={15} color={isActive ? '#FFFFFF' : '#64748B'} />
+                      )}
+                      <Text style={{
+                        fontSize: 12,
+                        fontFamily: systemFontMedium,
+                        color: isActive ? '#FFFFFF' : '#64748B'
+                      }} numberOfLines={1}>
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* COLUMN HEADER (CRICBUZZ / ICC STYLE) */}
@@ -475,14 +521,7 @@ export function HomeScreen({
                             borderBottomWidth: isLast ? 0 : 1,
                             borderBottomColor: '#F1F5F9'
                           }}
-                          onPress={() => {
-                            const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
-                              || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
-                            const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
-                            if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
-                            setSelectedPlayerName(b.name);
-                            setCurrentScreen('playerProfile');
-                          }}
+                          onPress={() => handlePlayerPress(b.name, { role: b.role, photoUrl: b.photoUrl, city: b.city })}
                         >
                           <Text style={{
                             width: 28,
@@ -540,14 +579,7 @@ export function HomeScreen({
                             borderBottomWidth: isLast ? 0 : 1,
                             borderBottomColor: '#F1F5F9'
                           }}
-                          onPress={() => {
-                            const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
-                              || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
-                            const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
-                            if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
-                            setSelectedPlayerName(b.name);
-                            setCurrentScreen('playerProfile');
-                          }}
+                          onPress={() => handlePlayerPress(b.name, { role: b.role, photoUrl: b.photoUrl, city: b.city })}
                         >
                           <Text style={{
                             width: 28,
@@ -605,14 +637,7 @@ export function HomeScreen({
                             borderBottomWidth: isLast ? 0 : 1,
                             borderBottomColor: '#F1F5F9'
                           }}
-                          onPress={() => {
-                            const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase())
-                              || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === b.name.trim().toLowerCase());
-                            const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(b.name) : { name: b.name, role: b.role || 'Local Player', photoUrl: b.photoUrl, city: b.city });
-                            if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
-                            setSelectedPlayerName(b.name);
-                            setCurrentScreen('playerProfile');
-                          }}
+                          onPress={() => handlePlayerPress(b.name, { role: b.role, photoUrl: b.photoUrl, city: b.city })}
                         >
                           <Text style={{
                             width: 28,

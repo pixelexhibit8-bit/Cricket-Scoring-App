@@ -44,6 +44,8 @@ import { QuickMatchSetupScreen } from './src/screens/QuickMatchSetupScreen.jsx';
 import { fetchLocalPlayers } from './src/services/localPlayerService.js';
 import { TeamPickerModal } from './src/components/TeamPickerModal.jsx';
 import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
+import { AuthModal } from './src/components/modals/AuthModal.jsx';
+import { getCurrentUser } from './src/services/authService.js';
 import { useFonts } from 'expo-font';
 import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, syncPlayerToSupabase, fetchLiveMatchFromSupabase, subscribeToSupabaseLiveMatches } from './src/services/matchService.js';
 import { generateUUID } from './src/services/supabaseClient.js';
@@ -604,6 +606,31 @@ export default function App() {
   // ── Match setup wizard ──
   const [wizardStep, setWizardStep] = useState(1);
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [pendingPlayerProfile, setPendingPlayerProfile] = useState(null);
+
+  useEffect(() => {
+    getCurrentUser().then(u => { if (u) setCurrentUser(u); }).catch(() => {});
+  }, []);
+
+  const handleOpenPlayerProfile = async (profile) => {
+    try {
+      const user = currentUser || await getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        setSelectedPlayerProfile(profile);
+        setCurrentScreen('playerProfile');
+      } else {
+        setPendingPlayerProfile(profile);
+        setAuthModalVisible(true);
+      }
+    } catch (err) {
+      setPendingPlayerProfile(profile);
+      setAuthModalVisible(true);
+    }
+  };
+
   const [team1Name, setTeam1Name] = useState('');
   const [team2Name, setTeam2Name] = useState('');
   const [scorerPin, setScorerPin] = useState('');
@@ -4810,6 +4837,7 @@ export default function App() {
                 MASTER_PLAYERS_DB={MASTER_PLAYERS_DB}
                 getSetupPlayerProfile={getSetupPlayerProfile}
                 setSelectedPlayerProfile={setSelectedPlayerProfile}
+                onOpenPlayerProfile={handleOpenPlayerProfile}
                 styles={styles}
                 isScorerUnlocked={isScorerUnlocked}
               />
@@ -5182,6 +5210,26 @@ export default function App() {
             setMatchCompleteModalVisible(false);
             setFinishedTab('scorecard');
           }}
+        />
+
+        {/* Global In-Place Authentication Modal */}
+        <AuthModal
+          visible={authModalVisible}
+          onClose={() => {
+            setAuthModalVisible(false);
+            setPendingPlayerProfile(null);
+          }}
+          onSuccessLogin={(user, userProfile) => {
+            setCurrentUser(user);
+            setAuthModalVisible(false);
+            if (pendingPlayerProfile) {
+              setSelectedPlayerProfile(pendingPlayerProfile);
+              setCurrentScreen('playerProfile');
+              setPendingPlayerProfile(null);
+            }
+          }}
+          title="Welcome to CricScorer"
+          subtitle="Sign in to track your lifetime runs, wickets & career match records."
         />
 
         {/* Global Floating Toast for entire CricFlow App */}
