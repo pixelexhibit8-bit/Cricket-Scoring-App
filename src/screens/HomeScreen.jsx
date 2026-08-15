@@ -15,6 +15,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, fontWeights, theme, typeScale } from '../theme.js';
 import { AppBottomNav } from '../components/navigation/AppBottomNav.jsx';
 import { AboutAppScreen } from '../components/AboutAppScreen.jsx';
+import { MyProfileScreen } from './MyProfileScreen.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
@@ -353,6 +354,15 @@ export function HomeScreen({
             );
           })()}
         </ScrollView>
+      ) : bottomNavTab === 'profile' ? (
+        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+          <MyProfileScreen
+            finishedMatches={finishedArchive || []}
+            onSelectMatch={(m) => {
+              if (setCurrentScreen) setCurrentScreen('finishedView');
+            }}
+          />
+        </View>
       ) : bottomNavTab === 'about' ? (
         <ScrollView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
           <AboutAppScreen />

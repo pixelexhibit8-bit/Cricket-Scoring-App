@@ -1086,17 +1086,26 @@ const styles = StyleSheet.create({
     fontFamily: systemFontMedium
   },
   authContainer: {
+    flexGrow: 1,
     padding: 16,
-    paddingTop: 24,
-    paddingBottom: 40
+    paddingVertical: 24,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   authCard: {
+    width: '100%',
+    maxWidth: 420,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
+    padding: 22,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    alignItems: 'center'
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2
   },
   authBadge: {
     width: 60,
