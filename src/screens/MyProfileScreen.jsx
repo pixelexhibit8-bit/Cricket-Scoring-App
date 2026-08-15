@@ -477,137 +477,70 @@ export function MyProfileScreen({
     );
   }
 
-  // ─── 1. SIGN IN SCREEN (PHONE OTP OR GOOGLE) ───
+  // ─── 1. SIGN IN SCREEN (OFFICIAL GOOGLE AUTHENTICATION) ───
   if (!currentUser && !isPublicView) {
     return (
       <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.authContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView style={styles.container} contentContainerStyle={styles.authContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.authCard}>
-            {/* App Logo */}
-            <Image source={require('../../assets/logo.png')} style={{ width: 92, height: 92, resizeMode: 'contain', marginBottom: 16 }} />
+            {/* CricScorer Brand Logo */}
+            <Image source={require('../../assets/logo.png')} style={{ width: 88, height: 88, resizeMode: 'contain', marginBottom: 14 }} />
             <Text style={styles.authTitle}>Welcome to CricScorer</Text>
             <Text style={styles.authSub}>
-              Sign in to track your lifetime runs, wickets & career match records.
+              Sign in with your Google account to track your lifetime career stats, match records and rankings.
             </Text>
 
-            {!otpSent ? (
-              <>
-                {/* Phone Input Box */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Mobile Phone Number</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', gap: 8 }}>
-                    <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#CBD5E1' }}>
-                      <Text style={{ color: '#0F172A', fontWeight: fontWeights.bold, fontSize: 13, fontFamily: systemFont }}>🇮🇳 +91</Text>
-                    </View>
-                    <TextInput
-                      style={[styles.textInput, { flex: 1 }]}
-                      placeholder="Enter 10-digit number"
-                      value={authPhone}
-                      onChangeText={setAuthPhone}
-                      keyboardType="phone-pad"
-                      placeholderTextColor="#94A3B8"
-                      maxLength={10}
-                    />
-                  </View>
-                </View>
+            {/* Feature Perks */}
+            <View style={styles.benefitList}>
+              <View style={styles.benefitItem}>
+                <MaterialCommunityIcons name="cricket" size={16} color="#0284C7" />
+                <Text style={styles.benefitText}>Track all local ground runs, wickets & averages</Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <Ionicons name="trophy-outline" size={16} color="#D97706" />
+                <Text style={styles.benefitText}>Compete on player leaderboards & MVP awards</Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <Ionicons name="cloud-done-outline" size={16} color="#16A34A" />
+                <Text style={styles.benefitText}>Lifetime cloud backup linked to your Google ID</Text>
+              </View>
+            </View>
 
-                {/* Get OTP Button */}
-                <TouchableOpacity
-                  style={styles.googleBtn}
-                  onPress={handleSendOtp}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FFFFFF" />
-                  <Text style={styles.googleBtnText}>Get OTP / Continue</Text>
-                </TouchableOpacity>
-
-                {/* Divider */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 16, width: '100%', gap: 10 }}>
-                  <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
-                  <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: fontWeights.bold, fontFamily: systemFont }}>OR</Text>
-                  <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
-                </View>
-
-                {/* Google Login Button (Official Play Store Compliant) */}
-                <TouchableOpacity
-                  style={{
-                    width: '100%',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: 12,
-                    paddingVertical: 13,
-                    borderWidth: 1,
-                    borderColor: '#CBD5E1'
-                  }}
-                  onPress={handleGoogleSignIn}
-                  activeOpacity={0.85}
-                >
-                  <MaterialCommunityIcons name="google" size={18} color="#4285F4" />
-                  <Text style={{ color: '#1E293B', fontSize: 14, fontFamily: systemFontBold }}>
-                    Sign In with Google
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              /* OTP Verification Step */
-              <>
-                <View style={{ width: '100%', backgroundColor: '#F0F9FF', padding: 12, borderRadius: 10, marginBottom: 14, borderWidth: 1, borderColor: '#BAE6FD' }}>
-                  <Text style={{ fontSize: 12, color: '#0369A1', fontFamily: systemFontMedium, textAlign: 'center' }}>
-                    Enter the OTP for +91 {authPhone}
-                  </Text>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Verification Code (OTP)</Text>
-                  <TextInput
-                    style={[styles.textInput, { textAlign: 'center', fontSize: 18, letterSpacing: 6, fontWeight: fontWeights.bold }]}
-                    placeholder="• • • • • •"
-                    value={authOtp}
-                    onChangeText={setAuthOtp}
-                    keyboardType="number-pad"
-                    placeholderTextColor="#94A3B8"
-                    maxLength={6}
-                    autoFocus
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={styles.googleBtn}
-                  onPress={handleVerifyOtp}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
-                  <Text style={styles.googleBtnText}>Verify & Login</Text>
-                </TouchableOpacity>
-
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: 14 }}>
-                  <TouchableOpacity
-                    onPress={() => setOtpSent(false)}
-                    style={{ paddingVertical: 6 }}
-                  >
-                    <Text style={{ color: '#0284C7', fontSize: 12, fontFamily: systemFontBold }}>
-                      ← Change Mobile
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    disabled={resendTimer > 0}
-                    onPress={handleSendOtp}
-                    style={{ paddingVertical: 6 }}
-                  >
-                    <Text style={{ color: resendTimer > 0 ? '#94A3B8' : '#0284C7', fontSize: 12, fontFamily: systemFontBold }}>
-                      {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
+            {/* Official Google Login Button (Authentic Multi-Color G Logo) */}
+            <TouchableOpacity
+              style={{
+                width: '100%',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 12,
+                backgroundColor: '#FFFFFF',
+                borderRadius: 14,
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                borderWidth: 1,
+                borderColor: '#CBD5E1',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 4,
+                elevation: 2,
+                marginTop: 4
+              }}
+              onPress={handleGoogleSignIn}
+              activeOpacity={0.85}
+            >
+              <Image
+                source={require('../../assets/google_logo.png')}
+                style={{ width: 22, height: 22, resizeMode: 'contain' }}
+              />
+              <Text style={{ color: '#1E293B', fontSize: 15, fontFamily: systemFontMedium }}>
+                Continue with Google
+              </Text>
+            </TouchableOpacity>
 
             <Text style={styles.authTerms}>
-              Your profile details and stats will be linked automatically across all ground matches.
+              Fast 1-tap sign in. No phone number or password required.
             </Text>
           </View>
         </ScrollView>
