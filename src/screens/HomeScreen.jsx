@@ -110,8 +110,9 @@ export function HomeScreen({
         if (setSearchQuery) setSearchQuery('');
         return true;
       }
-      if (bottomNavTab !== 'matches') {
+      if (bottomNavTab !== 'matches' && bottomNavTab !== 'home') {
         if (setBottomNavTab) setBottomNavTab('matches');
+        if (setMatchesSubTab) setMatchesSubTab('live');
         return true;
       }
       return false;
@@ -781,7 +782,12 @@ export function HomeScreen({
       {/* INDUSTRIAL STANDARD BOTTOM NAVIGATION BAR */}
       <AppBottomNav
         activeTab={bottomNavTab}
-        onTabChange={setBottomNavTab}
+        onTabChange={(tabId) => {
+          if (tabId === 'matches' || tabId === 'home') {
+            if (setMatchesSubTab) setMatchesSubTab('live');
+          }
+          if (setBottomNavTab) setBottomNavTab(tabId);
+        }}
       />
     </View>
   );
