@@ -52,7 +52,9 @@ export function HomeScreen({
   setSelectedPlayerProfile,
   onOpenPlayerProfile,
   styles,
-  isScorerUnlocked
+  isScorerUnlocked,
+  finishedArchive = [],
+  setSelectedMatch
 }) {
   const { width: screenWidth } = useWindowDimensions();
   const homePagerRef = useRef(null);
@@ -359,6 +361,7 @@ export function HomeScreen({
           <MyProfileScreen
             finishedMatches={finishedArchive || []}
             onSelectMatch={(m) => {
+              if (setSelectedMatch) setSelectedMatch(m);
               if (setCurrentScreen) setCurrentScreen('finishedView');
             }}
           />

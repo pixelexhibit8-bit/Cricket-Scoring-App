@@ -4774,56 +4774,42 @@ export default function App() {
             />
           ) : (
             /* ——— HOME DASHBOARD (POWERED BY HOMESCREEN COMPONENT) ——— */
-            bottomNavTab === 'profile' ? (
-              <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-                <MyProfileScreen
-                  finishedMatches={finishedArchive}
-                  onSelectMatch={(m) => {
-                    setSelectedMatch(m);
-                    setCurrentScreen('finishedView');
-                  }}
-                />
-                <AppBottomNav
-                  activeTab={bottomNavTab}
-                  onTabChange={setBottomNavTab}
-                />
-              </View>
-            ) : (
-              <HomeScreen
-                openScorerScreen={openScorerScreen}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                bottomNavTab={bottomNavTab}
-                setBottomNavTab={setBottomNavTab}
-                matchesSubTab={matchesSubTab}
-                setMatchesSubTab={setMatchesSubTab}
-                statsCategory={statsCategory}
-                setStatsCategory={setStatsCategory}
-                refreshing={refreshing}
-                handlePullToRefresh={handlePullToRefresh}
-                setupPlayerNames={setupPlayerNames}
-                searchNeedle={searchNeedle}
-                setSelectedPlayerName={setSelectedPlayerName}
-                setCurrentScreen={setCurrentScreen}
-                renderSetupPlayerPhoto={renderSetupPlayerPhoto}
-                activeMatchVisible={activeMatchVisible}
-                renderActiveMatchListCard={renderActiveMatchListCard}
-                recentFinishedMatches={recentFinishedMatches}
-                renderFinishedMatchListCard={renderFinishedMatchListCard}
-                visibleFinishedMatches={visibleFinishedMatches}
-                activeMatch={activeMatch}
-                TOP_BATTERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBatters}
-                TOP_BOWLERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBowlers}
-                TOP_ALLROUNDERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topAllRounders}
-                localPlayersList={localPlayersList}
-                MASTER_PLAYERS_DB={MASTER_PLAYERS_DB}
-                getSetupPlayerProfile={getSetupPlayerProfile}
-                setSelectedPlayerProfile={setSelectedPlayerProfile}
-                onOpenPlayerProfile={handleOpenPlayerProfile}
-                styles={styles}
-                isScorerUnlocked={isScorerUnlocked}
-              />
-            )
+            <HomeScreen
+              openScorerScreen={openScorerScreen}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              bottomNavTab={bottomNavTab}
+              setBottomNavTab={setBottomNavTab}
+              matchesSubTab={matchesSubTab}
+              setMatchesSubTab={setMatchesSubTab}
+              statsCategory={statsCategory}
+              setStatsCategory={setStatsCategory}
+              refreshing={refreshing}
+              handlePullToRefresh={handlePullToRefresh}
+              setupPlayerNames={setupPlayerNames}
+              searchNeedle={searchNeedle}
+              setSelectedPlayerName={setSelectedPlayerName}
+              setCurrentScreen={setCurrentScreen}
+              renderSetupPlayerPhoto={renderSetupPlayerPhoto}
+              activeMatchVisible={activeMatchVisible}
+              renderActiveMatchListCard={renderActiveMatchListCard}
+              recentFinishedMatches={recentFinishedMatches}
+              renderFinishedMatchListCard={renderFinishedMatchListCard}
+              visibleFinishedMatches={visibleFinishedMatches}
+              finishedArchive={finishedArchive}
+              setSelectedMatch={setSelectedMatch}
+              activeMatch={activeMatch}
+              TOP_BATTERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBatters}
+              TOP_BOWLERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBowlers}
+              TOP_ALLROUNDERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topAllRounders}
+              localPlayersList={localPlayersList}
+              MASTER_PLAYERS_DB={MASTER_PLAYERS_DB}
+              getSetupPlayerProfile={getSetupPlayerProfile}
+              setSelectedPlayerProfile={setSelectedPlayerProfile}
+              onOpenPlayerProfile={handleOpenPlayerProfile}
+              styles={styles}
+              isScorerUnlocked={isScorerUnlocked}
+            />
           )}
 
         </SafeAreaView>
