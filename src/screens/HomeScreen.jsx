@@ -9,7 +9,8 @@ import {
   RefreshControl,
   Keyboard,
   Animated,
-  useWindowDimensions
+  useWindowDimensions,
+  BackHandler
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, fontWeights, theme, typeScale } from '../theme.js';
@@ -98,8 +99,26 @@ export function HomeScreen({
 
   useEffect(() => {
     const targetOffset = activeTabIndex * screenWidth;
-    homePagerRef.current?.scrollTo({ x: targetOffset, animated: true });
-  }, [matchesSubTab]);
+    homePagerRef.current?.scrollTo({ x: targetOffset, animated: false });
+    homePagerScrollX.setValue(targetOffset);
+  }, [matchesSubTab, bottomNavTab, screenWidth]);
+
+  // Handle Android Hardware Back Button
+  useEffect(() => {
+    const onBackPress = () => {
+      if (searchQuery && searchQuery.trim().length > 0) {
+        if (setSearchQuery) setSearchQuery('');
+        return true;
+      }
+      if (bottomNavTab !== 'matches') {
+        if (setBottomNavTab) setBottomNavTab('matches');
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [searchQuery, bottomNavTab]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -375,6 +394,12 @@ export function HomeScreen({
           ref={homePagerRef}
           horizontal
           pagingEnabled
+          contentOffset={{ x: activeTabIndex * screenWidth, y: 0 }}
+          onLayout={() => {
+            const targetOffset = activeTabIndex * screenWidth;
+            homePagerRef.current?.scrollTo({ x: targetOffset, animated: false });
+            homePagerScrollX.setValue(targetOffset);
+          }}
           snapToInterval={screenWidth}
           snapToAlignment="start"
           disableIntervalMomentum
