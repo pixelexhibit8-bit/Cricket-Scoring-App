@@ -27,10 +27,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "80810216-2a05-4e4f-baeb-257668f81671"
+        "projectId": "4b137f23-8eb7-47d5-8b9b-dccaa270b992"
       }
     },
-    "owner": "bastixxx",
+    "owner": "bastixxxxs-team",
     "plugins": [
       "expo-splash-screen"
     ]
