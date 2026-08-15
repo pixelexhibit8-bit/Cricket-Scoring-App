@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "289246113323",
+    "project_id": "cric-scorer-55281",
+    "storage_bucket": "cric-scorer-55281.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:289246113323:android:fb9a6d86a41078a414046e",
+        "android_client_info": {
+          "package_name": "com.cricscorer.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYuzCjZLbSn-t55ZvrOKWnDJ6wj_Xv6CY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

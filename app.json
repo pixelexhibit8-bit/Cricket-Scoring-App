@@ -16,6 +16,7 @@
     },
     "android": {
       "package": "com.cricscorer.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#071B2C",
         "foregroundImage": "./assets/logo.png"

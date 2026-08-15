@@ -2,12 +2,12 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyBYxOGKE6eJFLpcffdOcs_F490DqyNMkn8",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyDYuzCjZLbSn-t55ZvrOKWnDJ6wj_Xv6CY",
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "cric-scorer-55281.firebaseapp.com",
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "cric-scorer-55281",
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "cric-scorer-55281.firebasestorage.app",
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "289246113323",
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:289246113323:web:c67983cdb9fc2b7e14046e"
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:289246113323:android:fb9a6d86a41078a414046e"
 };
 
 let app;
