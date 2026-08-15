@@ -13,10 +13,10 @@ export function AppBottomNav({ activeTab, onTabChange }) {
   const tabs = [
     {
       id: 'matches',
-      label: 'Matches',
-      activeIcon: 'cricket',
-      inactiveIcon: 'cricket',
-      isMCI: true
+      label: 'Home',
+      activeIcon: 'home',
+      inactiveIcon: 'home-outline',
+      isMCI: false
     },
     {
       id: 'profile',
