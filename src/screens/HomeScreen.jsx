@@ -126,7 +126,9 @@ export function HomeScreen({
       <View style={styles.header}>
         <View style={styles.logoRow}>
           <Image source={require('../../assets/logo.png')} style={styles.logoImg} />
-          <Text style={styles.logoText}>Cric <Text style={styles.logoAccent}>Scorer</Text></Text>
+          <Text style={{ fontSize: 18, color: '#FFFFFF', fontFamily: systemFontBold }}>
+            Cric <Text style={{ color: '#38BDF8' }}>Scorer</Text>
+          </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity
