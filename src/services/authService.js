@@ -156,15 +156,20 @@ export async function signInWithGoogleOAuth() {
 }
 
 /**
- * Sign in with Google (Supports real OAuth 2.0 & instant player setup)
+ * Sign in with Google (Collects Email, Name, Photo and saves to Supabase Database)
  */
 export async function signInWithGoogle({ name, email, photoUrl } = {}) {
   try {
+    const userEmail = email || 'player@cricflow.com';
+    const userName = name || 'Cricket Player';
+    const userPhoto = photoUrl || null;
+    const userId = `user_${Date.now()}`;
+
     const user = {
-      id: `user_${Date.now()}`,
-      name: name || 'Cricket Player',
-      email: email || `${(name || 'player').toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-      photoUrl: photoUrl || null,
+      id: userId,
+      name: userName,
+      email: userEmail,
+      photoUrl: userPhoto,
       provider: 'google',
       signedInAt: new Date().toISOString()
     };
@@ -191,9 +196,24 @@ export async function signInWithGoogle({ name, email, photoUrl } = {}) {
       await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
     }
 
+    // DIRECT SUPABASE DATABASE ENTRY: Save user's email, name and profile
+    if (supabase) {
+      try {
+        await supabase.from('local_players').upsert({
+          name: profile.name || userName,
+          role: profile.role || 'All-Rounder',
+          city: profile.city || 'Local Ground',
+          photo_url: userPhoto,
+          phone: userEmail // Stores email / contact in Supabase
+        }, { onConflict: 'name' }).catch(() => {});
+      } catch (dbErr) {
+        console.warn('Supabase email save notice:', dbErr);
+      }
+    }
+
     return { user, profile };
   } catch (e) {
-    console.error('Sign in error:', e);
+    console.warn('Error during Google sign in:', e);
     throw e;
   }
 }
