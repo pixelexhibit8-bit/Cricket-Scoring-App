@@ -133,7 +133,7 @@ export const saveLocalPlayer = async (newPlayer) => {
     phone: newPlayer.phone ? newPlayer.phone.trim() : ''
   };
 
-  // 1. Save to Supabase if configured
+  // 1. Save to Supabase strictly by immutable Player ID (Primary Key)
   if (isSupabaseConfigured() && supabase) {
     try {
       await supabase
@@ -144,16 +144,16 @@ export const saveLocalPlayer = async (newPlayer) => {
           role: playerObj.role,
           photo_url: playerObj.photoUrl,
           phone: playerObj.phone
-        }, { onConflict: 'name' });
+        }, { onConflict: 'id' });
     } catch (err) {
       console.warn('[LocalPlayerService] Supabase save warning:', err.message || err);
     }
   }
 
-  // 2. Save to AsyncStorage cache
+  // 2. Save to AsyncStorage cache by ID
   try {
     const existing = await fetchLocalPlayers();
-    const updated = [playerObj, ...existing.filter(p => p.name.toLowerCase() !== playerObj.name.toLowerCase())];
+    const updated = [playerObj, ...existing.filter(p => p.id !== playerObj.id && p.name.toLowerCase() !== playerObj.name.toLowerCase())];
     await AsyncStorage.setItem(LOCAL_PLAYERS_STORAGE_KEY, JSON.stringify(updated));
     registerPlayerPhoto(playerObj.name, playerObj.photoUrl);
     return playerObj;

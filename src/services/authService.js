@@ -88,15 +88,15 @@ export async function savePlayerProfile(profileData) {
     };
     await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
 
-    // Sync to Supabase if connected
+    // Sync to Supabase strictly by immutable Player ID (Primary Key)
     if (supabase && updated.name) {
       try {
-        // If user changed / formatted their name (e.g. Bastiram Suthar -> Basti Ram Suthar), delete old unformatted row
-        if (existing.name && existing.name.trim() !== updated.name.trim()) {
-          await supabase.from('local_players').delete().eq('name', existing.name.trim()).catch(() => {});
-        }
+        const playerId = updated.id || updated.auth_user_id || existing.id || existing.auth_user_id || generateUUID();
+        updated.id = playerId;
+        await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
 
         const fullPayload = {
+          id: playerId,
           name: updated.name.trim(),
           role: updated.role || 'All-Rounder',
           batting_style: updated.battingStyle || updated.batting_style || 'Right Hand Bat',
@@ -106,20 +106,21 @@ export async function savePlayerProfile(profileData) {
           dob: updated.dob || '',
           jersey_number: updated.jerseyNumber || updated.jersey_number || '',
           photo_url: updated.photoUrl || updated.photo_url || null,
-          auth_user_id: updated.auth_user_id || updated.id || null,
+          auth_user_id: updated.auth_user_id || playerId,
           updated_at: updated.updated_at
         };
 
-        const { error } = await supabase.from('local_players').upsert(fullPayload, { onConflict: 'name' });
+        const { error } = await supabase.from('local_players').upsert(fullPayload, { onConflict: 'id' });
         if (error) {
           console.warn('Full upsert notice, trying basic payload:', error.message);
           // Fallback to basic columns if custom columns not added yet
           await supabase.from('local_players').upsert({
+            id: playerId,
             name: updated.name.trim(),
             role: updated.role || 'All-Rounder',
             photo_url: updated.photoUrl || updated.photo_url || null,
             phone: updated.phone || ''
-          }, { onConflict: 'name' });
+          }, { onConflict: 'id' });
         }
       } catch (err) {
         console.warn('Supabase local_players upsert notice:', err?.message || err);
