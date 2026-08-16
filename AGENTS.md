@@ -2,6 +2,11 @@
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
 
+# Git Remote Push Prohibition Rule - STRICT (NEVER PUSH TO GITHUB)
+- **STRICT**: The AI agent MUST NEVER execute `git push` to remote GitHub or any remote repository under ANY circumstance.
+- All version control operations performed by the agent MUST BE STRICTLY LOCAL (`git commit` on local branch only).
+- The USER exclusively owns, reviews, and executes all remote pushes to GitHub.
+
 # CricFlow Source Of Truth - STRICT
 
 - Every CricFlow request from the user defaults to the Expo application, even when the user does not say "app", "mobile", or "Expo".

@@ -1,5 +1,10 @@
 # Project Rules & Architecture Guardrails
 
+## 0. Git Remote Push Prohibition Rule (STRICT - NEVER PUSH TO GITHUB)
+- **STRICT**: The AI agent MUST NEVER execute `git push` to remote GitHub or any remote repository under ANY circumstance.
+- All version control operations performed by the agent MUST BE STRICTLY LOCAL (`git commit` on local branch only).
+- The USER exclusively reviews, tests, and performs all git pushes manually.
+
 ## 1. App.js Protection Rule (STRICT - DO NOT TOUCH)
 - `App.js` MUST ALWAYS remain a minimal 11-line entry point:
   ```js
