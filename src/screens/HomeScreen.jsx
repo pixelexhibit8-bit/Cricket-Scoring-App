@@ -90,10 +90,10 @@ export function HomeScreen({
         const isToday = d.toDateString() === today.toDateString();
         const isYesterday = d.toDateString() === yesterday.toDateString();
         const formattedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
-        if (isToday) return `Today, ${formattedDate}`;
-        if (isYesterday) return `Yesterday, ${formattedDate}`;
-        return `${dayName}, ${formattedDate}`;
+        const shortDay = d.toLocaleDateString('en-GB', { weekday: 'short' });
+        if (isToday) return `Today • ${formattedDate}`;
+        if (isYesterday) return `Yesterday • ${formattedDate}`;
+        return `${shortDay}, ${formattedDate}`;
       }
     }
     if (m.dateText && m.dateText !== 'Recent Matches' && m.dateText !== 'Recent Match') {
@@ -699,9 +699,12 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dKey => (
-                    <View key={`foryou-grp-${dKey}`} style={{ marginTop: 12 }}>
-                      <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
-                        <Text style={{ fontSize: 14.5, fontFamily: systemFontBold, color: '#0F172A' }}>{dKey}</Text>
+                    <View key={`foryou-grp-${dKey}`} style={{ marginTop: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
+                        <Ionicons name="calendar-outline" size={13} color="#64748B" />
+                        <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                          {dKey}
+                        </Text>
                       </View>
                       {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
                     </View>
@@ -734,7 +737,7 @@ export function HomeScreen({
             >
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
-                <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
                   {activeMatchVisible ? 'LIVE MATCH' : 'FEATURED MATCH'}
                 </Text>
               </View>
@@ -745,7 +748,7 @@ export function HomeScreen({
                 <View style={styles.idleCard}>
                   <View style={styles.idleIconBg}><MaterialCommunityIcons name="cricket" size={28} color="#0284C7" /></View>
                   <Text style={styles.idleTitle}>No Live Match Currently</Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: fontWeights.medium, marginTop: 4, fontFamily: systemFont }}>Live match scorecards will appear here</Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 11, fontFamily: systemFontMedium, marginTop: 4 }}>Live match scorecards will appear here</Text>
                 </View>
               )}
 
@@ -759,9 +762,12 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dKey => (
-                    <View key={`live-grp-${dKey}`} style={{ marginTop: 14 }}>
-                      <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
-                        <Text style={{ fontSize: 14.5, fontFamily: systemFontBold, color: '#0F172A' }}>{dKey}</Text>
+                    <View key={`live-grp-${dKey}`} style={{ marginTop: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
+                        <Ionicons name="calendar-outline" size={13} color="#64748B" />
+                        <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                          {dKey}
+                        </Text>
                       </View>
                       {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
                     </View>
@@ -818,9 +824,12 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dateKey => (
-                    <View key={`up-grp-${dateKey}`} style={{ marginBottom: 14 }}>
-                      <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
-                        <Text style={{ fontSize: 15, fontFamily: systemFontBold, color: '#0F172A' }}>{dateKey}</Text>
+                    <View key={`up-grp-${dateKey}`} style={{ marginBottom: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
+                        <Ionicons name="calendar-outline" size={13} color="#64748B" />
+                        <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                          {dateKey}
+                        </Text>
                       </View>
                       {groups[dateKey].map((m, idx) => {
                         const t1Name = m.team1Name || m.team1?.name || m.teams?.[0]?.name || 'Team A';
@@ -948,9 +957,12 @@ export function HomeScreen({
                 });
 
                 return Object.keys(groups).map(dateKey => (
-                  <View key={`fin-grp-${dateKey}`} style={{ marginBottom: 14 }}>
-                    <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
-                      <Text style={{ fontSize: 15, fontFamily: systemFontBold, color: '#0F172A' }}>{dateKey}</Text>
+                  <View key={`fin-grp-${dateKey}`} style={{ marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
+                      <Ionicons name="calendar-outline" size={13} color="#64748B" />
+                      <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                        {dateKey}
+                      </Text>
                     </View>
                     {groups[dateKey].map(f => renderFinishedMatchListCard && renderFinishedMatchListCard(f))}
                   </View>
