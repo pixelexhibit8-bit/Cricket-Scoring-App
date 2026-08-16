@@ -125,14 +125,25 @@ export const fetchFinishedMatchesFromSupabase = async () => {
             const legalBalls = inn.totalLegalBalls ?? inn.legalBalls ?? 0;
             const ov = Math.floor(legalBalls / 6);
             const b = legalBalls % 6;
+
+            const battingList = Array.isArray(inn.allBatters) && inn.allBatters.length > 0
+              ? inn.allBatters
+              : (Array.isArray(inn.batting) && inn.batting.length > 0
+                ? inn.batting
+                : (inn.battingStats ? (Array.isArray(inn.battingStats) ? inn.battingStats : Object.values(inn.battingStats)) : []));
+
+            const bowlingList = Array.isArray(inn.bowling) && inn.bowling.length > 0
+              ? inn.bowling
+              : (inn.bowlingStats ? (Array.isArray(inn.bowlingStats) ? inn.bowlingStats : Object.values(inn.bowlingStats)) : []);
+
             return {
               name,
               runs,
               wickets,
               legalBalls,
               score: `${runs}-${wickets} (${ov}.${b} Ov)`,
-              batting: inn.allBatters || inn.batting || [],
-              bowling: inn.bowlingStats ? Object.values(inn.bowlingStats) : (inn.bowling || []),
+              batting: battingList,
+              bowling: bowlingList,
               overHistory: inn.overHistory || [],
               fallOfWickets: inn.fallOfWickets || [],
               partnerships: inn.partnershipHistory || inn.partnerships || []
@@ -142,8 +153,8 @@ export const fetchFinishedMatchesFromSupabase = async () => {
         };
 
         const sourceMatch = innings.length > 0 ? match : (match.sourceMatch || match);
-        const team1Built = (match.team1?.runs !== undefined && match.team1?.score) ? match.team1 : buildTeamFromInning(inn1, t1Name, match.team1);
-        const team2Built = (match.team2?.runs !== undefined && match.team2?.score) ? match.team2 : buildTeamFromInning(inn2, t2Name, match.team2);
+        const team1Built = buildTeamFromInning(inn1, t1Name, match.team1);
+        const team2Built = buildTeamFromInning(inn2, t2Name, match.team2);
 
         let computedWinner = match.resultText || row.result_text || '';
         let computedWinnerTeamName = match.winnerTeamName || row.winner_team_name || '';
@@ -178,6 +189,14 @@ export const fetchFinishedMatchesFromSupabase = async () => {
           resultText: computedWinner || 'Match Completed',
           winnerTeamName: computedWinnerTeamName || '',
           maxOvers: match.maxOvers || row.max_overs || 20,
+          team1: team1Built,
+          team2: team2Built,
+          team1Name: t1Name,
+          team2Name: t2Name,
+          innings: innings.length > 0 ? innings : [
+            { battingTeam: team1Built, allBatters: team1Built.batting, bowlingStats: team1Built.bowling },
+            { battingTeam: team2Built, allBatters: team2Built.batting, bowlingStats: team2Built.bowling }
+          ],
           completedAt: completedDate,
           sourceMatch,
           team1: team1Built,
