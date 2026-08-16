@@ -21,6 +21,7 @@ import { PRESET_TEAM_LOGOS, getTeamLogoSource } from '../utils/teamUtils.js';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { MatchTabBar } from '../components/MatchTabBar.jsx';
 import { OpeningPlayersSelector } from '../components/OpeningPlayersSelector.jsx';
+import { MatchDatePickerModal } from '../components/modals/MatchDatePickerModal.jsx';
 import { MASTER_PLAYERS_DB } from '../../mockData.js';
 import { fetchLocalPlayers, saveLocalPlayer, PRESET_PLAYER_AVATARS } from '../services/localPlayerService.js';
 import { syncPlayersToPhotoRegistry, registerPlayerPhoto } from '../services/playerPhotoStore.js';
@@ -43,7 +44,8 @@ export function QuickMatchSetupScreen({
   savedTeamsList = [],
   initialSetup = null,
   onStartMatch,
-  onCancel
+  onCancel,
+  onScheduleMatch = null
 }) {
   const step1ScrollRef = useRef(null);
   // Wizard Step: 1 = Build Teams & Setup, 2 = Coin Toss, 3 = Select Openers
@@ -61,6 +63,16 @@ export function QuickMatchSetupScreen({
   const [team2Roster, setTeam2Roster] = useState(initialSetup?.team2Roster || DEFAULT_TEAM_B_ROSTER);
   const [playerPool, setPlayerPool] = useState([]);
   const [localPlayersDb, setLocalPlayersDb] = useState([]);
+
+  // Match Date & Time Scheduling
+  const [matchSchedule, setMatchSchedule] = useState({
+    isoString: initialSetup?.scheduledAt || new Date().toISOString(),
+    label: initialSetup?.matchDate || 'Today (Live Match)',
+    dateText: 'Today',
+    timeText: 'Now',
+    isScheduledLater: false
+  });
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
 
   const [ballType, setBallType] = useState(initialSetup?.ballType || 'tennis');
   const [totalOvers, setTotalOvers] = useState(initialSetup?.totalOvers ? String(initialSetup.totalOvers) : '5');
@@ -442,6 +454,8 @@ export function QuickMatchSetupScreen({
         pitchType,
         umpireName: umpireName || 'Cric Scorer',
         venueName: venueName ? venueName.trim() : '',
+        scheduledAt: matchSchedule.isoString,
+        matchDate: matchSchedule.label,
         tossWinner: tossWinner || finalTeam1,
         tossDecision: tossDecision || 'BAT',
         striker: step3Striker,
@@ -844,6 +858,38 @@ export function QuickMatchSetupScreen({
                 </View>
 
                 <View style={{ gap: 4 }}>
+                  <Text style={styles.labelHeader}>MATCH DATE & TIME</Text>
+                  <TouchableOpacity
+                    onPress={() => setDatePickerVisible(true)}
+                    activeOpacity={0.75}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: '#F8FAFC',
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1'
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                      <Ionicons name="calendar-outline" size={18} color="#0284C7" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontBold }} numberOfLines={1}>
+                          {matchSchedule.label}
+                        </Text>
+                        <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFontMedium, marginTop: 1 }}>
+                          Tap to select date or scheduled time
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{ gap: 4 }}>
                   <Text style={styles.labelHeader}>UMPIRE NAME</Text>
                   <TextInput
                     style={styles.input}
@@ -872,6 +918,22 @@ export function QuickMatchSetupScreen({
               <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </ScrollView>
+
+          {/* MATCH DATE & TIME PICKER MODAL */}
+          <MatchDatePickerModal
+            visible={datePickerVisible}
+            onClose={() => setDatePickerVisible(false)}
+            onSelectDateTime={(sched) => {
+              setMatchSchedule({
+                isoString: sched.isoString,
+                label: sched.label,
+                dateText: sched.dateText,
+                timeText: sched.timeText,
+                isScheduledLater: true
+              });
+              showToast(`Match set for: ${sched.label}`, 'success', 'Schedule Updated');
+            }}
+          />
 
           {/* 10-PRESET TEAM LOGO PICKER MODAL */}
           <Modal

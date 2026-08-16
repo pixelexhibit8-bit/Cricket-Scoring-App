@@ -20,6 +20,7 @@ import { AppBottomNav } from '../components/navigation/AppBottomNav.jsx';
 import { AboutAppScreen } from '../components/AboutAppScreen.jsx';
 import { MyProfileScreen } from './MyProfileScreen.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
+import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
 import { showToast } from '../services/toastService.js';
@@ -47,6 +48,8 @@ export function HomeScreen({
   renderFinishedMatchListCard,
   visibleFinishedMatches = [],
   activeMatch,
+  upcomingMatches = [],
+  onStartUpcomingMatch = null,
   TOP_BATTERS = [],
   TOP_BOWLERS = [],
   TOP_ALLROUNDERS = [],
@@ -77,6 +80,7 @@ export function HomeScreen({
   const homeTabs = [
     { id: 'home', label: 'For you' },
     { id: 'live', label: activeMatchVisible ? 'Live (1)' : 'Live (0)' },
+    { id: 'upcoming', label: `Upcoming (${upcomingMatches?.length || 0})` },
     { id: 'finished', label: 'Finished' },
     { id: 'playerStats', label: 'Rankings' }
   ];
@@ -94,13 +98,13 @@ export function HomeScreen({
   };
 
   const animatedUnderlineX = homePagerScrollX.interpolate({
-    inputRange: [0, screenWidth, screenWidth * 2, screenWidth * 3],
+    inputRange: [0, screenWidth, screenWidth * 2, screenWidth * 3, screenWidth * 4],
     outputRange: homeTabs.map((t, index) => tabLayouts[t.id]?.x != null ? tabLayouts[t.id].x : (index * 75 + 16)),
     extrapolate: 'clamp'
   });
 
   const animatedUnderlineWidth = homePagerScrollX.interpolate({
-    inputRange: [0, screenWidth, screenWidth * 2, screenWidth * 3],
+    inputRange: [0, screenWidth, screenWidth * 2, screenWidth * 3, screenWidth * 4],
     outputRange: homeTabs.map(t => tabLayouts[t.id]?.width != null ? tabLayouts[t.id].width : 50),
     extrapolate: 'clamp'
   });
@@ -717,7 +721,138 @@ export function HomeScreen({
             </ScrollView>
           </View>
 
-          {/* 2. FINISHED MATCHES PAGE */}
+          {/* 2. UPCOMING MATCHES PAGE */}
+          <View style={{ width: screenWidth, flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+              contentContainerStyle={styles.tabContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              scrollEventThrottle={16}
+              removeClippedSubviews={true}
+              overScrollMode="never"
+              decelerationRate="normal"
+              nestedScrollEnabled={true}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handlePullToRefresh}
+                  colors={['#0284C7']}
+                  tintColor="#0284C7"
+                />
+              }
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
+                <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  SCHEDULED UPCOMING MATCHES ({upcomingMatches?.length || 0})
+                </Text>
+              </View>
+
+              {(!upcomingMatches || upcomingMatches.length === 0) ? (
+                <View style={styles.idleCard}>
+                  <View style={styles.idleIconBg}>
+                    <Ionicons name="calendar-outline" size={28} color="#0284C7" />
+                  </View>
+                  <Text style={styles.idleTitle}>No Upcoming Matches Scheduled</Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 11, fontFamily: systemFontMedium, marginTop: 4, textAlign: 'center' }}>
+                    Scheduled matches and upcoming fixtures will appear here
+                  </Text>
+                </View>
+              ) : (
+                upcomingMatches.map((m, idx) => {
+                  const t1Name = m.team1Name || m.team1?.name || m.teams?.[0]?.name || 'Team A';
+                  const t2Name = m.team2Name || m.team2?.name || m.teams?.[1]?.name || 'Team B';
+                  const t1Logo = m.team1LogoKey || m.team1?.logoKey || 'csk';
+                  const t2Logo = m.team2LogoKey || m.team2?.logoKey || 'rcb';
+                  const schedTime = m.matchDate || m.scheduledAt || 'Upcoming';
+                  const venue = m.venueName || m.venue || 'Sadokan Ground';
+                  const overs = m.totalOvers || m.maxOvers || 5;
+
+                  return (
+                    <View
+                      key={`upcoming-${m.id || idx}`}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 14,
+                        padding: 14,
+                        marginBottom: 10,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        gap: 10
+                      }}
+                    >
+                      {/* Top Header: Schedule Badge & Venue */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#BAE6FD', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Ionicons name="calendar" size={11} color="#0284C7" />
+                          <Text style={{ color: '#0284C7', fontSize: 10.5, fontFamily: systemFontBold }}>
+                            {schedTime}
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name="location-outline" size={12} color="#64748B" />
+                          <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }} numberOfLines={1}>
+                            {venue}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Teams Matchup Center Row */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
+                        {/* Team 1 */}
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TeamIdentityMark team={{ name: t1Name, logoKey: t1Logo }} size={38} />
+                          <Text style={{ color: '#0F172A', fontSize: 14, fontFamily: systemFontBold, flex: 1 }} numberOfLines={1}>
+                            {t1Name}
+                          </Text>
+                        </View>
+
+                        {/* VS Chip */}
+                        <View style={{ paddingHorizontal: 8, alignItems: 'center' }}>
+                          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ color: '#64748B', fontSize: 9.5, fontFamily: systemFontBold }}>VS</Text>
+                          </View>
+                          <Text style={{ color: '#94A3B8', fontSize: 9, fontFamily: systemFontMedium, marginTop: 2 }}>{overs} Ov</Text>
+                        </View>
+
+                        {/* Team 2 */}
+                        <View style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+                          <TeamIdentityMark team={{ name: t2Name, logoKey: t2Logo }} size={38} />
+                          <Text style={{ color: '#0F172A', fontSize: 14, fontFamily: systemFontBold, flex: 1, textAlign: 'right' }} numberOfLines={1}>
+                            {t2Name}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Scorer Action: Start Match Button */}
+                      {onStartUpcomingMatch && (
+                        <TouchableOpacity
+                          onPress={() => onStartUpcomingMatch(m)}
+                          activeOpacity={0.8}
+                          style={{
+                            backgroundColor: '#0284C7',
+                            paddingVertical: 9,
+                            borderRadius: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6
+                          }}
+                        >
+                          <MaterialCommunityIcons name="cricket" size={15} color="#FFFFFF" />
+                          <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>
+                            START SCORING MATCH
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+
+          {/* 3. FINISHED MATCHES PAGE */}
           <View style={{ width: screenWidth, flex: 1 }}>
             <ScrollView
               style={{ flex: 1, backgroundColor: '#F8FAFC' }}
