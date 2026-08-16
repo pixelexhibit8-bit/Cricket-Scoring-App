@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { systemFont, systemFontBold, systemFontMedium, typeScale } from '../../theme.js';
+import { systemFont, systemFontBold, systemFontMedium, typeScale, fontWeights } from '../../theme.js';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
 
 const nameFitProps = {
@@ -69,7 +69,7 @@ export function RunOutModal({
 
           <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
             <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
-              <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>WICKET BROKEN AT</Text>
+              <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFontMedium, letterSpacing: 0.5 }}>WICKET BROKEN AT</Text>
             </View>
             {[
               { id: 'striker', label: 'Striker End' },
@@ -83,7 +83,7 @@ export function RunOutModal({
                   style={{ minHeight: 54, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: selected ? '#F0F9FF' : '#FFFFFF' }}
                 >
                   <Ionicons name="flag-outline" size={18} color={selected ? '#0284C7' : '#64748B'} />
-                  <Text style={{ flex: 1, color: '#0F172A', fontSize: 14, fontWeight: selected ? fontWeights.bold : '700', fontFamily: systemFont }}>{item.label}</Text>
+                  <Text style={{ flex: 1, color: '#0F172A', fontSize: 14, fontFamily: selected ? systemFontBold : systemFontMedium }}>{item.label}</Text>
                   <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={19} color={selected ? '#0284C7' : '#CBD5E1'} />
                 </TouchableOpacity>
               );
@@ -92,7 +92,7 @@ export function RunOutModal({
 
           <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
             <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
-              <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>COMPLETED RUNS</Text>
+              <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFontMedium, letterSpacing: 0.5 }}>COMPLETED RUNS</Text>
             </View>
             <View style={{ minHeight: 58, flexDirection: 'row', alignItems: 'stretch' }}>
               <TouchableOpacity
@@ -103,8 +103,8 @@ export function RunOutModal({
                 <Ionicons name="remove" size={22} color="#0F172A" />
               </TouchableOpacity>
               <View style={{ flex: 1.4, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
-                <Text style={{ color: '#0F172A', fontSize: typeScale.keyAction, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{runOutRuns}</Text>
-                <Text style={{ color: '#64748B', fontSize: 9, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }}>RUNS</Text>
+                <Text style={{ color: '#0F172A', fontSize: typeScale.keyAction, fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>{runOutRuns}</Text>
+                <Text style={{ color: '#64748B', fontSize: 9, marginTop: 2, fontFamily: systemFontMedium }}>RUNS</Text>
               </View>
               <TouchableOpacity onPress={() => setRunOutRuns(value => value + 1)} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name="add" size={22} color="#0F172A" />
@@ -128,7 +128,7 @@ export function RunOutModal({
             }}
           >
             <Ionicons name="checkmark-circle-outline" size={17} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }}>CONFIRM RUN OUT</Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>CONFIRM RUN OUT</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

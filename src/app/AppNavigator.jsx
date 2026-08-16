@@ -4305,7 +4305,6 @@ export function AppNavigator() {
               <TouchableOpacity
                 style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
                 onPress={() => handleRecordBall(0, 'wd')}
-{{ ... }}
               >
                 <Text style={{ color: '#B45309', fontSize: 15, fontFamily: systemFontBold }}>WIDE</Text>
               </TouchableOpacity>
