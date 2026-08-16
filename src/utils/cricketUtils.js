@@ -591,8 +591,9 @@ export const formatOrdinal = (value) => {
 };
 
 export const formatMatchDateTime = (startedAt) => {
-  const date = startedAt ? new Date(startedAt) : new Date();
-  if (Number.isNaN(date.getTime())) return '';
+  if (!startedAt) return '';
+  const date = new Date(startedAt);
+  if (Number.isNaN(date.getTime())) return String(startedAt);
   return date.toLocaleString('en-IN', {
     weekday: 'short',
     day: '2-digit',
@@ -605,8 +606,9 @@ export const formatMatchDateTime = (startedAt) => {
 };
 
 export const formatMatchDateLabel = (startedAt) => {
-  const date = startedAt ? new Date(startedAt) : new Date();
-  if (Number.isNaN(date.getTime())) return 'Match Date';
+  if (!startedAt) return '';
+  const date = new Date(startedAt);
+  if (Number.isNaN(date.getTime())) return String(startedAt);
   return date.toLocaleDateString('en-IN', {
     weekday: 'short',
     day: '2-digit',
@@ -723,15 +725,21 @@ export const buildFinishedMatch = (match, rosterByTeam = {}) => {
     .filter(player => player.balls > 0 || player.runs > 0)
     .sort((a, b) => b.runs - a.runs || a.balls - b.balls);
 
-  const completedDate = match.completedAt || match.startedAt || match.createdAt || new Date().toISOString();
+  const completedDate = match.completedAt
+    || match.startedAt
+    || match.created_at
+    || match.createdAt
+    || match.date
+    || match.dateText
+    || null;
 
   return {
     id: match.id || `finished-${Date.now()}`,
     matchType: match.matchType || `${match.totalOvers || 5} Overs Match`,
     venue: match.venue || 'Sadokan Ground',
     completedAt: completedDate,
-    dateText: formatMatchDateTime(completedDate),
-    dateLabel: formatMatchDateLabel(completedDate),
+    dateText: formatMatchDateTime(completedDate) || 'Match Finished',
+    dateLabel: formatMatchDateLabel(completedDate) || 'Match Finished',
     resultText: match.resultText || 'Match Completed',
     winnerTeamName: match.winnerTeamName || '',
     team1,
