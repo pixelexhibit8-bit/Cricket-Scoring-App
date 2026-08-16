@@ -1834,17 +1834,20 @@ export default function App() {
         inn.isOverComplete = false;
       }
 
-      // Check inning end
+      // Check inning end & chase result
       const roster = getRosterForTeam(inn.battingTeam.name, []);
-      const mw = roster.length - 1;
+      const totalSquadPlayers = roster.length > 0
+        ? roster.length
+        : (inn.allBatters?.length > 1 ? inn.allBatters.length : 11);
+      const mw = Math.max(1, totalSquadPlayers - 1);
       const innEnded = checkInningEnd(inn, prev.maxOvers, mw);
-      const chaseCompleted = prev.inning === 2
-        && prev.target
-        && inn.battingTeam.runs >= prev.target;
+      const inn1Runs = Number(innings[0]?.battingTeam?.runs || 0);
+      const effectiveTarget = prev.target || (inn1Runs + 1);
+      const chaseCompleted = prev.inning === 2 && inn.battingTeam.runs >= effectiveTarget;
 
       if (chaseCompleted) {
         inn.status = 'complete';
-        const wicketsLeft = Math.max(0, mw - inn.battingTeam.wickets);
+        const wicketsLeft = Math.max(1, mw - inn.battingTeam.wickets);
         const resultText = `${inn.battingTeam.name} won by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}!`;
         try { Speech.speak('Match over! ' + resultText, { language: 'en-IN' }); } catch (e) { }
         return { ...prev, innings, phase: 'result', winnerTeamName: inn.battingTeam.name, resultText, pendingPublicEvent: null };
@@ -1856,17 +1859,21 @@ export default function App() {
         return { ...prev, innings, phase: 'inningBreak', target: inn.battingTeam.runs + 1, pendingPublicEvent: null };
       } else if (innEnded && prev.inning === 2) {
         inn.status = 'complete';
-        const inn2 = inn;
-        const inn1 = innings[0];
-        const target = prev.target;
+        const inn2Runs = Number(inn.battingTeam.runs || 0);
         let resultText = '';
         let winnerTeamName = null;
-        if (inn2.battingTeam.runs === target - 1) {
+        if (inn2Runs >= effectiveTarget) {
+          const wicketsLeft = Math.max(1, mw - inn.battingTeam.wickets);
+          resultText = `${inn.battingTeam.name} won by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}!`;
+          winnerTeamName = inn.battingTeam.name;
+        } else if (inn2Runs === inn1Runs) {
           resultText = 'Match tied!';
+          winnerTeamName = null;
         } else {
-          const diff = target - inn2.battingTeam.runs - 1;
-          resultText = `${inn1.battingTeam.name} won by ${diff} run${diff !== 1 ? 's' : ''}!`;
-          winnerTeamName = inn1.battingTeam.name;
+          const diff = Math.max(1, inn1Runs - inn2Runs);
+          const defTeam = innings[0]?.battingTeam?.name || 'Defending Team';
+          resultText = `${defTeam} won by ${diff} run${diff !== 1 ? 's' : ''}!`;
+          winnerTeamName = defTeam;
         }
         try { Speech.speak('Match over! ' + resultText, { language: 'en-IN' }); } catch (e) { }
         return { ...prev, innings, phase: 'result', winnerTeamName, resultText, pendingPublicEvent: null };
