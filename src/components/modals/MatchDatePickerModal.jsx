@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,94 +7,96 @@ import {
   ScrollView,
   StyleSheet
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import {
   systemFont,
   systemFontBold,
-  systemFontMedium,
-  fontWeights
+  systemFontMedium
 } from '../../theme.js';
 
-const MONTHS = [
+const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
-const HOURS = ['06', '07', '08', '09', '10', '11', '12', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10'];
-const MINUTES = ['00', '15', '30', '45'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Standard Cricket Match Slot Times
+const POPULAR_TIME_SLOTS = [
+  { hour: '07', minute: '00', period: 'AM', label: '07:00 AM (Morning Slot)' },
+  { hour: '08', minute: '30', period: 'AM', label: '08:30 AM (Early Match)' },
+  { hour: '10', minute: '00', period: 'AM', label: '10:00 AM (Day Match)' },
+  { hour: '02', minute: '30', period: 'PM', label: '02:30 PM (Afternoon)' },
+  { hour: '04', minute: '00', period: 'PM', label: '04:00 PM (Evening Slot)' },
+  { hour: '05', minute: '30', period: 'PM', label: '05:30 PM (Sunset Slot)' },
+  { hour: '07', minute: '30', period: 'PM', label: '07:30 PM (Night Turf)' }
+];
 
 export function MatchDatePickerModal({
   visible,
-  initialDate,
-  initialTime,
   onClose,
   onSelectDateTime
 }) {
-  const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
-  const [selectedDay, setSelectedDay] = useState(now.getDate());
+  const [selectedDayOffset, setSelectedDayOffset] = useState(0); // 0 = Today, 1 = Tomorrow, 2 = Day After, etc.
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(POPULAR_TIME_SLOTS[4]); // 04:00 PM default
 
-  // Time state
-  const [selectedHour, setSelectedHour] = useState('04');
-  const [selectedMinute, setSelectedMinute] = useState('30');
-  const [selectedPeriod, setSelectedPeriod] = useState('PM');
-  const [activeTab, setActiveTab] = useState('date'); // 'date' | 'time'
-
-  // Quick Preset Options
-  const handleQuickPreset = (type) => {
-    const d = new Date();
-    if (type === 'today') {
-      setSelectedYear(d.getFullYear());
-      setSelectedMonth(d.getMonth());
-      setSelectedDay(d.getDate());
-    } else if (type === 'tomorrow') {
-      d.setDate(d.getDate() + 1);
-      setSelectedYear(d.getFullYear());
-      setSelectedMonth(d.getMonth());
-      setSelectedDay(d.getDate());
+  // Generate 7 consecutive upcoming days cleanly with day names
+  const upcomingDays = useMemo(() => {
+    const list = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const dayName = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAY_NAMES[d.getDay()];
+      const formattedDate = `${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
+      const fullDate = `${dayName}, ${formattedDate}`;
+      list.push({
+        offset: i,
+        dayName,
+        formattedDate,
+        fullDate,
+        dateObj: d
+      });
     }
-  };
+    return list;
+  }, []);
 
-  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-  const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-  const formattedDatePreview = `${selectedDay} ${MONTHS[selectedMonth]} ${selectedYear}`;
-  const formattedTimePreview = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
+  const activeDay = upcomingDays[selectedDayOffset] || upcomingDays[0];
 
   const handleConfirm = () => {
-    // Construct standard ISO date string
-    let hourNum = parseInt(selectedHour, 10);
-    if (selectedPeriod === 'PM' && hourNum < 12) hourNum += 12;
-    if (selectedPeriod === 'AM' && hourNum === 12) hourNum = 0;
-    
-    const mm = String(selectedMonth + 1).padStart(2, '0');
-    const dd = String(selectedDay).padStart(2, '0');
+    const d = new Date();
+    d.setDate(d.getDate() + selectedDayOffset);
+
+    let hourNum = parseInt(selectedTimeSlot.hour, 10);
+    if (selectedTimeSlot.period === 'PM' && hourNum < 12) hourNum += 12;
+    if (selectedTimeSlot.period === 'AM' && hourNum === 12) hourNum = 0;
+
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
     const hh = String(hourNum).padStart(2, '0');
-    const min = String(selectedMinute).padStart(2, '0');
-    
-    const isoString = `${selectedYear}-${mm}-${dd}T${hh}:${min}:00`;
-    const label = `${formattedDatePreview}, ${formattedTimePreview}`;
-    
+    const min = String(selectedTimeSlot.minute).padStart(2, '0');
+
+    const isoString = `${d.getFullYear()}-${mm}-${dd}T${hh}:${min}:00`;
+    const label = `${activeDay.fullDate} • ${selectedTimeSlot.hour}:${selectedTimeSlot.minute} ${selectedTimeSlot.period}`;
+
     onSelectDateTime({
       isoString,
       label,
-      dateText: formattedDatePreview,
-      timeText: formattedTimePreview
+      dateText: activeDay.fullDate,
+      timeText: `${selectedTimeSlot.hour}:${selectedTimeSlot.minute} ${selectedTimeSlot.period}`
     });
     onClose();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.backdrop}>
         <TouchableOpacity activeOpacity={1} style={styles.card}>
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>Match Schedule</Text>
-              <Text style={styles.subtitle}>
-                {formattedDatePreview} • {formattedTimePreview}
+              <Text style={styles.title}>Match Schedule (Date & Time)</Text>
+              <Text style={styles.previewSubtitle}>
+                {activeDay.fullDate} • {selectedTimeSlot.hour}:{selectedTimeSlot.minute} {selectedTimeSlot.period}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -102,142 +104,70 @@ export function MatchDatePickerModal({
             </TouchableOpacity>
           </View>
 
-          {/* Quick Preset Buttons */}
-          <View style={styles.presetRow}>
-            <TouchableOpacity
-              onPress={() => handleQuickPreset('today')}
-              style={[styles.presetBtn, selectedDay === now.getDate() && selectedMonth === now.getMonth() && styles.presetBtnActive]}
-            >
-              <Ionicons name="calendar-outline" size={13} color={selectedDay === now.getDate() && selectedMonth === now.getMonth() ? '#0284C7' : '#64748B'} />
-              <Text style={[styles.presetBtnText, selectedDay === now.getDate() && selectedMonth === now.getMonth() && styles.presetBtnTextActive]}>
-                Today ({now.getDate()} {MONTHS[now.getMonth()]})
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => handleQuickPreset('tomorrow')}
-              style={[styles.presetBtn, selectedDay === now.getDate() + 1 && styles.presetBtnActive]}
-            >
-              <Ionicons name="sunny-outline" size={13} color={selectedDay === now.getDate() + 1 ? '#0284C7' : '#64748B'} />
-              <Text style={[styles.presetBtnText, selectedDay === now.getDate() + 1 && styles.presetBtnTextActive]}>
-                Tomorrow
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Switcher Tab Bar */}
-          <View style={styles.tabBar}>
-            <TouchableOpacity
-              onPress={() => setActiveTab('date')}
-              style={[styles.tabBtn, activeTab === 'date' && styles.tabBtnActive]}
-            >
-              <Ionicons name="calendar" size={15} color={activeTab === 'date' ? '#0284C7' : '#64748B'} />
-              <Text style={[styles.tabText, activeTab === 'date' && styles.tabTextActive]}>
-                {formattedDatePreview}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setActiveTab('time')}
-              style={[styles.tabBtn, activeTab === 'time' && styles.tabBtnActive]}
-            >
-              <Ionicons name="time" size={15} color={activeTab === 'time' ? '#0284C7' : '#64748B'} />
-              <Text style={[styles.tabText, activeTab === 'time' && styles.tabTextActive]}>
-                {formattedTimePreview}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* TAB 1: DATE PICKER */}
-          {activeTab === 'date' ? (
-            <View style={{ gap: 12 }}>
-              {/* Month Selector */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                {MONTHS.map((m, idx) => (
-                  <TouchableOpacity
-                    key={m}
-                    onPress={() => setSelectedMonth(idx)}
-                    style={[styles.monthChip, selectedMonth === idx && styles.monthChipActive]}
-                  >
-                    <Text style={[styles.monthText, selectedMonth === idx && styles.monthTextActive]}>
-                      {m}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              {/* Day Grid */}
-              <ScrollView style={{ maxHeight: 180 }} showsVerticalScrollIndicator={false}>
-                <View style={styles.daysGrid}>
-                  {daysArray.map(d => {
-                    const active = selectedDay === d;
-                    return (
-                      <TouchableOpacity
-                        key={d}
-                        onPress={() => setSelectedDay(d)}
-                        style={[styles.dayCell, active && styles.dayCellActive]}
-                      >
-                        <Text style={[styles.dayText, active && styles.dayTextActive]}>{d}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
+            {/* 1. SELECT DAY CHIPS */}
+            <View style={{ gap: 8 }}>
+              <Text style={styles.sectionLabel}>1. SELECT MATCH DAY</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {upcomingDays.map((item) => {
+                  const active = selectedDayOffset === item.offset;
+                  return (
+                    <TouchableOpacity
+                      key={`day-${item.offset}`}
+                      onPress={() => setSelectedDayOffset(item.offset)}
+                      activeOpacity={0.75}
+                      style={[styles.dayChip, active && styles.dayChipActive]}
+                    >
+                      <Text style={[styles.dayChipTitle, active && styles.dayChipTitleActive]}>
+                        {item.dayName}
+                      </Text>
+                      <Text style={[styles.dayChipDate, active && styles.dayChipDateActive]}>
+                        {item.formattedDate}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             </View>
-          ) : (
-            /* TAB 2: TIME PICKER */
-            <View style={{ gap: 14 }}>
-              {/* AM / PM Selector */}
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {['AM', 'PM'].map(p => (
-                  <TouchableOpacity
-                    key={p}
-                    onPress={() => setSelectedPeriod(p)}
-                    style={[styles.periodBtn, selectedPeriod === p && styles.periodBtnActive]}
-                  >
-                    <Text style={[styles.periodText, selectedPeriod === p && styles.periodTextActive]}>{p}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
 
-              {/* Hour & Minute Row */}
-              <View style={{ gap: 8 }}>
-                <Text style={styles.sectionLabel}>SELECT HOUR</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                  {HOURS.map(h => (
+            {/* 2. SELECT TIME SLOT */}
+            <View style={{ gap: 8 }}>
+              <Text style={styles.sectionLabel}>2. SELECT MATCH START TIME</Text>
+              <View style={{ gap: 6 }}>
+                {POPULAR_TIME_SLOTS.map((slot, sIdx) => {
+                  const active = (selectedTimeSlot.hour === slot.hour && selectedTimeSlot.minute === slot.minute && selectedTimeSlot.period === slot.period);
+                  return (
                     <TouchableOpacity
-                      key={h}
-                      onPress={() => setSelectedHour(h)}
-                      style={[styles.timeChip, selectedHour === h && styles.timeChipActive]}
+                      key={`slot-${sIdx}-${slot.hour}-${slot.minute}`}
+                      onPress={() => setSelectedTimeSlot(slot)}
+                      activeOpacity={0.75}
+                      style={[styles.timeRow, active && styles.timeRowActive]}
                     >
-                      <Text style={[styles.timeChipText, selectedHour === h && styles.timeChipTextActive]}>{h}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Ionicons name="time-outline" size={18} color={active ? '#0284C7' : '#64748B'} />
+                        <Text style={[styles.timeRowText, active && styles.timeRowTextActive]}>
+                          {slot.label}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={active ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={20}
+                        color={active ? '#0284C7' : '#CBD5E1'}
+                      />
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
-
-                <Text style={[styles.sectionLabel, { marginTop: 6 }]}>SELECT MINUTE</Text>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {MINUTES.map(m => (
-                    <TouchableOpacity
-                      key={m}
-                      onPress={() => setSelectedMinute(m)}
-                      style={[styles.minChip, selectedMinute === m && styles.timeChipActive]}
-                    >
-                      <Text style={[styles.timeChipText, selectedMinute === m && styles.timeChipTextActive]}>{m}m</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                  );
+                })}
               </View>
             </View>
-          )}
+          </ScrollView>
 
-          {/* Footer Actions */}
+          {/* Footer Buttons */}
           <View style={styles.footer}>
             <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleConfirm} style={styles.confirmBtn}>
-              <Text style={styles.confirmText}>Set Schedule</Text>
+            <TouchableOpacity onPress={handleConfirm} style={styles.saveBtn}>
+              <Text style={styles.saveText}>Confirm Schedule</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -250,20 +180,18 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
+    justifyContent: 'flex-end'
   },
   card: {
-    width: '100%',
-    maxWidth: 380,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 18,
+    paddingBottom: 28,
     gap: 14,
+    maxHeight: '80%',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    elevation: 8
+    borderColor: '#CBD5E1'
   },
   header: {
     flexDirection: 'row',
@@ -278,7 +206,7 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold,
     color: '#0F172A'
   },
-  subtitle: {
+  previewSubtitle: {
     fontSize: 12,
     fontFamily: systemFontMedium,
     color: '#0284C7',
@@ -292,170 +220,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center'
   },
-  presetRow: {
-    flexDirection: 'row',
-    gap: 8
-  },
-  presetBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0'
-  },
-  presetBtnActive: {
-    backgroundColor: '#F0F9FF',
-    borderColor: '#38BDF8'
-  },
-  presetBtnText: {
-    fontSize: 11,
-    fontFamily: systemFontMedium,
-    color: '#475569'
-  },
-  presetBtnTextActive: {
-    color: '#0284C7',
-    fontFamily: systemFontBold
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 10,
-    padding: 3,
-    gap: 4
-  },
-  tabBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 8
-  },
-  tabBtnActive: {
-    backgroundColor: '#FFFFFF',
-    elevation: 2
-  },
-  tabText: {
-    fontSize: 12,
-    fontFamily: systemFontMedium,
-    color: '#64748B'
-  },
-  tabTextActive: {
-    color: '#0284C7',
-    fontFamily: systemFontBold
-  },
-  monthChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0'
-  },
-  monthChipActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7'
-  },
-  monthText: {
-    fontSize: 11.5,
-    fontFamily: systemFontMedium,
-    color: '#475569'
-  },
-  monthTextActive: {
-    color: '#FFFFFF',
-    fontFamily: systemFontBold
-  },
-  daysGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    paddingVertical: 4
-  },
-  dayCell: {
-    width: '12.8%',
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0'
-  },
-  dayCellActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7'
-  },
-  dayText: {
-    fontSize: 12,
-    fontFamily: systemFontMedium,
-    color: '#334155'
-  },
-  dayTextActive: {
-    color: '#FFFFFF',
-    fontFamily: systemFontBold
-  },
-  periodBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center'
-  },
-  periodBtnActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7'
-  },
-  periodText: {
-    fontSize: 12,
-    fontFamily: systemFontMedium,
-    color: '#475569'
-  },
-  periodTextActive: {
-    color: '#FFFFFF',
-    fontFamily: systemFontBold
-  },
   sectionLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: systemFontBold,
     color: '#64748B',
     letterSpacing: 0.5
   },
-  timeChip: {
+  dayChip: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0'
-  },
-  minChip: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    alignItems: 'center'
+    alignItems: 'center',
+    minWidth: 80
   },
-  timeChipActive: {
+  dayChipActive: {
     backgroundColor: '#0284C7',
     borderColor: '#0284C7'
   },
-  timeChipText: {
-    fontSize: 12,
+  dayChipTitle: {
+    fontSize: 13,
+    fontFamily: systemFontBold,
+    color: '#0F172A'
+  },
+  dayChipTitleActive: {
+    color: '#FFFFFF'
+  },
+  dayChipDate: {
+    fontSize: 11,
+    fontFamily: systemFontMedium,
+    color: '#64748B',
+    marginTop: 2
+  },
+  dayChipDateActive: {
+    color: 'rgba(255, 255, 255, 0.9)'
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0'
+  },
+  timeRowActive: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#BAE6FD'
+  },
+  timeRowText: {
+    fontSize: 13.5,
     fontFamily: systemFontMedium,
     color: '#334155'
   },
-  timeChipTextActive: {
-    color: '#FFFFFF',
+  timeRowTextActive: {
+    color: '#0284C7',
     fontFamily: systemFontBold
   },
   footer: {
@@ -465,7 +288,7 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: 10,
     backgroundColor: '#F1F5F9',
     alignItems: 'center'
@@ -475,14 +298,14 @@ const styles = StyleSheet.create({
     fontFamily: systemFontMedium,
     color: '#64748B'
   },
-  confirmBtn: {
-    flex: 1.5,
-    paddingVertical: 10,
+  saveBtn: {
+    flex: 1.6,
+    paddingVertical: 11,
     borderRadius: 10,
     backgroundColor: '#0284C7',
     alignItems: 'center'
   },
-  confirmText: {
+  saveText: {
     fontSize: 13,
     fontFamily: systemFontBold,
     color: '#FFFFFF'
