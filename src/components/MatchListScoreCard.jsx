@@ -36,13 +36,13 @@ export const MatchListScoreCard = ({
     const scoreColor = isWinner || isActive ? '#0284C7' : (isLoser ? '#94A3B8' : '#0F172A');
 
     return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <TeamIdentityMark team={team} size={30} isLoser={isLoser} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <TeamIdentityMark team={team} size={26} isLoser={isLoser} />
         <Text
           style={{
-            fontSize: 15,
+            fontSize: 15.5,
             color: isLoser ? '#94A3B8' : (muted ? '#64748B' : '#0F172A'),
-            minWidth: 42,
+            minWidth: 44,
             fontFamily: systemFontMedium
           }}
           numberOfLines={1}
@@ -58,7 +58,7 @@ export const MatchListScoreCard = ({
                 color: scoreColor,
                 fontSize: 16.5,
                 fontVariant: ['tabular-nums'],
-                fontFamily: systemFontMedium
+                fontFamily: systemFontBold
               }}
               numberOfLines={1}
             >
@@ -79,7 +79,6 @@ export const MatchListScoreCard = ({
               </Text>
             ) : null}
             {isActive ? <MaterialCommunityIcons name="cricket" size={14} color="#0284C7" /> : null}
-            {isWinner ? <Ionicons name="trophy-outline" size={13} color="#0284C7" /> : null}
           </View>
         ) : (
           <Text
@@ -104,92 +103,95 @@ export const MatchListScoreCard = ({
         onPress={onPress}
         style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: 14,
-          padding: 13,
+          borderRadius: 16,
+          padding: 16,
           borderWidth: 1,
-          borderColor: '#E2E8F0',
-          gap: 10
+          borderColor: '#F1F5F9',
+          gap: 12,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.03,
+          shadowRadius: 4,
+          elevation: 1
         }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-          <Text style={{ fontSize: 12, color: '#64748B', flex: 1, fontFamily: systemFontMedium }} numberOfLines={1}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ fontSize: 12, color: '#94A3B8', flex: 1, fontFamily: systemFontMedium }} numberOfLines={1}>
             {subtitle}
           </Text>
-          {topRightIcon ? <Ionicons name={topRightIcon} size={18} color="#64748B" /> : null}
+          {topRightIcon ? <Ionicons name={topRightIcon} size={17} color="#94A3B8" /> : null}
         </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1, gap: 8 }}>
-          {renderTeamRow(teamOne, teamOneScore, teamOneOvers)}
-          {renderTeamRow(teamTwo, teamTwoScore, teamTwoOvers, !teamTwoScore)}
-        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1, gap: 12 }}>
+            {renderTeamRow(teamOne, teamOneScore, teamOneOvers)}
+            {renderTeamRow(teamTwo, teamTwoScore, teamTwoOvers, !teamTwoScore)}
+          </View>
 
-        <View style={{ width: 1, height: 44, backgroundColor: '#F1F5F9', marginHorizontal: 12 }} />
+          <View style={{ width: 1, height: 50, backgroundColor: '#F1F5F9', marginHorizontal: 14 }} />
 
-        {resultTitle ? (
-          <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
-            <Text
-              selectable
-              style={{
-                fontSize: 15,
-                lineHeight: 20,
-                color: resultColor || '#166534',
-                textAlign: 'center',
-                fontFamily: systemFontBold
-              }}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.85}
-            >
-              {resultTitle}
-            </Text>
-            {resultDetail ? (
+          {resultTitle ? (
+            <View style={{ minWidth: 105, alignItems: 'center', justifyContent: 'center' }}>
               <Text
                 selectable
                 style={{
-                  fontSize: 11.5,
-                  lineHeight: 15,
-                  color: '#64748B',
+                  fontSize: 17,
+                  lineHeight: 22,
+                  color: resultColor || '#0284C7',
                   textAlign: 'center',
-                  marginTop: 2,
-                  fontFamily: systemFontMedium
+                  fontFamily: systemFontBold
                 }}
-                numberOfLines={1}
+                numberOfLines={2}
                 adjustsFontSizeToFit
                 minimumFontScale={0.85}
               >
-                {resultDetail}
+                {resultTitle}
               </Text>
-            ) : null}
-          </View>
-        ) : (
-          <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: statusDotColor }} />
-              <Text style={{ fontSize: 14.5, color: statusColor, fontFamily: systemFontMedium }}>
-                {statusLabel}
-              </Text>
+              {resultDetail ? (
+                <Text
+                  selectable
+                  style={{
+                    fontSize: 12,
+                    lineHeight: 16,
+                    color: '#64748B',
+                    textAlign: 'center',
+                    fontFamily: systemFontMedium,
+                    marginTop: 3
+                  }}
+                  numberOfLines={1}
+                >
+                  {resultDetail}
+                </Text>
+              ) : null}
             </View>
-          </View>
-        )}
-      </View>
+          ) : (statusLabel ? (
+            <View style={{ minWidth: 90, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <View style={{ width: 6.5, height: 6.5, borderRadius: 3.5, backgroundColor: statusDotColor }} />
+                <Text style={{ fontSize: 14, color: statusColor, fontFamily: systemFontBold }}>
+                  {statusLabel}
+                </Text>
+              </View>
+            </View>
+          ) : null)}
+        </View>
 
-      {footerText ? (
-        <Text
-          selectable
-          style={{
-            fontSize: 12,
-            color: footerColor,
-            fontFamily: systemFontMedium,
-            paddingTop: 4,
-            borderTopWidth: 1,
-            borderTopColor: '#F8FAFC'
-          }}
-          numberOfLines={2}
-        >
-          {footerText}
-        </Text>
-      ) : null}
+        {footerText ? (
+          <Text
+            selectable
+            style={{
+              fontSize: 12,
+              color: footerColor,
+              fontFamily: systemFontMedium,
+              paddingTop: 4,
+              borderTopWidth: 1,
+              borderTopColor: '#F8FAFC'
+            }}
+            numberOfLines={2}
+          >
+            {footerText}
+          </Text>
+        ) : null}
       </ScalePressable>
     </FadeSlideIn>
   );

@@ -701,13 +701,10 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dKey => (
-                    <View key={`foryou-grp-${dKey}`} style={{ marginTop: 12 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
-                        <Ionicons name="calendar-outline" size={15} color="#0284C7" />
-                        <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#334155' }}>
-                          {dKey}
-                        </Text>
-                      </View>
+                    <View key={`foryou-grp-${dKey}`} style={{ marginTop: 16, marginBottom: 4 }}>
+                      <Text style={{ fontSize: 16.5, fontFamily: systemFontBold, color: '#0F172A', marginBottom: 10, paddingHorizontal: 2 }}>
+                        {dKey}
+                      </Text>
                       {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
                     </View>
                   ));
@@ -764,13 +761,10 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dKey => (
-                    <View key={`live-grp-${dKey}`} style={{ marginTop: 14 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
-                        <Ionicons name="calendar-outline" size={15} color="#0284C7" />
-                        <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#334155' }}>
-                          {dKey}
-                        </Text>
-                      </View>
+                    <View key={`live-grp-${dKey}`} style={{ marginTop: 16, marginBottom: 4 }}>
+                      <Text style={{ fontSize: 16.5, fontFamily: systemFontBold, color: '#0F172A', marginBottom: 10, paddingHorizontal: 2 }}>
+                        {dKey}
+                      </Text>
                       {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
                     </View>
                   ));
@@ -826,13 +820,10 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dateKey => (
-                    <View key={`up-grp-${dateKey}`} style={{ marginBottom: 12 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
-                        <Ionicons name="calendar-outline" size={15} color="#0284C7" />
-                        <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#334155' }}>
-                          {dateKey}
-                        </Text>
-                      </View>
+                    <View key={`up-grp-${dateKey}`} style={{ marginTop: 16, marginBottom: 4 }}>
+                      <Text style={{ fontSize: 16.5, fontFamily: systemFontBold, color: '#0F172A', marginBottom: 10, paddingHorizontal: 2 }}>
+                        {dateKey}
+                      </Text>
                       {groups[dateKey].map((m, idx) => {
                         const t1Name = m.team1Name || m.team1?.name || m.teams?.[0]?.name || 'Team A';
                         const t2Name = m.team2Name || m.team2?.name || m.teams?.[1]?.name || 'Team B';
@@ -847,43 +838,43 @@ export function HomeScreen({
                             key={`upcoming-${m.id || idx}`}
                             style={{
                               backgroundColor: '#FFFFFF',
-                              borderRadius: 14,
-                              padding: 13,
-                              marginBottom: 8,
+                              borderRadius: 16,
+                              padding: 16,
+                              marginBottom: 10,
                               borderWidth: 1,
-                              borderColor: '#E2E8F0',
-                              gap: 10
+                              borderColor: '#F1F5F9',
+                              gap: 12
                             }}
                           >
                             {/* Card Header Subtitle (Like Reference Screenshot) */}
-                            <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>
+                            <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: systemFontMedium }} numberOfLines={1}>
                               {overs}-Over Match • Tennis Ball • {venue}
                             </Text>
 
                             {/* Center Matchup Row */}
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                               {/* Left Teams Column */}
-                              <View style={{ flex: 1, gap: 8 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View style={{ flex: 1, gap: 12 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                                   <TeamIdentityMark team={{ name: t1Name, logoKey: t1Logo }} size={26} />
-                                  <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                                  <Text style={{ fontSize: 15.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
                                     {t1Name}
                                   </Text>
                                 </View>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                                   <TeamIdentityMark team={{ name: t2Name, logoKey: t2Logo }} size={26} />
-                                  <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                                  <Text style={{ fontSize: 15.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
                                     {t2Name}
                                   </Text>
                                 </View>
                               </View>
 
                               {/* Divider */}
-                              <View style={{ width: 1, height: 44, backgroundColor: '#F1F5F9', marginHorizontal: 12 }} />
+                              <View style={{ width: 1, height: 50, backgroundColor: '#F1F5F9', marginHorizontal: 14 }} />
 
                               {/* Right Column: Time & Start Button */}
-                              <View style={{ minWidth: 110, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                                <Text style={{ fontSize: 13, fontFamily: systemFontBold, color: '#0284C7' }}>
+                              <View style={{ minWidth: 105, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                <Text style={{ fontSize: 14, fontFamily: systemFontBold, color: '#0284C7' }}>
                                   {schedTime}
                                 </Text>
                                 {onStartUpcomingMatch ? (
@@ -892,16 +883,16 @@ export function HomeScreen({
                                     activeOpacity={0.8}
                                     style={{
                                       backgroundColor: '#0284C7',
-                                      paddingHorizontal: 10,
-                                      paddingVertical: 5,
-                                      borderRadius: 6,
+                                      paddingHorizontal: 12,
+                                      paddingVertical: 6,
+                                      borderRadius: 8,
                                       flexDirection: 'row',
                                       alignItems: 'center',
                                       gap: 4
                                     }}
                                   >
-                                    <MaterialCommunityIcons name="cricket" size={12} color="#FFFFFF" />
-                                    <Text style={{ color: '#FFFFFF', fontSize: 10.5, fontFamily: systemFontBold }}>
+                                    <MaterialCommunityIcons name="cricket" size={13} color="#FFFFFF" />
+                                    <Text style={{ color: '#FFFFFF', fontSize: 11, fontFamily: systemFontBold }}>
                                       SCORE
                                     </Text>
                                   </TouchableOpacity>
@@ -959,13 +950,10 @@ export function HomeScreen({
                 });
 
                 return Object.keys(groups).map(dateKey => (
-                  <View key={`fin-grp-${dateKey}`} style={{ marginBottom: 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
-                      <Ionicons name="calendar-outline" size={15} color="#0284C7" />
-                      <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#334155' }}>
-                        {dateKey}
-                      </Text>
-                    </View>
+                  <View key={`fin-grp-${dateKey}`} style={{ marginTop: 16, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 16.5, fontFamily: systemFontBold, color: '#0F172A', marginBottom: 10, paddingHorizontal: 2 }}>
+                      {dateKey}
+                    </Text>
                     {groups[dateKey].map(f => renderFinishedMatchListCard && renderFinishedMatchListCard(f))}
                   </View>
                 ));
