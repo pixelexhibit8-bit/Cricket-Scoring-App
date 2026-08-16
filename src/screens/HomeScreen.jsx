@@ -77,6 +77,30 @@ export function HomeScreen({
     if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
     if (setCurrentScreen) setCurrentScreen('playerProfile');
   };
+
+  const getFinishedMatchDateKey = (m) => {
+    if (!m) return 'Match Results';
+    const rawDateStr = m.dateLabel || m.completedAt || m.startedAt || m.created_at || m.updated_at || m.dateText;
+    if (rawDateStr) {
+      const d = new Date(rawDateStr);
+      if (!isNaN(d.getTime())) {
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        const isToday = d.toDateString() === today.toDateString();
+        const isYesterday = d.toDateString() === yesterday.toDateString();
+        const formattedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
+        if (isToday) return `Today, ${formattedDate}`;
+        if (isYesterday) return `Yesterday, ${formattedDate}`;
+        return `${dayName}, ${formattedDate}`;
+      }
+    }
+    if (m.dateText && m.dateText !== 'Recent Matches' && m.dateText !== 'Recent Match') {
+      return m.dateText.split('•')[0].trim();
+    }
+    return 'Match Results';
+  };
   const homeTabs = [
     { id: 'home', label: 'For you' },
     { id: 'live', label: activeMatchVisible ? 'Live (1)' : 'Live (0)' },
@@ -664,12 +688,25 @@ export function HomeScreen({
                 </View>
               )}
 
-              {/* Recent Finished Matches */}
+              {/* Recent Finished Matches Grouped by Exact Date */}
               {recentFinishedMatches && recentFinishedMatches.length > 0 ? (
-                <>
-                  <Text style={[styles.sectionLabel, { marginTop: 14 }]}>RECENT MATCH RESULTS</Text>
-                  {recentFinishedMatches.slice(0, 3).map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
-                </>
+                (() => {
+                  const groups = {};
+                  recentFinishedMatches.slice(0, 4).forEach(m => {
+                    const dKey = getFinishedMatchDateKey(m);
+                    if (!groups[dKey]) groups[dKey] = [];
+                    groups[dKey].push(m);
+                  });
+
+                  return Object.keys(groups).map(dKey => (
+                    <View key={`foryou-grp-${dKey}`} style={{ marginTop: 12 }}>
+                      <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
+                        <Text style={{ fontSize: 14.5, fontFamily: systemFontBold, color: '#0F172A' }}>{dKey}</Text>
+                      </View>
+                      {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
+                    </View>
+                  ));
+                })()
               ) : null}
             </ScrollView>
           </View>
@@ -713,10 +750,23 @@ export function HomeScreen({
               )}
 
               {recentFinishedMatches && recentFinishedMatches.length > 0 ? (
-                <>
-                  <Text style={[styles.sectionLabel, { marginTop: 14 }]}>RECENT MATCH RESULTS</Text>
-                  {recentFinishedMatches.map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
-                </>
+                (() => {
+                  const groups = {};
+                  recentFinishedMatches.forEach(m => {
+                    const dKey = getFinishedMatchDateKey(m);
+                    if (!groups[dKey]) groups[dKey] = [];
+                    groups[dKey].push(m);
+                  });
+
+                  return Object.keys(groups).map(dKey => (
+                    <View key={`live-grp-${dKey}`} style={{ marginTop: 14 }}>
+                      <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
+                        <Text style={{ fontSize: 14.5, fontFamily: systemFontBold, color: '#0F172A' }}>{dKey}</Text>
+                      </View>
+                      {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
+                    </View>
+                  ));
+                })()
               ) : null}
             </ScrollView>
           </View>
@@ -881,21 +931,24 @@ export function HomeScreen({
               {(() => {
                 if (!visibleFinishedMatches || visibleFinishedMatches.length === 0) {
                   return (
-                    <View style={[styles.idleCard, { borderRadius: 8 }]}>
-                      <Text style={styles.idleTitle}>No Finished Match Yet</Text>
-                      <Text style={{ color: '#94A3B8', fontSize: 11, fontFamily: systemFont }}>Completed matches will be saved date-wise here</Text>
+                    <View style={[styles.idleCard, { borderRadius: 12 }]}>
+                      <View style={styles.idleIconBg}>
+                        <MaterialCommunityIcons name="trophy-outline" size={28} color="#0284C7" />
+                      </View>
+                      <Text style={styles.idleTitle}>No Finished Matches Yet</Text>
+                      <Text style={{ color: '#94A3B8', fontSize: 11, fontFamily: systemFontMedium, marginTop: 4, textAlign: 'center' }}>Completed matches will be saved date-wise here</Text>
                     </View>
                   );
                 }
                 const groups = {};
                 visibleFinishedMatches.forEach(m => {
-                  const dateLabel = m.dateLabel || (m.dateText ? m.dateText.split(',')[0] : 'Recent Matches');
-                  if (!groups[dateLabel]) groups[dateLabel] = [];
-                  groups[dateLabel].push(m);
+                  const dateKey = getFinishedMatchDateKey(m);
+                  if (!groups[dateKey]) groups[dateKey] = [];
+                  groups[dateKey].push(m);
                 });
 
                 return Object.keys(groups).map(dateKey => (
-                  <View key={dateKey} style={{ marginBottom: 14 }}>
+                  <View key={`fin-grp-${dateKey}`} style={{ marginBottom: 14 }}>
                     <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
                       <Text style={{ fontSize: 15, fontFamily: systemFontBold, color: '#0F172A' }}>{dateKey}</Text>
                     </View>

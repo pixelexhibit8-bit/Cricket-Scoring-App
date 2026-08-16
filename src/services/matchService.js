@@ -112,8 +112,6 @@ export const fetchFinishedMatchesFromSupabase = async () => {
         const isPlaceholder = (n) => !n || n === 'Team 1' || n === 'Team 2' || n === 'Team A' || n === 'Team B';
         if (isPlaceholder(t1Name) || isPlaceholder(t2Name)) return null;
 
-        const completedDate = match.completedAt || row.updated_at || row.created_at || new Date().toISOString();
-
         // Extract scores from raw innings format
         const inn1 = innings.find(i => i?.battingTeam?.name === t1Name) || innings[0];
         const inn2 = innings.find(i => i?.battingTeam?.name === t2Name) || innings[1];
@@ -179,6 +177,15 @@ export const fetchFinishedMatchesFromSupabase = async () => {
           }
         }
 
+        const completedDate = match.completedAt || match.startedAt || row.updated_at || row.created_at || new Date().toISOString();
+        const dObj = new Date(completedDate);
+        let dateLabel = 'Match Results';
+        if (!isNaN(dObj.getTime())) {
+          const dayName = dObj.toLocaleDateString('en-GB', { weekday: 'long' });
+          const dayMonthYear = dObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+          dateLabel = `${dayName}, ${dayMonthYear}`;
+        }
+
         return {
           ...match,
           id: match.id || row.id,
@@ -193,6 +200,8 @@ export const fetchFinishedMatchesFromSupabase = async () => {
           team2: team2Built,
           team1Name: t1Name,
           team2Name: t2Name,
+          dateLabel,
+          dateText: dateLabel,
           innings: innings.length > 0 ? innings : [
             { battingTeam: team1Built, allBatters: team1Built.batting, bowlingStats: team1Built.bowling },
             { battingTeam: team2Built, allBatters: team2Built.batting, bowlingStats: team2Built.bowling }
