@@ -17,7 +17,33 @@ export const syncMatchToSupabase = async (match) => {
     const team2Name = updatedMatch.teams?.[1]?.name || updatedMatch.team2?.name || updatedMatch.inn1BowlingTeam || 'Team 2';
 
     let winnerTeamName = updatedMatch.winnerTeamName || null;
-    const resText = updatedMatch.resultText || updatedMatch.winner || '';
+    let resText = updatedMatch.resultText || updatedMatch.winner || '';
+
+    // If resultText is empty or generic 'Match Completed', calculate real result dynamically:
+    if (!resText || resText === 'Match Completed' || !winnerTeamName) {
+      const inn1 = updatedMatch.innings?.[0] || updatedMatch.team1;
+      const inn2 = updatedMatch.innings?.[1] || updatedMatch.team2;
+      const t1Runs = Number(inn1?.battingTeam?.runs ?? inn1?.runs ?? 0);
+      const t2Runs = Number(inn2?.battingTeam?.runs ?? inn2?.runs ?? 0);
+      const t2Wkts = Number(inn2?.battingTeam?.wickets ?? inn2?.wickets ?? 0);
+      const maxWkts = (inn2?.allBatters?.length > 1 ? inn2.allBatters.length - 1 : (updatedMatch.maxWickets || 10));
+
+      if (updatedMatch.phase === 'result' || updatedMatch.phase === 'finished' || updatedMatch.isCompleted || (inn2 && t2Runs > 0)) {
+        if (t2Runs > t1Runs) {
+          winnerTeamName = team2Name;
+          const wLeft = Math.max(1, maxWkts - t2Wkts);
+          resText = `${team2Name} won by ${wLeft} wicket${wLeft !== 1 ? 's' : ''}`;
+        } else if (t1Runs > t2Runs) {
+          winnerTeamName = team1Name;
+          const rDiff = t1Runs - t2Runs;
+          resText = `${team1Name} won by ${rDiff} run${rDiff !== 1 ? 's' : ''}`;
+        } else if (t1Runs === t2Runs && t1Runs > 0) {
+          resText = 'Match tied';
+          winnerTeamName = null;
+        }
+      }
+    }
+
     if (!winnerTeamName && resText) {
       if (resText.toLowerCase().includes(team1Name.toLowerCase())) winnerTeamName = team1Name;
       else if (resText.toLowerCase().includes(team2Name.toLowerCase())) winnerTeamName = team2Name;
@@ -37,7 +63,7 @@ export const syncMatchToSupabase = async (match) => {
       toss_winner: updatedMatch.tossWinner || null,
       toss_decision: updatedMatch.tossDecision || updatedMatch.tossChoice || null,
       scorer_pin: updatedMatch.scorerPin || updatedMatch.scorer_pin || null,
-      match_data: updatedMatch,
+      match_data: { ...updatedMatch, winnerTeamName, resultText: resText },
       updated_at: nowIso
     };
 
@@ -119,15 +145,38 @@ export const fetchFinishedMatchesFromSupabase = async () => {
         const team1Built = (match.team1?.runs !== undefined && match.team1?.score) ? match.team1 : buildTeamFromInning(inn1, t1Name, match.team1);
         const team2Built = (match.team2?.runs !== undefined && match.team2?.score) ? match.team2 : buildTeamFromInning(inn2, t2Name, match.team2);
 
+        let computedWinner = match.resultText || row.result_text || '';
+        let computedWinnerTeamName = match.winnerTeamName || row.winner_team_name || '';
+
+        const t1Runs = Number(team1Built?.runs || 0);
+        const t2Runs = Number(team2Built?.runs || 0);
+        const t2Wkts = Number(team2Built?.wickets || 0);
+        const maxWkts = team2Built?.batting?.length > 1 ? team2Built.batting.length - 1 : (match.maxWickets || 10);
+
+        if (!computedWinner || computedWinner === 'Match Completed' || !computedWinnerTeamName) {
+          if (t2Runs > t1Runs) {
+            computedWinnerTeamName = t2Name;
+            const wLeft = Math.max(1, maxWkts - t2Wkts);
+            computedWinner = `${t2Name} won by ${wLeft} wicket${wLeft !== 1 ? 's' : ''}`;
+          } else if (t1Runs > t2Runs) {
+            computedWinnerTeamName = t1Name;
+            const rDiff = t1Runs - t2Runs;
+            computedWinner = `${t1Name} won by ${rDiff} run${rDiff !== 1 ? 's' : ''}`;
+          } else if (t1Runs === t2Runs && t1Runs > 0) {
+            computedWinner = 'Match tied';
+            computedWinnerTeamName = '';
+          }
+        }
+
         return {
           ...match,
           id: match.id || row.id,
           supabaseId: row.id,
           title: match.matchTitle || row.match_title || `${t1Name} vs ${t2Name}`,
           matchTitle: match.matchTitle || row.match_title || `${t1Name} vs ${t2Name}`,
-          winner: match.resultText || row.result_text || 'Match Completed',
-          resultText: match.resultText || row.result_text || 'Match Completed',
-          winnerTeamName: match.winnerTeamName || row.winner_team_name || '',
+          winner: computedWinner || 'Match Completed',
+          resultText: computedWinner || 'Match Completed',
+          winnerTeamName: computedWinnerTeamName || '',
           maxOvers: match.maxOvers || row.max_overs || 20,
           completedAt: completedDate,
           sourceMatch,
@@ -272,4 +321,148 @@ export const fetchMatchesByPinFromSupabase = async (pin) => {
 export const fetchMatchByPinFromSupabase = async (pin) => {
   const matches = await fetchMatchesByPinFromSupabase(pin);
   return matches[0] || null;
+};
+
+/**
+ * Automatically updates past match records in Supabase so that ground spellings / aliases
+ * are replaced with the official registered player name.
+ */
+export const syncPlayerNameToPastMatches = async (officialName) => {
+  if (!isSupabaseConfigured() || !supabase || !officialName) return;
+  const cleanOfficial = officialName.trim();
+  if (!cleanOfficial) return;
+
+  try {
+    const { data: matches, error } = await supabase.from('matches').select('*');
+    if (error || !Array.isArray(matches)) return;
+
+    for (const row of matches) {
+      let md = typeof row.match_data === 'string' ? JSON.parse(row.match_data) : row.match_data;
+      if (!md) continue;
+      let changed = false;
+
+      // 1. Update playingXI
+      if (md.playingXI && typeof md.playingXI === 'object') {
+        Object.keys(md.playingXI).forEach(teamKey => {
+          const list = md.playingXI[teamKey];
+          if (Array.isArray(list)) {
+            md.playingXI[teamKey] = list.map(pName => {
+              const nameStr = typeof pName === 'string' ? pName : pName?.name;
+              if (nameStr && nameStr !== cleanOfficial) {
+                // Check if phonetic / alias match
+                const n1 = nameStr.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                const n2 = cleanOfficial.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                if (n1 === n2 || (n1.length > 3 && (n2.includes(n1) || n1.includes(n2)))) {
+                  changed = true;
+                  return cleanOfficial;
+                }
+              }
+              return pName;
+            });
+          }
+        });
+      }
+
+      // 2. Update innings stats
+      if (Array.isArray(md.innings)) {
+        md.innings.forEach(inn => {
+          // Bowling stats
+          if (inn.bowlingStats && typeof inn.bowlingStats === 'object') {
+            Object.keys(inn.bowlingStats).forEach(bowlerKey => {
+              if (bowlerKey !== cleanOfficial) {
+                const n1 = bowlerKey.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                const n2 = cleanOfficial.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                if (n1 === n2 || (n1.length > 3 && (n2.includes(n1) || n1.includes(n2)))) {
+                  const stat = inn.bowlingStats[bowlerKey];
+                  stat.name = cleanOfficial;
+                  inn.bowlingStats[cleanOfficial] = stat;
+                  delete inn.bowlingStats[bowlerKey];
+                  changed = true;
+                }
+              }
+            });
+          }
+          // Batting stats
+          if (inn.battingStats && typeof inn.battingStats === 'object') {
+            Object.keys(inn.battingStats).forEach(batterKey => {
+              if (batterKey !== cleanOfficial) {
+                const n1 = batterKey.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                const n2 = cleanOfficial.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                if (n1 === n2 || (n1.length > 3 && (n2.includes(n1) || n1.includes(n2)))) {
+                  const stat = inn.battingStats[batterKey];
+                  stat.name = cleanOfficial;
+                  inn.battingStats[cleanOfficial] = stat;
+                  delete inn.battingStats[batterKey];
+                  changed = true;
+                }
+              }
+            });
+          }
+          // All batters list (completed innings scorecard)
+          if (Array.isArray(inn.allBatters)) {
+            inn.allBatters.forEach(b => {
+              if (b && b.name && b.name !== cleanOfficial) {
+                const n1 = b.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                const n2 = cleanOfficial.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                if (n1 === n2 || (n1.length > 3 && (n2.includes(n1) || n1.includes(n2)))) {
+                  b.name = cleanOfficial;
+                  changed = true;
+                }
+              }
+              if (b && b.dismissal && typeof b.dismissal === 'string') {
+                const n2 = cleanOfficial.toLowerCase().trim().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                if (b.dismissal.toLowerCase().includes('dasrath') || b.dismissal.toLowerCase().includes('sangwa')) {
+                  const dClean = b.dismissal.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/h/g, '');
+                  if (dClean.includes(n2)) {
+                    b.dismissal = b.dismissal.replace(/dasrath\s*sangwa/gi, cleanOfficial);
+                    changed = true;
+                  }
+                }
+              }
+            });
+          }
+        });
+      }
+
+      if (changed) {
+        await supabase
+          .from('matches')
+          .update({ match_data: md })
+          .eq('id', row.id);
+      }
+    }
+  } catch (err) {
+    console.warn('[syncPlayerNameToPastMatches error]:', err.message || err);
+  }
+};
+
+export const fetchMatchByAccessCode = async (code) => {
+  if (!code || !isSupabaseConfigured() || !supabase) return null;
+  const cleanCode = code.trim().toUpperCase();
+
+  try {
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*')
+      .order('updated_at', { ascending: false })
+      .limit(20);
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const matched = data.find(m => {
+        const md = m.match_data || m;
+        const c1 = (md.matchCode || '').toUpperCase();
+        const c2 = (md.scorerPin || '').toUpperCase();
+        const c3 = (m.id || '').toUpperCase();
+        return c1 === cleanCode || c2 === cleanCode || c3.endsWith(cleanCode) || (cleanCode.length >= 4 && c3.includes(cleanCode));
+      });
+
+      if (matched) {
+        return matched.match_data || matched;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.warn('Error fetching match by access code:', err);
+    return null;
+  }
 };

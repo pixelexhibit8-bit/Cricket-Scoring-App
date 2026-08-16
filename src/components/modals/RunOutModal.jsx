@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { systemFont, typeScale, fontWeights } from '../../theme.js';
+import { systemFont, systemFontBold, systemFontMedium, typeScale } from '../../theme.js';
+import { PlayerAvatar } from '../PlayerAvatar.jsx';
 
 const nameFitProps = {
   numberOfLines: 1,
@@ -28,20 +29,20 @@ export function RunOutModal({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        <View style={{ minHeight: 58, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
+        <View style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
           <TouchableOpacity onPress={onClose} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="close" size={22} color="#0F172A" />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#0F172A', fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, fontFamily: systemFont }}>RUN OUT</Text>
-            <Text style={{ color: '#64748B', fontSize: 11, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }}>Record wicket details</Text>
+            <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: systemFontBold }}>RUN OUT</Text>
+            <Text style={{ color: '#64748B', fontSize: 11.5, fontFamily: systemFontMedium, marginTop: 2 }}>Record dismissal details</Text>
           </View>
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
           <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
             <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
-              <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>BATTER OUT</Text>
+              <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }}>SELECT BATTER OUT</Text>
             </View>
             {[
               { id: 'striker', label: 'Striker', name: curInning?.striker?.name },
@@ -52,12 +53,13 @@ export function RunOutModal({
                 <TouchableOpacity
                   key={item.id}
                   onPress={() => setRunOutDismissed(item.id)}
-                  style={{ minHeight: 58, paddingHorizontal: 16, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: selected ? '#FFF1F2' : '#FFFFFF' }}
+                  activeOpacity={0.7}
+                  style={{ minHeight: 56, paddingHorizontal: 16, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: selected ? '#FFF1F2' : '#FFFFFF' }}
                 >
-                  <MaterialCommunityIcons name="cricket" size={18} color={selected ? '#E11D48' : '#64748B'} />
+                  <PlayerAvatar name={item.name} size={36} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text selectable {...nameFitProps} style={{ color: '#0F172A', fontSize: 14, fontWeight: selected ? fontWeights.bold : '700', fontFamily: systemFont }}>{item.name}</Text>
-                    <Text style={{ color: selected ? '#E11D48' : '#94A3B8', fontSize: 9, fontWeight: fontWeights.bold, marginTop: 3, fontFamily: systemFont }}>{item.label.toUpperCase()}</Text>
+                    <Text selectable {...nameFitProps} style={{ color: '#0F172A', fontSize: 13.5, fontFamily: systemFontMedium }}>{item.name}</Text>
+                    <Text style={{ color: selected ? '#E11D48' : '#64748B', fontSize: 10, fontFamily: systemFontMedium, marginTop: 2 }}>{item.label.toUpperCase()}</Text>
                   </View>
                   <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={19} color={selected ? '#E11D48' : '#CBD5E1'} />
                 </TouchableOpacity>

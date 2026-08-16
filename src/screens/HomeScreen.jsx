@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,9 @@ import {
   Keyboard,
   Animated,
   useWindowDimensions,
-  BackHandler
+  BackHandler,
+  Platform,
+  LayoutAnimation
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, fontWeights, theme, typeScale } from '../theme.js';
@@ -20,6 +22,7 @@ import { MyProfileScreen } from './MyProfileScreen.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
+import { showToast } from '../services/toastService.js';
 
 export function HomeScreen({
   openScorerScreen,
@@ -27,7 +30,7 @@ export function HomeScreen({
   setSearchQuery,
   bottomNavTab = 'matches',
   setBottomNavTab,
-  matchesSubTab = 'live',
+  matchesSubTab = 'home',
   setMatchesSubTab,
   statsCategory,
   setStatsCategory,
@@ -55,10 +58,12 @@ export function HomeScreen({
   styles,
   isScorerUnlocked,
   finishedArchive = [],
-  setSelectedMatch
+  setSelectedMatch,
+  onJoinMatchByCode
 }) {
   const { width: screenWidth } = useWindowDimensions();
   const homePagerRef = useRef(null);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   const handlePlayerPress = (name, extraProps = {}) => {
     const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === String(name).trim().toLowerCase())
@@ -70,23 +75,43 @@ export function HomeScreen({
     if (setCurrentScreen) setCurrentScreen('playerProfile');
   };
   const homeTabs = [
-    { id: 'live', label: 'Live', icon: 'radio-outline' },
-    { id: 'finished', label: 'Finished', icon: 'trophy-outline' },
-    { id: 'playerStats', label: 'Rankings', icon: 'stats-chart-outline' }
+    { id: 'home', label: 'For you' },
+    { id: 'live', label: activeMatchVisible ? 'Live (1)' : 'Live (0)' },
+    { id: 'finished', label: 'Finished' },
+    { id: 'playerStats', label: 'Rankings' }
   ];
   const activeTabIndex = Math.max(0, homeTabs.findIndex(t => t.id === matchesSubTab));
   const homePagerScrollX = useRef(new Animated.Value(activeTabIndex * screenWidth)).current;
 
-  const tabWidth = screenWidth / 3;
-  const indicatorTranslateX = homePagerScrollX.interpolate({
-    inputRange: [0, screenWidth, screenWidth * 2],
-    outputRange: [0, tabWidth, tabWidth * 2],
+  const [tabLayouts, setTabLayouts] = useState({});
+  const onTabLayout = (id, e) => {
+    const { x, width } = e.nativeEvent.layout;
+    setTabLayouts(prev => {
+      const cur = prev[id];
+      if (cur && Math.abs(cur.x - x) < 0.5 && Math.abs(cur.width - width) < 0.5) return prev;
+      return { ...prev, [id]: { x, width } };
+    });
+  };
+
+  const animatedUnderlineX = homePagerScrollX.interpolate({
+    inputRange: [0, screenWidth, screenWidth * 2, screenWidth * 3],
+    outputRange: homeTabs.map((t, index) => tabLayouts[t.id]?.x != null ? tabLayouts[t.id].x : (index * 75 + 16)),
     extrapolate: 'clamp'
   });
 
+  const animatedUnderlineWidth = homePagerScrollX.interpolate({
+    inputRange: [0, screenWidth, screenWidth * 2, screenWidth * 3],
+    outputRange: homeTabs.map(t => tabLayouts[t.id]?.width != null ? tabLayouts[t.id].width : 50),
+    extrapolate: 'clamp'
+  });
+
+  const isDraggingPager = useRef(false);
+
   const onTabPress = (tabId, index) => {
     setMatchesSubTab(tabId);
+    isDraggingPager.current = true;
     homePagerRef.current?.scrollTo({ x: index * screenWidth, animated: true });
+    setTimeout(() => { isDraggingPager.current = false; }, 300);
   };
 
   const handleHomePagerEnd = (e) => {
@@ -98,105 +123,172 @@ export function HomeScreen({
   };
 
   useEffect(() => {
-    const targetOffset = activeTabIndex * screenWidth;
-    homePagerRef.current?.scrollTo({ x: targetOffset, animated: false });
-    homePagerScrollX.setValue(targetOffset);
-  }, [matchesSubTab, bottomNavTab, screenWidth]);
+    if (!isDraggingPager.current) {
+      const targetOffset = activeTabIndex * screenWidth;
+      homePagerRef.current?.scrollTo({ x: targetOffset, animated: false });
+      homePagerScrollX.setValue(targetOffset);
+    }
+  }, [matchesSubTab, screenWidth]);
 
   // Handle Android Hardware Back Button
   useEffect(() => {
     const onBackPress = () => {
-      if (searchQuery && searchQuery.trim().length > 0) {
+      if (isSearchExpanded || (searchQuery && searchQuery.trim().length > 0)) {
+        setIsSearchExpanded(false);
         if (setSearchQuery) setSearchQuery('');
         return true;
       }
       if (bottomNavTab !== 'matches' && bottomNavTab !== 'home') {
         if (setBottomNavTab) setBottomNavTab('matches');
-        if (setMatchesSubTab) setMatchesSubTab('live');
+        if (setMatchesSubTab) setMatchesSubTab('home');
         return true;
       }
       return false;
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [searchQuery, bottomNavTab]);
+  }, [searchQuery, bottomNavTab, isSearchExpanded]);
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logoRow}>
-          <Image source={require('../../assets/logo.png')} style={styles.logoImg} />
-          <Text style={{ fontSize: 18, color: '#FFFFFF', fontFamily: systemFontBold }}>
-            Cric <Text style={{ color: '#38BDF8' }}>Scorer</Text>
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <TouchableOpacity
-            style={{
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      {/* MODERN UNIFIED CLEAN TOP HEADER (CREX STYLE LIGHT THEME) */}
+      <View style={{
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 14,
+        paddingTop: Platform.OS === 'ios' ? 12 : 14,
+        paddingBottom: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+        minHeight: 60
+      }}>
+        {isSearchExpanded || Boolean(searchQuery) ? (
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{
+              flex: 1,
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 6,
-              paddingHorizontal: 14,
-              paddingVertical: 7,
-              borderRadius: 20,
-              backgroundColor: activeMatch && (activeMatch.phase === 'playing' || activeMatch.phase === 'inningBreak') && isScorerUnlocked
-                ? '#059669'
-                : '#0284C7',
-            }}
-            onPress={openScorerScreen}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons
-              name={activeMatch && (activeMatch.phase === 'playing' || activeMatch.phase === 'inningBreak') && isScorerUnlocked
-                ? "scoreboard"
-                : "key-outline"
-              }
-              size={15}
-              color="#FFFFFF"
-            />
-            <Text style={{
-              color: '#FFFFFF',
-              fontSize: 12,
-              fontFamily: systemFontBold,
+              backgroundColor: '#F1F5F9',
+              borderRadius: 9,
+              paddingHorizontal: 10,
+              height: 36,
+              borderWidth: 1,
+              borderColor: '#0284C7'
             }}>
-              {activeMatch && (activeMatch.phase === 'playing' || activeMatch.phase === 'inningBreak') && isScorerUnlocked
-                ? 'Scorer Console'
-                : 'Scorer Login'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+              <Ionicons name="search" size={15} color="#0284C7" style={{ marginRight: 6 }} />
+              <TextInput
+                style={{
+                  flex: 1,
+                  color: '#0F172A',
+                  fontSize: 12.5,
+                  fontFamily: systemFontMedium,
+                  paddingVertical: 0
+                }}
+                placeholder="Search matches, players..."
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                returnKeyType="search"
+                autoFocus
+              />
+              {Boolean(searchQuery) && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  style={{ padding: 4 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close-circle" size={15} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={17} color="#0284C7" style={{ marginLeft: 12 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search player, team, ground..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#94A3B8"
-            returnKeyType="search"
-          />
-          {Boolean(searchQuery) && (
             <TouchableOpacity
               onPress={() => {
-                setSearchQuery('');
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setIsSearchExpanded(false);
+                if (setSearchQuery) setSearchQuery('');
                 Keyboard.dismiss();
               }}
-              style={{ padding: 8, marginRight: 4 }}
+              style={{ paddingHorizontal: 6, paddingVertical: 6 }}
               activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close-circle" size={18} color="#94A3B8" />
+              <Text style={{ color: '#0284C7', fontSize: 12.5, fontFamily: systemFontMedium }}>Cancel</Text>
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
+        ) : (
+          <>
+            {/* LOGO & APP BRAND */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Image source={require('../../assets/logo.png')} style={{ width: 34, height: 34, resizeMode: 'contain' }} />
+              <Text style={{ fontSize: 18.5, color: '#0F172A', fontFamily: systemFontBold, letterSpacing: -0.2 }}>
+                Cric<Text style={{ color: '#0284C7' }}>Flow</Text>
+              </Text>
+            </View>
+
+            {/* BALANCED SEARCH BAR RIGHT ALIGNED NEAR NOTIFICATION */}
+            <TouchableOpacity
+              onPress={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setIsSearchExpanded(true);
+              }}
+              activeOpacity={0.75}
+              style={{
+                width: 185,
+                marginLeft: 'auto',
+                marginRight: 6,
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#F1F5F9',
+                borderRadius: 9,
+                paddingHorizontal: 10,
+                height: 36,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 6
+              }}
+            >
+              <Ionicons name="search" size={15} color="#64748B" />
+              <Text style={{ color: '#64748B', fontSize: 12, fontFamily: systemFontMedium, flex: 1 }} numberOfLines={1}>
+                Search match, player...
+              </Text>
+            </TouchableOpacity>
+
+            {/* NOTIFICATION BELL ICON */}
+            <TouchableOpacity
+              onPress={() => showToast ? showToast('You have no new notifications', 'info', 'Notifications') : null}
+              activeOpacity={0.7}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 9,
+                backgroundColor: '#F8FAFC',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                position: 'relative'
+              }}
+            >
+              <Ionicons name="notifications-outline" size={18} color="#334155" />
+              <View style={{
+                position: 'absolute',
+                top: 7,
+                right: 7,
+                width: 6.5,
+                height: 6.5,
+                borderRadius: 3.5,
+                backgroundColor: '#0284C7',
+                borderWidth: 1,
+                borderColor: '#FFFFFF'
+              }} />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
-      {/* MATCHES SUB-TABS (SCORECARD SWIPER STYLE UNDERLINE TABS) */}
+      {/* MATCHES SUB-TABS (CREX STYLE CLEAN TEXT-ONLY UNDERLINE TABS) */}
       {(bottomNavTab === 'matches' || bottomNavTab === 'home' || !bottomNavTab) && (
         <View style={{
           backgroundColor: '#FFFFFF',
@@ -204,52 +296,49 @@ export function HomeScreen({
           borderBottomColor: '#E2E8F0',
           position: 'relative'
         }}>
-          <View style={{ flexDirection: 'row' }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, flexDirection: 'row', gap: 20 }}
+          >
             {homeTabs.map((t, idx) => {
               const active = matchesSubTab === t.id;
               return (
                 <TouchableOpacity
                   key={t.id}
+                  onLayout={(e) => onTabLayout(t.id, e)}
                   onPress={() => onTabPress(t.id, idx)}
                   activeOpacity={0.7}
                   style={{
-                    width: tabWidth,
                     paddingVertical: 12,
+                    paddingHorizontal: 2,
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons
-                      name={t.icon}
-                      size={16}
-                      color={active ? '#0284C7' : '#64748B'}
-                    />
-                    <Text style={{
-                      fontSize: 14.5,
-                      color: active ? '#0284C7' : '#64748B',
-                      fontFamily: active ? systemFontBold : systemFontMedium
-                    }}>
-                      {t.label}
-                    </Text>
-                  </View>
+                  <Text style={{
+                    fontSize: 14,
+                    color: active ? '#0284C7' : '#64748B',
+                    fontFamily: systemFontMedium
+                  }}>
+                    {t.label}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
-          </View>
 
-          {/* Animated Smooth Underline Indicator */}
-          <Animated.View style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            width: tabWidth,
-            height: 3,
-            alignItems: 'center',
-            transform: [{ translateX: indicatorTranslateX }]
-          }}>
-            <View style={{ width: 44, height: 3, borderRadius: 2, backgroundColor: '#0284C7' }} />
-          </Animated.View>
+            {/* Animated Smooth Underline Matching Exact Text Width */}
+            <Animated.View style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: animatedUnderlineWidth,
+              height: 2.5,
+              borderRadius: 1.5,
+              backgroundColor: '#0284C7',
+              transform: [{ translateX: animatedUnderlineX }]
+            }} />
+          </ScrollView>
         </View>
       )}
 
@@ -382,6 +471,9 @@ export function HomeScreen({
         <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
           <MyProfileScreen
             finishedMatches={finishedArchive || []}
+            activeMatch={activeMatch}
+            onStartQuickMatch={openScorerScreen}
+            onJoinMatchByCode={onJoinMatchByCode}
             onSelectMatch={(m) => {
               if (setSelectedMatch) setSelectedMatch(m);
               if (setCurrentScreen) setCurrentScreen('finishedView');
@@ -397,22 +489,10 @@ export function HomeScreen({
           ref={homePagerRef}
           horizontal
           pagingEnabled
-          contentOffset={{ x: activeTabIndex * screenWidth, y: 0 }}
-          onLayout={() => {
-            const targetOffset = activeTabIndex * screenWidth;
-            homePagerRef.current?.scrollTo({ x: targetOffset, animated: false });
-            homePagerScrollX.setValue(targetOffset);
-          }}
-          snapToInterval={screenWidth}
-          snapToAlignment="start"
-          disableIntervalMomentum
-          directionalLockEnabled
-          nestedScrollEnabled
-          bounces={false}
-          overScrollMode="never"
-          decelerationRate="fast"
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
+          overScrollMode="never"
+          bounces={false}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { x: homePagerScrollX } } }],
             { useNativeDriver: false }
@@ -420,6 +500,176 @@ export function HomeScreen({
           onMomentumScrollEnd={handleHomePagerEnd}
           style={{ flex: 1 }}
         >
+          {/* 0. FOR YOU (HOME DISCOVERY) PAGE */}
+          <View style={{ width: screenWidth, flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+              contentContainerStyle={styles.tabContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              scrollEventThrottle={16}
+              removeClippedSubviews={true}
+              overScrollMode="never"
+              decelerationRate="normal"
+              nestedScrollEnabled={true}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handlePullToRefresh}
+                  colors={['#0284C7']}
+                  tintColor="#0284C7"
+                />
+              }
+            >
+              {/* Top Featured / Live Match Banner */}
+              {activeMatchVisible && (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
+                    <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                      FEATURED LIVE MATCH
+                    </Text>
+                    <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontBold }}>LIVE</Text>
+                    </View>
+                  </View>
+                  {renderActiveMatchListCard && renderActiveMatchListCard()}
+                </>
+              )}
+
+              {/* Ground Spotlight (Top Batsman, Bowler, All-Rounder) */}
+              {(TOP_BATTERS.length > 0 || TOP_BOWLERS.length > 0 || TOP_ALLROUNDERS.length > 0) && (
+                <View style={{ marginTop: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
+                    <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                      GROUND SPOTLIGHT
+                    </Text>
+                    <TouchableOpacity onPress={() => onTabPress('playerStats', 3)}>
+                      <Text style={{ color: '#0284C7', fontSize: 11.5, fontFamily: systemFontMedium }}>View All ➜</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {/* Top Batsman Card */}
+                    {TOP_BATTERS[0] ? (
+                      <TouchableOpacity
+                        onPress={() => handlePlayerPress(TOP_BATTERS[0].name, { role: 'Top Batsman', photoUrl: TOP_BATTERS[0].photoUrl })}
+                        activeOpacity={0.75}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: 14,
+                          paddingVertical: 10,
+                          paddingHorizontal: 6,
+                          borderWidth: 1,
+                          borderColor: '#E2E8F0',
+                          alignItems: 'center',
+                          gap: 5
+                        }}
+                      >
+                        <View style={{ position: 'relative' }}>
+                          <PlayerAvatar name={TOP_BATTERS[0].name} photoUrl={TOP_BATTERS[0].photoUrl} size={38} />
+                          <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#0284C7', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, borderWidth: 1.5, borderColor: '#FFFFFF' }}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontBold }}>#1</Text>
+                          </View>
+                        </View>
+                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontBold, textAlign: 'center' }} numberOfLines={1}>
+                          {TOP_BATTERS[0].name}
+                        </Text>
+                        <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1, borderColor: '#BAE6FD' }}>
+                          <Text style={{ fontSize: 9, color: '#0284C7', fontFamily: systemFontBold }}>BATTER</Text>
+                        </View>
+                        <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 5, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>{TOP_BATTERS[0].runs} Runs</Text>
+                          <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>SR: {TOP_BATTERS[0].sr || '0.0'}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ) : null}
+
+                    {/* Top Bowler Card */}
+                    {TOP_BOWLERS[0] ? (
+                      <TouchableOpacity
+                        onPress={() => handlePlayerPress(TOP_BOWLERS[0].name, { role: 'Top Bowler', photoUrl: TOP_BOWLERS[0].photoUrl })}
+                        activeOpacity={0.75}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: 14,
+                          paddingVertical: 10,
+                          paddingHorizontal: 6,
+                          borderWidth: 1,
+                          borderColor: '#E2E8F0',
+                          alignItems: 'center',
+                          gap: 5
+                        }}
+                      >
+                        <View style={{ position: 'relative' }}>
+                          <PlayerAvatar name={TOP_BOWLERS[0].name} photoUrl={TOP_BOWLERS[0].photoUrl} size={38} />
+                          <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#7C3AED', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, borderWidth: 1.5, borderColor: '#FFFFFF' }}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontBold }}>#1</Text>
+                          </View>
+                        </View>
+                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontBold, textAlign: 'center' }} numberOfLines={1}>
+                          {TOP_BOWLERS[0].name}
+                        </Text>
+                        <View style={{ backgroundColor: '#FDF4FF', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1, borderColor: '#F5D0FE' }}>
+                          <Text style={{ fontSize: 9, color: '#7C3AED', fontFamily: systemFontBold }}>BOWLER</Text>
+                        </View>
+                        <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 5, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>{TOP_BOWLERS[0].wickets} Wkts</Text>
+                          <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>Eco: {TOP_BOWLERS[0].econ || '0.0'}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ) : null}
+
+                    {/* Top All-Rounder Card */}
+                    {TOP_ALLROUNDERS[0] ? (
+                      <TouchableOpacity
+                        onPress={() => handlePlayerPress(TOP_ALLROUNDERS[0].name, { role: 'All-Rounder', photoUrl: TOP_ALLROUNDERS[0].photoUrl })}
+                        activeOpacity={0.75}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: 14,
+                          paddingVertical: 10,
+                          paddingHorizontal: 6,
+                          borderWidth: 1,
+                          borderColor: '#E2E8F0',
+                          alignItems: 'center',
+                          gap: 5
+                        }}
+                      >
+                        <View style={{ position: 'relative' }}>
+                          <PlayerAvatar name={TOP_ALLROUNDERS[0].name} photoUrl={TOP_ALLROUNDERS[0].photoUrl} size={38} />
+                          <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#059669', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, borderWidth: 1.5, borderColor: '#FFFFFF' }}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontBold }}>#1</Text>
+                          </View>
+                        </View>
+                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontBold, textAlign: 'center' }} numberOfLines={1}>
+                          {TOP_ALLROUNDERS[0].name}
+                        </Text>
+                        <View style={{ backgroundColor: '#F0FDF4', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1, borderColor: '#BBF7D0' }}>
+                          <Text style={{ fontSize: 9, color: '#059669', fontFamily: systemFontBold }}>ALL-R</Text>
+                        </View>
+                        <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 5, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>{TOP_ALLROUNDERS[0].runs}R • {TOP_ALLROUNDERS[0].wickets}W</Text>
+                          <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>{TOP_ALLROUNDERS[0].matches || 1} Matches</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                </View>
+              )}
+
+              {/* Recent Finished Matches */}
+              {recentFinishedMatches && recentFinishedMatches.length > 0 ? (
+                <>
+                  <Text style={[styles.sectionLabel, { marginTop: 14 }]}>RECENT MATCH RESULTS</Text>
+                  {recentFinishedMatches.slice(0, 3).map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
+                </>
+              ) : null}
+            </ScrollView>
+          </View>
+
           {/* 1. LIVE MATCHES PAGE */}
           <View style={{ width: screenWidth, flex: 1 }}>
             <ScrollView
@@ -585,22 +835,6 @@ export function HomeScreen({
                 })}
               </View>
 
-              {/* COLUMN HEADER (CRICBUZZ / ICC STYLE) */}
-              <View style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                marginTop: 2
-              }}>
-                <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#94A3B8', fontFamily: systemFontMedium, letterSpacing: 0.3 }}>
-                  Rank
-                </Text>
-                <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#94A3B8', fontFamily: systemFontMedium, letterSpacing: 0.3 }}>
-                  {statsCategory === 'batters' ? 'Runs (SR)' : (statsCategory === 'bowlers' ? 'Wkts (ECO)' : 'MVP Points')}
-                </Text>
-              </View>
-
               {/* BATTERS RANKINGS */}
               {statsCategory === 'batters' && (TOP_BATTERS && TOP_BATTERS.length > 0) && (
                 <View style={{
@@ -611,6 +845,25 @@ export function HomeScreen({
                   overflow: 'hidden',
                   marginBottom: 16
                 }}>
+                  {/* CARD TABLE HEADER */}
+                  <View style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    backgroundColor: '#F8FAFC',
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#E2E8F0'
+                  }}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Rank & Player
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Runs (SR)
+                    </Text>
+                  </View>
+
                   {TOP_BATTERS.map((b, idx) => {
                     const isLast = idx === TOP_BATTERS.length - 1;
                     return (
@@ -635,17 +888,17 @@ export function HomeScreen({
                           }}>
                             {b.rank}
                           </Text>
-                          <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
-                          <View style={{ flex: 1, marginLeft: 14 }}>
-                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                          <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={44} />
+                          <View style={{ flex: 1, marginLeft: 12 }}>
+                            <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
                               {b.name}
                             </Text>
-                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1, fontFamily: systemFont }} numberOfLines={1}>
                               {b.city || 'Sadokan'}
                             </Text>
                           </View>
                           <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }}>
+                            <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }}>
                               {b.runs}
                             </Text>
                             <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
@@ -669,6 +922,25 @@ export function HomeScreen({
                   overflow: 'hidden',
                   marginBottom: 16
                 }}>
+                  {/* CARD TABLE HEADER */}
+                  <View style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    backgroundColor: '#F8FAFC',
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#E2E8F0'
+                  }}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Rank & Player
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Wickets (Eco)
+                    </Text>
+                  </View>
+
                   {TOP_BOWLERS.map((b, idx) => {
                     const isLast = idx === TOP_BOWLERS.length - 1;
                     return (
@@ -693,17 +965,17 @@ export function HomeScreen({
                           }}>
                             {b.rank}
                           </Text>
-                          <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
-                          <View style={{ flex: 1, marginLeft: 14 }}>
-                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                          <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={44} />
+                          <View style={{ flex: 1, marginLeft: 12 }}>
+                            <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
                               {b.name}
                             </Text>
-                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1, fontFamily: systemFont }} numberOfLines={1}>
                               {b.city || 'Sadokan'}
                             </Text>
                           </View>
                           <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }}>
+                            <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }}>
                               {b.wickets} Wkts
                             </Text>
                             <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>
@@ -727,6 +999,25 @@ export function HomeScreen({
                   overflow: 'hidden',
                   marginBottom: 16
                 }}>
+                  {/* CARD TABLE HEADER */}
+                  <View style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    backgroundColor: '#F8FAFC',
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#E2E8F0'
+                  }}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Rank & Player
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      MVP Points
+                    </Text>
+                  </View>
+
                   {TOP_ALLROUNDERS.map((b, idx) => {
                     const isLast = idx === TOP_ALLROUNDERS.length - 1;
                     return (
@@ -751,17 +1042,17 @@ export function HomeScreen({
                           }}>
                             {b.rank}
                           </Text>
-                          <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={48} />
-                          <View style={{ flex: 1, marginLeft: 14 }}>
-                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                          <PlayerAvatar name={b.name} photoUrl={b.photoUrl} size={44} />
+                          <View style={{ flex: 1, marginLeft: 12 }}>
+                            <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
                               {b.name}
                             </Text>
-                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1, fontFamily: systemFont }} numberOfLines={1}>
                               {b.city || 'Sadokan'}
                             </Text>
                           </View>
                           <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: systemFontMedium }}>
+                            <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }}>
                               {b.pts}
                             </Text>
                             <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1, fontFamily: systemFont }}>

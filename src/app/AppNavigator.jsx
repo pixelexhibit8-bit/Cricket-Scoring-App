@@ -16,12 +16,14 @@ import { MatchInfoPanel } from '../components/MatchInfoPanel';
 import { MatchTabBar } from '../components/MatchTabBar';
 import { RealtimeWinBar } from '../components/RealtimeWinBar';
 import { PreInningsScorecard } from '../components/PreInningsScorecard';
+import { OpeningPlayersSelector } from '../components/OpeningPlayersSelector';
 import { WormGraph } from '../components/WormGraph';
 import { ManhattanGraph } from '../components/ManhattanGraph';
 import { useFonts } from 'expo-font';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { computeLeaderboardRankings } from '../utils/cricketUtils.js';
 import { fetchLocalPlayers } from '../services/localPlayerService.js';
+import { syncPlayersToPhotoRegistry } from '../services/playerPhotoStore.js';
 import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, syncPlayerToSupabase, fetchLiveMatchFromSupabase, subscribeToSupabaseLiveMatches } from '../services/matchService.js';
 import { systemFont, systemFontMedium, systemFontBold, typeScale, fontWeights, publicType, themeColors } from '../theme.js';
 
@@ -353,9 +355,12 @@ const getCleanPlayerNames = (names = []) => {
 };
 
 const makeTeamCode = (name = '') => {
-  const words = String(name).trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return words.slice(0, 2).map(word => word[0]).join('').toUpperCase();
-  return String(name).replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'TM';
+  const clean = String(name || '').trim();
+  if (!clean) return 'TM';
+  if (clean.length <= 4) return clean.toUpperCase();
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return words.slice(0, 3).map(word => word[0]).join('').toUpperCase();
+  return clean.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'TM';
 };
 
 const getTeamShortCode = (team, fallbackName = '') => {
@@ -681,19 +686,57 @@ const escapeRegExp = (value = '') =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const getFinishedResultCardText = (match) => {
-  const rawResult = String(match?.winner || '').replace(/!+$/g, '').trim();
-  if (!rawResult) return { title: 'Result', detail: '' };
-  if (/tie|tied/i.test(rawResult)) return { title: 'Match Tied', detail: '' };
+  const team1 = match?.team1 || {};
+  const team2 = match?.team2 || {};
+  const t1Name = team1.name || 'Team 1';
+  const t2Name = team2.name || 'Team 2';
+  const t1Code = team1.code || getTeamShortCode(team1, t1Name) || t1Name.slice(0, 2).toUpperCase();
+  const t2Code = team2.code || getTeamShortCode(team2, t2Name) || t2Name.slice(0, 2).toUpperCase();
 
-  const winnerTeam = [match?.team1, match?.team2].find(team => team?.name === match?.winnerTeamName);
-  const winnerCode = getTeamShortCode(winnerTeam, match?.winnerTeamName || '');
-  const detail = match?.winnerTeamName
-    ? rawResult.replace(new RegExp(`^${escapeRegExp(match.winnerTeamName)}\\s+won\\s*`, 'i'), '').trim()
-    : rawResult.replace(/^.*?\bwon\b\s*/i, '').trim();
+  const t1Parsed = parseFinishedScoreText(team1.score);
+  const t2Parsed = parseFinishedScoreText(team2.score);
+  const t1Runs = Number(team1.runs ?? t1Parsed.runs ?? 0);
+  const t2Runs = Number(team2.runs ?? t2Parsed.runs ?? 0);
+  const t2Wkts = Number(team2.wickets ?? t2Parsed.wickets ?? 0);
+  const maxWkts = team2.batting?.length > 1 ? team2.batting.length - 1 : (match?.maxWickets || 10);
+
+  const rawResult = String(match?.resultText || match?.winner || '').replace(/!+$/g, '').trim();
+
+  if (/tie|tied/i.test(rawResult) || (t1Runs === t2Runs && t1Runs > 0 && team2.score && team2.score !== 'Yet to bat')) {
+    return { title: 'Match Tied', detail: '' };
+  }
+
+  // Determine winner name
+  let winnerName = match?.winnerTeamName || '';
+  if (!winnerName && rawResult && rawResult !== 'Match Completed') {
+    if (rawResult.toLowerCase().includes(t1Name.toLowerCase())) winnerName = t1Name;
+    else if (rawResult.toLowerCase().includes(t2Name.toLowerCase())) winnerName = t2Name;
+  }
+
+  if (!winnerName) {
+    if (t2Runs > t1Runs) winnerName = t2Name;
+    else if (t1Runs > t2Runs) winnerName = t1Name;
+  }
+
+  const winnerCode = (winnerName === t2Name || t2Runs > t1Runs) ? t2Code : t1Code;
+
+  // Determine win margin
+  let detail = '';
+  if (winnerName === t2Name || t2Runs > t1Runs) {
+    const wicketsLeft = Math.max(1, maxWkts - t2Wkts);
+    detail = `by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}`;
+  } else if (winnerName === t1Name || t1Runs > t2Runs) {
+    const runsDiff = Math.max(1, t1Runs - t2Runs);
+    detail = `by ${runsDiff} run${runsDiff !== 1 ? 's' : ''}`;
+  }
+
+  if (!detail && rawResult && rawResult !== 'Match Completed') {
+    detail = rawResult.replace(new RegExp(`^${escapeRegExp(winnerName)}\\s+won\\s*`, 'i'), '').replace(/^.*?\bwon\b\s*/i, '').trim();
+  }
 
   return {
-    title: `${winnerCode || 'Team'} Won`,
-    detail
+    title: `${winnerCode} Won`,
+    detail: detail || ''
   };
 };
 
@@ -908,50 +951,51 @@ const PendingBattersSection = ({ title, players }) => {
 
 const ResultTeamBlock = ({ team, isWinner, align = 'left' }) => {
   const scoreParts = getScorePartsFromText(team?.score);
-  const teamCode = getTeamShortCode(team, team?.name);
+  const rawName = String(team?.name || '').trim();
+  const displayName = rawName.length <= 6 ? rawName : getTeamShortCode(team, rawName);
   const isLoser = !isWinner;
 
   return (
     <View style={{ flex: 1, flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 10 }}>
-      <TeamIdentityMark team={team} size={44} isLoser={isLoser} />
+      <TeamIdentityMark team={team} size={42} isLoser={isLoser} />
       <View style={{ flex: 1, alignItems: align === 'left' ? 'flex-start' : 'flex-end', justifyContent: 'center' }}>
-        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 5 }}>
+        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 4 }}>
           <Text
             selectable
             numberOfLines={1}
             style={{
               color: isWinner ? '#FFFFFF' : '#94A3B8',
-              fontSize: 16,
-              fontFamily: systemFontBold,
-              letterSpacing: 0.5
+              fontSize: 13.5,
+              fontFamily: systemFontMedium,
+              letterSpacing: 0.3
             }}
           >
-            {teamCode}
+            {displayName}
           </Text>
           {isWinner ? (
-            <MaterialCommunityIcons name="trophy" size={15} color="#F59E0B" />
+            <MaterialCommunityIcons name="trophy" size={13} color="#F59E0B" />
           ) : null}
         </View>
 
-        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
+        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'baseline', gap: 5, marginTop: 1 }}>
           <Text
             selectable
             style={{
               color: '#FFFFFF',
-              fontSize: 19,
+              fontSize: 17,
               fontFamily: systemFontBold,
               fontVariant: ['tabular-nums']
             }}
             numberOfLines={1}
           >
-            {scoreParts.score}
+            {scoreParts.score || 'Yet to bat'}
           </Text>
-          {scoreParts.overs ? (
+          {Boolean(scoreParts.overs) && (
             <Text
               selectable
               style={{
                 color: '#94A3B8',
-                fontSize: 12,
+                fontSize: 11,
                 fontFamily: systemFontMedium,
                 fontVariant: ['tabular-nums']
               }}
@@ -959,7 +1003,7 @@ const ResultTeamBlock = ({ team, isWinner, align = 'left' }) => {
             >
               {scoreParts.overs}
             </Text>
-          ) : null}
+          )}
         </View>
       </View>
     </View>
@@ -968,10 +1012,10 @@ const ResultTeamBlock = ({ team, isWinner, align = 'left' }) => {
 
 const MatchResultHero = ({ teamOne, teamTwo, winnerTeamName, resultText }) => (
   <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
-    <View style={{ paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+    <View style={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <ResultTeamBlock team={teamOne} isWinner={winnerTeamName === teamOne?.name || (resultText && resultText.toLowerCase().includes(teamOne?.name?.toLowerCase()))} align="left" />
       <View style={{ width: 28, alignItems: 'center', justifyContent: 'center' }}>
-        <MaterialCommunityIcons name="lightning-bolt" size={22} color="#64748B" />
+        <MaterialCommunityIcons name="lightning-bolt" size={20} color="#64748B" />
       </View>
       <ResultTeamBlock team={teamTwo} isWinner={winnerTeamName === teamTwo?.name || (resultText && resultText.toLowerCase().includes(teamTwo?.name?.toLowerCase()))} align="right" />
     </View>
@@ -980,8 +1024,8 @@ const MatchResultHero = ({ teamOne, teamTwo, winnerTeamName, resultText }) => (
         selectable
         style={{
           color: '#F59E0B',
-          fontSize: 13.5,
-          fontFamily: systemFontBold,
+          fontSize: 12.5,
+          fontFamily: systemFontMedium,
           textAlign: 'center',
           letterSpacing: 0.2
         }}
@@ -1150,7 +1194,7 @@ export function AppNavigator() {
   // Navigation
   const [currentScreen, setCurrentScreen] = useState('home');
   const [bottomNavTab, setBottomNavTab] = useState('home'); // Default: 'home'
-  const [matchesSubTab, setMatchesSubTab] = useState('live'); // 'live' | 'finished' | 'playerStats'
+  const [matchesSubTab, setMatchesSubTab] = useState('home'); // 'home' (For you) | 'live' | 'finished' | 'playerStats'
   const [mainTab, setMainTab] = useState('live');
   const [publicLiveTab, setPublicLiveTab] = useState('live');
   const [showTopTitleHeader, setShowTopTitleHeader] = useState(true); // 'live' | 'info' | 'scorecard' | 'overs' | 'graphs'
@@ -1427,13 +1471,18 @@ export function AppNavigator() {
 
   const getRosterForTeam = (teamName, fallbackRoster = []) => {
     if (!teamName) return fallbackRoster;
-    const declaredRoster = activeMatch?.playingXI?.[teamName];
-    if (Array.isArray(declaredRoster) && declaredRoster.length > 0) return declaredRoster;
-    const teamIndex = activeMatch?.teams?.findIndex(team => team.name === teamName);
-    if (teamIndex === 0) return team1Roster;
-    if (teamIndex === 1) return team2Roster;
-    if (teamName === team1Name) return team1Roster;
-    if (teamName === team2Name) return team2Roster;
+    const clean = String(teamName).trim().toLowerCase();
+    if (activeMatch?.playingXI) {
+      for (const key of Object.keys(activeMatch.playingXI)) {
+        if (key.trim().toLowerCase() === clean && Array.isArray(activeMatch.playingXI[key]) && activeMatch.playingXI[key].length > 0) {
+          return activeMatch.playingXI[key];
+        }
+      }
+    }
+    if (activeMatch?.teams?.[0]?.name?.trim()?.toLowerCase() === clean) return team1Roster?.length ? team1Roster : fallbackRoster;
+    if (activeMatch?.teams?.[1]?.name?.trim()?.toLowerCase() === clean) return team2Roster?.length ? team2Roster : fallbackRoster;
+    if (team1Name?.trim()?.toLowerCase() === clean) return team1Roster?.length ? team1Roster : fallbackRoster;
+    if (team2Name?.trim()?.toLowerCase() === clean) return team2Roster?.length ? team2Roster : fallbackRoster;
     return fallbackRoster;
   };
 
@@ -2023,7 +2072,7 @@ export function AppNavigator() {
         const wicketsLeft = Math.max(0, mw - inn.battingTeam.wickets);
         const resultText = `${inn.battingTeam.name} won by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}!`;
         try { Speech.speak('Match over! ' + resultText, { language: 'en-IN' }); } catch (e) { }
-        return { ...prev, innings, phase: 'result', resultText, pendingPublicEvent: null };
+        return { ...prev, innings, phase: 'result', winnerTeamName: inn.battingTeam.name, resultText, pendingPublicEvent: null };
       }
 
       if (innEnded && prev.inning === 1) {
@@ -2036,14 +2085,16 @@ export function AppNavigator() {
         const inn1 = innings[0];
         const target = prev.target;
         let resultText = '';
+        let winnerTeamName = null;
         if (inn2.battingTeam.runs === target - 1) {
           resultText = 'Match tied!';
         } else {
           const diff = target - inn2.battingTeam.runs - 1;
           resultText = `${inn1.battingTeam.name} won by ${diff} run${diff !== 1 ? 's' : ''}!`;
+          winnerTeamName = inn1.battingTeam.name;
         }
         try { Speech.speak('Match over! ' + resultText, { language: 'en-IN' }); } catch (e) { }
-        return { ...prev, innings, phase: 'result', resultText, pendingPublicEvent: null };
+        return { ...prev, innings, phase: 'result', winnerTeamName, resultText, pendingPublicEvent: null };
       }
 
       // Wicket fell â€” need new batsman
@@ -2385,12 +2436,19 @@ export function AppNavigator() {
     }
     setActiveMatch(prev => {
       const inn1 = prev.innings[0];
+      const team1Logo = prev.team1?.logoKey || prev.teams?.[0]?.logoKey || 'csk';
+      const team2Logo = prev.team2?.logoKey || prev.teams?.[1]?.logoKey || 'rcb';
+      const inn2BatLogo = inn1.bowlingTeam.name === prev.teams?.[0]?.name ? team1Logo : team2Logo;
+      const inn2BowlLogo = inn1.battingTeam.name === prev.teams?.[0]?.name ? team1Logo : team2Logo;
       const inn2 = makeInning(inn1.bowlingTeam.name, inn1.battingTeam.name);
+      inn2.battingTeam.logoKey = inn2BatLogo;
+      inn2.bowlingTeam.logoKey = inn2BowlLogo;
       inn2.striker = { name: inn2Striker, runs: 0, balls: 0, fours: 0, sixes: 0 };
       inn2.nonStriker = { name: inn2NonStriker, runs: 0, balls: 0, fours: 0, sixes: 0 };
       inn2.bowler = { name: inn2Bowler, runs: 0, wickets: 0, overs: '0.0' };
       inn2.bowlingStats = { [inn2Bowler]: makeBowlingFigure({ name: inn2Bowler }) };
       inn2.allBatters = [inn2.striker, inn2.nonStriker].filter(player => player.name).map(player => ({ ...player, dismissal: 'Not out', isOut: false }));
+      try { Speech.speak('Second innings started. Target is ' + (prev.target || (inn1.battingTeam.runs + 1)) + ' runs.', { language: 'en-IN' }); } catch (e) { }
       return { ...prev, innings: [inn1, inn2], inning: 2, phase: 'playing' };
     });
     setInn2Striker(''); setInn2NonStriker(''); setInn2Bowler('');
@@ -2951,8 +3009,8 @@ export function AppNavigator() {
             ) : (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 6 }}>
                 <TouchableOpacity onPress={() => setCurrentScreen(liveViewReturnScreen)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <Ionicons name="arrow-back" size={20} color="#E0F2FE" />
-                  <Text style={{ color: '#FFFFFF', fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, fontFamily: systemFont }} numberOfLines={1}>{activeMatch.matchTitle}</Text>
+                  <Ionicons name="arrow-back" size={18} color="#E0F2FE" />
+                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: systemFontMedium }} numberOfLines={1}>{activeMatch.matchTitle}</Text>
                 </TouchableOpacity>
               </View>
             )
@@ -3283,18 +3341,40 @@ export function AppNavigator() {
                                 ? viewInningObj.status === 'complete' ? ' (Unbroken)' : ' (Current)'
                                 : '';
                               return (
-                                <View key={`${item.wicketNumber}-${idx}`} style={{ minHeight: 66, backgroundColor: item.status === 'unbroken' ? '#ECFEFF' : '#FFFFFF', paddingHorizontal: 16, paddingVertical: 11, borderTopWidth: 1, borderTopColor: item.status === 'unbroken' ? '#A5F3FC' : '#E8ECEF' }}>
-                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                                    <Text style={{ fontSize: typeScale.label, fontWeight: fontWeights.bold, color: item.status === 'unbroken' ? '#0284C7' : '#64748B', fontFamily: systemFont }}>
+                                <View key={`${item.wicketNumber}-${idx}`} style={{ minHeight: 60, backgroundColor: item.status === 'unbroken' ? '#F0F9FF' : '#FFFFFF', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: item.status === 'unbroken' ? '#BAE6FD' : '#F1F5F9', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  {/* Left Batter */}
+                                  <View style={{ flex: 1, alignItems: 'flex-start' }}>
+                                    <Text selectable style={{ fontSize: 12.5, fontWeight: fontWeights.medium, color: '#0F172A', fontFamily: systemFont }} numberOfLines={1}>
+                                      {item.p1 || 'Batter'}
+                                    </Text>
+                                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont, marginTop: 1 }}>
+                                      {item.r1 || 0} runs
+                                    </Text>
+                                  </View>
+
+                                  {/* Center Total Partnership Badge */}
+                                  <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, minWidth: 86 }}>
+                                    <View style={{ backgroundColor: item.status === 'unbroken' ? '#0284C7' : '#F0F9FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: item.status === 'unbroken' ? '#0284C7' : '#BAE6FD', alignItems: 'center' }}>
+                                      <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: item.status === 'unbroken' ? '#FFFFFF' : '#0284C7', fontFamily: systemFont }}>
+                                        {item.totalRuns || 0} runs
+                                      </Text>
+                                      <Text style={{ fontSize: 9.5, color: item.status === 'unbroken' ? '#E0F2FE' : '#64748B', fontFamily: systemFont }}>
+                                        ({item.totalBalls || 0}b)
+                                      </Text>
+                                    </View>
+                                    <Text style={{ fontSize: 9, color: '#94A3B8', fontFamily: systemFont, marginTop: 2 }}>
                                       {formatOrdinal(item.wicketNumber)} Wicket{partnershipState}
                                     </Text>
-                                    <Text selectable style={{ fontSize: typeScale.body, fontWeight: fontWeights.bold, color: item.status === 'unbroken' ? '#0369A1' : '#0F172A', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{item.totalRuns} runs ({item.totalBalls})</Text>
                                   </View>
-                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                                    <Text selectable style={{ flex: 1, fontSize: 11, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }} numberOfLines={1}>{item.p1} <Text style={{ color: '#64748B', fontWeight: fontWeights.semibold, fontFamily: systemFont }}>({item.r1})</Text></Text>
-                                    {item.p2 ? (
-                                      <Text selectable style={{ flex: 1, fontSize: 11, fontWeight: fontWeights.bold, color: '#0F172A', textAlign: 'right', fontFamily: systemFont }} numberOfLines={1}>{item.p2} <Text style={{ color: '#64748B', fontWeight: fontWeights.semibold, fontFamily: systemFont }}>({item.r2})</Text></Text>
-                                    ) : null}
+
+                                  {/* Right Batter */}
+                                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                                    <Text selectable style={{ fontSize: 12.5, fontWeight: fontWeights.medium, color: '#0F172A', fontFamily: systemFont, textAlign: 'right' }} numberOfLines={1}>
+                                      {item.p2 || 'Batter'}
+                                    </Text>
+                                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont, marginTop: 1, textAlign: 'right' }}>
+                                      {item.r2 || 0} runs
+                                    </Text>
                                   </View>
                                 </View>
                               );
@@ -3496,7 +3576,7 @@ export function AppNavigator() {
       partnerships: []
     };
     const opponentTeam = (finishedInningIndex === 0 ? finishedLiveMatch.team2 : finishedLiveMatch.team1) || {};
-    const finishedBowlingRows = (opponentTeam?.bowling?.length ? opponentTeam.bowling : viewTeam?.bowling) || [];
+    const finishedBowlingRows = (viewTeam?.bowling?.length ? viewTeam.bowling : opponentTeam?.bowling) || [];
     const finishedBattingRows = (viewTeam.batting || []).filter(player => player.dismissal !== 'Did not bat');
     const finishedDeclaredRoster = finishedLiveMatch.playingXI?.[viewTeam.name]
       || f.sourceMatch?.playingXI?.[viewTeam.name]
@@ -3541,8 +3621,8 @@ export function AppNavigator() {
         {/* Top Bar Header */}
         <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 14, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
           <TouchableOpacity onPress={() => setCurrentScreen('home')} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Ionicons name="arrow-back" size={20} color="#E0F2FE" />
-            <Text style={{ flex: 1, color: '#FFFFFF', fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, fontFamily: systemFont }} numberOfLines={1}>{f.title}</Text>
+            <Ionicons name="arrow-back" size={18} color="#E0F2FE" />
+            <Text style={{ flex: 1, color: '#FFFFFF', fontSize: 14, fontFamily: systemFontMedium }} numberOfLines={1}>{f.title || f.matchTitle}</Text>
           </TouchableOpacity>
 
           <MatchTabBar
@@ -3670,16 +3750,29 @@ export function AppNavigator() {
                           <Text style={{ color: '#7C8793', fontSize: 11, fontWeight: fontWeights.bold, width: 32, textAlign: 'right', fontFamily: systemFont }}>W</Text>
                           <Text style={{ color: '#7C8793', fontSize: 11, fontWeight: fontWeights.bold, width: 50, textAlign: 'right', fontFamily: systemFont }}>ECO</Text>
                         </View>
-                        {viewTeam.bowling.map((bw, bwi) => (
-                          <View key={bwi} style={{ minHeight: 50, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderTopWidth: bwi > 0 ? 1 : 0, borderTopColor: '#E8ECEF' }}>
-                            <Text selectable {...nameFitProps} style={{ flex: 1, minWidth: 0, color: '#111827', fontWeight: fontWeights.bold, fontSize: typeScale.name, fontFamily: systemFont }}>{bw.name}</Text>
-                            <Text selectable style={{ color: '#4B5563', fontWeight: fontWeights.bold, fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{bw.overs}</Text>
-                            <Text selectable style={{ color: '#4B5563', fontWeight: fontWeights.bold, fontSize: 12, width: 30, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>0</Text>
-                            <Text selectable style={{ color: '#4B5563', fontWeight: fontWeights.bold, fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{bw.runs}</Text>
-                            <Text selectable style={{ color: '#111827', fontWeight: fontWeights.bold, fontSize: typeScale.name, width: 32, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{bw.wickets}</Text>
-                            <Text selectable style={{ color: '#1477A8', fontWeight: fontWeights.bold, fontSize: typeScale.body, width: 50, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{bw.econ || '0.00'}</Text>
-                          </View>
-                        ))}
+                        {viewTeam.bowling.map((bw, bwi) => {
+                          const runsNum = Number(bw?.runs ?? bw?.runsConceded ?? 0);
+                          let ballsNum = Number(bw?.balls ?? bw?.legalBalls ?? 0);
+                          if (ballsNum === 0 && bw?.overs) {
+                            const [fullOvers, remBalls] = String(bw.overs).split('.').map(Number);
+                            ballsNum = ((fullOvers || 0) * 6) + (remBalls || 0);
+                          }
+                          const econVal = (bw?.econ && bw.econ !== '0.00' && bw.econ !== '0')
+                            ? String(bw.econ)
+                            : (ballsNum > 0 ? ((runsNum / ballsNum) * 6).toFixed(2) : '0.00');
+                          const maidensVal = bw?.maidens ?? bw?.m ?? 0;
+
+                          return (
+                            <View key={bwi} style={{ minHeight: 50, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderTopWidth: bwi > 0 ? 1 : 0, borderTopColor: '#E8ECEF' }}>
+                              <Text selectable {...nameFitProps} style={{ flex: 1, minWidth: 0, color: '#111827', fontWeight: fontWeights.bold, fontSize: typeScale.name, fontFamily: systemFont }}>{bw.name}</Text>
+                              <Text selectable style={{ color: '#4B5563', fontWeight: fontWeights.bold, fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{bw.overs}</Text>
+                              <Text selectable style={{ color: '#4B5563', fontWeight: fontWeights.bold, fontSize: 12, width: 30, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{maidensVal}</Text>
+                              <Text selectable style={{ color: '#4B5563', fontWeight: fontWeights.bold, fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{runsNum}</Text>
+                              <Text selectable style={{ color: '#111827', fontWeight: fontWeights.bold, fontSize: typeScale.name, width: 32, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{bw.wickets}</Text>
+                              <Text selectable style={{ color: '#1477A8', fontWeight: fontWeights.bold, fontSize: typeScale.body, width: 50, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{econVal}</Text>
+                            </View>
+                          );
+                        })}
                       </View>
                     )}
                     {/* FALL OF WICKETS */}
@@ -3703,14 +3796,42 @@ export function AppNavigator() {
                         <Text style={{ color: '#64748B', fontSize: typeScale.label, fontWeight: fontWeights.bold, fontFamily: systemFont }}>INNING PARTNERSHIPS</Text>
                       </View>
                       {viewTeam.partnerships.map((item, idx) => (
-                        <View key={idx} style={{ paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#E8ECEF' }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <Text style={{ fontSize: typeScale.label, fontWeight: fontWeights.bold, color: '#0284C7', fontFamily: systemFont }}>{item.wkt}</Text>
-                            <Text style={{ fontSize: typeScale.body, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{item.totalRuns} runs ({item.totalBalls}b)</Text>
+                        <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                          {/* Left Batter */}
+                          <View style={{ flex: 1, alignItems: 'flex-start' }}>
+                            <Text selectable style={{ fontSize: 12.5, fontWeight: fontWeights.medium, color: '#0F172A', fontFamily: systemFont }} numberOfLines={1}>
+                              {item.p1 || 'Batter'}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont, marginTop: 1 }}>
+                              {item.r1 || 0} runs
+                            </Text>
                           </View>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                            <Text selectable style={{ flex: 1, fontSize: 11, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }} numberOfLines={1}>{item.p1} <Text style={{ color: '#64748B', fontWeight: fontWeights.semibold, fontFamily: systemFont }}>({item.r1 || 0})</Text></Text>
-                            <Text selectable style={{ flex: 1, fontSize: 11, fontWeight: fontWeights.bold, color: '#0F172A', textAlign: 'right', fontFamily: systemFont }} numberOfLines={1}>{item.p2} <Text style={{ color: '#64748B', fontWeight: fontWeights.semibold, fontFamily: systemFont }}>({item.r2 || 0})</Text></Text>
+
+                          {/* Center Total Partnership Badge */}
+                          <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, minWidth: 86 }}>
+                            <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: '#BAE6FD', alignItems: 'center' }}>
+                              <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#0284C7', fontFamily: systemFont }}>
+                                {item.totalRuns || 0} runs
+                              </Text>
+                              <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFont }}>
+                                ({item.totalBalls || 0}b)
+                              </Text>
+                            </View>
+                            {item.wkt ? (
+                              <Text style={{ fontSize: 9, color: '#94A3B8', fontFamily: systemFont, marginTop: 2 }}>
+                                {item.wkt}
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          {/* Right Batter */}
+                          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                            <Text selectable style={{ fontSize: 12.5, fontWeight: fontWeights.medium, color: '#0F172A', fontFamily: systemFont, textAlign: 'right' }} numberOfLines={1}>
+                              {item.p2 || 'Batter'}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont, marginTop: 1, textAlign: 'right' }}>
+                              {item.r2 || 0} runs
+                            </Text>
                           </View>
                         </View>
                       ))}
@@ -3981,16 +4102,19 @@ export function AppNavigator() {
 
                 {/* Row 1 Batter (Fixed Position 1) */}
                 {row1Batter && (
-                  <View style={{ height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: isRow1Striker ? '#F0F9FF' : '#FFFFFF' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                      <View style={{ width: 18, alignItems: 'center' }}>
-                        {isRow1Striker ? <MaterialCommunityIcons name="cricket" size={18} color="#0284C7" /> : null}
-                      </View>
+                  <View style={{ minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: isRow1Striker ? '#F0F9FF' : '#FFFFFF' }}>
+                    <TouchableOpacity
+                      onPress={() => handleOpenPlayerProfile(row1Batter.name)}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
+                    >
+                      <PlayerAvatar name={row1Batter.name} photoUrl={row1Batter.photoUrl || row1Batter.photo_url} size={34} />
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 14, color: isRow1Striker ? '#0F172A' : '#475569', fontFamily: isRow1Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
+                          <Text style={{ fontSize: 13.5, color: isRow1Striker ? '#0F172A' : '#475569', fontFamily: isRow1Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
                             {row1Batter.name}
                           </Text>
+                          {isRow1Striker ? <MaterialCommunityIcons name="cricket" size={15} color="#0284C7" /> : null}
                           {isRow1Striker ? (
                             <TouchableOpacity
                               onPress={handleRetireBatsman}
@@ -4000,8 +4124,11 @@ export function AppNavigator() {
                             </TouchableOpacity>
                           ) : null}
                         </View>
+                        <Text style={{ fontSize: 10.5, color: isRow1Striker ? '#0284C7' : '#94A3B8', fontFamily: systemFontMedium }}>
+                          {isRow1Striker ? 'On Strike (*)' : 'Non-Striker'}
+                        </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                     <Text style={{ fontSize: isRow1Striker ? 16 : 15, color: isRow1Striker ? '#0284C7' : '#475569', fontFamily: isRow1Striker ? systemFontBold : systemFontMedium }}>
                       {row1Batter.runs}<Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFont }}> ({row1Batter.balls})</Text>
                     </Text>
@@ -4019,16 +4146,19 @@ export function AppNavigator() {
 
                 {/* Row 2 Batter (Fixed Position 2) */}
                 {row2Batter && (
-                  <View style={{ height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: isRow2Striker ? '#F0F9FF' : '#FFFFFF' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                      <View style={{ width: 18, alignItems: 'center' }}>
-                        {isRow2Striker ? <MaterialCommunityIcons name="cricket" size={18} color="#0284C7" /> : null}
-                      </View>
+                  <View style={{ minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: isRow2Striker ? '#F0F9FF' : '#FFFFFF' }}>
+                    <TouchableOpacity
+                      onPress={() => handleOpenPlayerProfile(row2Batter.name)}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
+                    >
+                      <PlayerAvatar name={row2Batter.name} photoUrl={row2Batter.photoUrl || row2Batter.photo_url} size={34} />
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 14, color: isRow2Striker ? '#0F172A' : '#475569', fontFamily: isRow2Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
+                          <Text style={{ fontSize: 13.5, color: isRow2Striker ? '#0F172A' : '#475569', fontFamily: isRow2Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
                             {row2Batter.name}
                           </Text>
+                          {isRow2Striker ? <MaterialCommunityIcons name="cricket" size={15} color="#0284C7" /> : null}
                           {isRow2Striker ? (
                             <TouchableOpacity
                               onPress={handleRetireBatsman}
@@ -4038,8 +4168,11 @@ export function AppNavigator() {
                             </TouchableOpacity>
                           ) : null}
                         </View>
+                        <Text style={{ fontSize: 10.5, color: isRow2Striker ? '#0284C7' : '#94A3B8', fontFamily: systemFontMedium }}>
+                          {isRow2Striker ? 'On Strike (*)' : 'Non-Striker'}
+                        </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                     <Text style={{ fontSize: isRow2Striker ? 16 : 15, color: isRow2Striker ? '#0284C7' : '#475569', fontFamily: isRow2Striker ? systemFontBold : systemFontMedium }}>
                       {row2Batter.runs}<Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFont }}> ({row2Batter.balls})</Text>
                     </Text>
@@ -4048,22 +4181,27 @@ export function AppNavigator() {
 
                 {/* Bowler Row */}
                 {inn.bowler && (
-                  <View style={{ height: 58, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0, paddingLeft: 14, paddingRight: 8 }}>
+                  <View style={{ minHeight: 58, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+                    <TouchableOpacity
+                      onPress={() => handleOpenPlayerProfile(inn.bowler.name)}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, paddingLeft: 14, paddingRight: 8, paddingVertical: 8 }}
+                    >
+                      <PlayerAvatar name={inn.bowler.name} photoUrl={inn.bowler.photoUrl || inn.bowler.photo_url} size={34} />
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 14, color: '#334155', fontFamily: systemFontMedium }} numberOfLines={1}>{inn.bowler.name}</Text>
-                          <MaterialCommunityIcons name="baseball" size={15} color="#0284C7" />
+                          <Text style={{ fontSize: 13.5, color: '#334155', fontFamily: systemFontMedium }} numberOfLines={1}>{inn.bowler.name}</Text>
+                          <MaterialCommunityIcons name="baseball" size={14} color="#0284C7" />
                           <TouchableOpacity
                             onPress={() => { setNextBowlerName(inn.bowler.name); setBowlerChangePending(true); }}
-                            style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#BAE6FD', marginLeft: 4 }}
+                            style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#BAE6FD', marginLeft: 2 }}
                           >
                             <Text style={{ color: '#0284C7', fontSize: 9, fontFamily: systemFontBold }}>Change</Text>
                           </TouchableOpacity>
                         </View>
                         <Text style={{ fontSize: 10, color: '#64748B', fontFamily: systemFontMedium }}>Current Bowler</Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                     <View style={{ width: 148, alignSelf: 'stretch', flexDirection: 'row', borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }}>
                       {[
                         ['O', inn.bowler.overs],
@@ -4160,6 +4298,7 @@ export function AppNavigator() {
               <TouchableOpacity
                 style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
                 onPress={() => handleRecordBall(0, 'wd')}
+{{ ... }}
               >
                 <Text style={{ color: '#B45309', fontSize: 15, fontFamily: systemFontBold }}>WIDE</Text>
               </TouchableOpacity>
@@ -4211,124 +4350,74 @@ export function AppNavigator() {
 
   const renderInningBreak = () => {
     const inn1 = activeMatch.innings[0];
-    const target = activeMatch.target;
+    const target = activeMatch.target || (inn1.battingTeam.runs + 1);
+    const totalBalls = (Number(activeMatch.maxOvers) || 5) * 6;
+    const rrr = totalBalls > 0 ? ((target / totalBalls) * 6).toFixed(2) : '0.00';
     const firstInningTeamMeta = activeMatch.teams?.find(team => team.name === inn1.battingTeam.name) || {
       ...inn1.battingTeam,
-      logoKey: 'default-team-1'
+      logoKey: activeMatch.team1?.logoKey || 'csk'
     };
     const bat2Roster = getRosterForTeam(inn1.bowlingTeam.name, []);
     const bowl2Roster = getRosterForTeam(inn1.battingTeam.name, []);
-    const inningReady = inn2Striker && inn2NonStriker && inn2Bowler;
 
     return (
       <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-          <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
-            <View style={{ minHeight: 48, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F8FAFC' }}>
-              <Ionicons name="pause-circle-outline" size={18} color="#0284C7" />
-              <Text style={{ color: '#0F172A', fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }}>INNINGS BREAK</Text>
+        {/* TOP INNINGS BREAK BANNER */}
+        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
+          <View style={{ minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="pause-circle" size={18} color="#0284C7" />
+              <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }}>INNINGS BREAK</Text>
             </View>
-            <View style={{ paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TeamIdentityMark team={firstInningTeamMeta} size={48} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: fontWeights.bold, fontFamily: systemFont }} numberOfLines={1}>{inn1.battingTeam.name.toUpperCase()}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-                  <Text selectable style={{ color: '#0F172A', fontSize: typeScale.score, lineHeight: 31, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>
-                    {inn1.battingTeam.runs}-{inn1.battingTeam.wickets}
-                  </Text>
-                  <Text selectable style={{ color: '#64748B', fontSize: 13, fontWeight: fontWeights.semibold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>
-                    {formatOvers(inn1.totalLegalBalls)} ({activeMatch.maxOvers})
-                  </Text>
-                </View>
+            <View style={{ backgroundColor: '#E0F2FE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+              <Text style={{ color: '#0369A1', fontSize: 11, fontFamily: systemFontMedium }}>1ST INNINGS COMPLETED</Text>
+            </View>
+          </View>
+
+          {/* 1ST INNINGS SUMMARY SCORE */}
+          <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TeamIdentityMark team={firstInningTeamMeta} size={44} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }} numberOfLines={1}>
+                {inn1.battingTeam.name.toUpperCase()}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+                <Text selectable style={{ color: '#0F172A', fontSize: 22, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
+                  {inn1.battingTeam.runs}-{inn1.battingTeam.wickets}
+                </Text>
+                <Text selectable style={{ color: '#64748B', fontSize: 12.5, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
+                  {formatOvers(inn1.totalLegalBalls)} ({activeMatch.maxOvers} ov)
+                </Text>
               </View>
             </View>
-            <View style={{ paddingHorizontal: 16, paddingVertical: 11, borderTopWidth: 1, borderTopColor: '#FDE68A', backgroundColor: '#FFFBEB' }}>
-              <Text selectable style={{ color: '#92400E', fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }}>
-                {inn1.bowlingTeam.name} need {target} runs to win
+
+            {/* TARGET CALLOUT BADGE */}
+            <View style={{ alignItems: 'flex-end', backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
+              <Text style={{ color: '#92400E', fontSize: 9.5, fontFamily: systemFontMedium }}>TARGET</Text>
+              <Text selectable style={{ color: '#B45309', fontSize: 18, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
+                {target}
               </Text>
             </View>
           </View>
-
-          <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
-            <View style={{ minHeight: 48, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, backgroundColor: '#F8FAFC' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                <MaterialCommunityIcons name="cricket" size={18} color="#0284C7" />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#0F172A', fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }}>SELECT OPENERS</Text>
-                  <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>{inn1.bowlingTeam.name}</Text>
-                </View>
-              </View>
-              <Text style={{ color: inn2NonStriker ? '#15803D' : '#64748B', fontSize: 11, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>
-                {inn2Striker ? (inn2NonStriker ? '2/2' : '1/2') : '0/2'}
-              </Text>
-            </View>
-
-            {bat2Roster.map((name, index) => {
-              const selectedRole = name === inn2Striker ? 'STRIKER' : name === inn2NonStriker ? 'NON-STRIKER' : null;
-              return (
-                <TouchableOpacity
-                  key={name}
-                  onPress={() => handleSelectInning2Opener(name)}
-                  style={{ minHeight: 56, paddingHorizontal: 16, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: selectedRole ? '#F0F9FF' : '#FFFFFF' }}
-                >
-                  <Text style={{ width: 22, color: '#94A3B8', fontSize: 11, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{index + 1}</Text>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text selectable {...nameFitProps} style={{ color: '#0F172A', fontSize: 14, fontWeight: selectedRole ? fontWeights.bold : '700', fontFamily: systemFont }}>{name}</Text>
-                    {selectedRole ? (
-                      <Text style={{ color: '#0284C7', fontSize: 9, fontWeight: fontWeights.bold, marginTop: 3, fontFamily: systemFont }}>{selectedRole}</Text>
-                    ) : null}
-                  </View>
-                  {selectedRole === 'STRIKER' ? (
-                    <MaterialCommunityIcons name="cricket" size={18} color="#0284C7" />
-                  ) : selectedRole ? (
-                    <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
-                  ) : (
-                    <Ionicons name="ellipse-outline" size={18} color="#CBD5E1" />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
-            <View style={{ minHeight: 48, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F8FAFC' }}>
-              <MaterialCommunityIcons name="baseball" size={18} color="#E11D48" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#0F172A', fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }}>SELECT OPENING BOWLER</Text>
-                <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>{inn1.battingTeam.name}</Text>
-              </View>
-            </View>
-
-            {bowl2Roster.map((name, index) => {
-              const isSelected = inn2Bowler === name;
-              return (
-                <TouchableOpacity
-                  key={name}
-                  onPress={() => setInn2Bowler(isSelected ? '' : name)}
-                  style={{ minHeight: 54, paddingHorizontal: 16, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: isSelected ? '#FFF1F2' : '#FFFFFF' }}
-                >
-                  <Text style={{ width: 22, color: '#94A3B8', fontSize: 11, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{index + 1}</Text>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text selectable {...nameFitProps} style={{ color: '#0F172A', fontSize: 14, fontWeight: isSelected ? fontWeights.bold : '700', fontFamily: systemFont }}>{name}</Text>
-                    {isSelected ? <Text style={{ color: '#E11D48', fontSize: 9, fontWeight: fontWeights.bold, marginTop: 3, fontFamily: systemFont }}>OPENING BOWLER</Text> : null}
-                  </View>
-                  <Ionicons name={isSelected ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={isSelected ? '#E11D48' : '#CBD5E1'} />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-
-        <View style={{ paddingHorizontal: 14, paddingVertical: 11, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#CBD5E1' }}>
-          <TouchableOpacity
-            disabled={!inningReady}
-            style={[styles.nextBtn, { backgroundColor: inningReady ? '#0284C7' : '#94A3B8', borderRadius: 6 }]}
-            onPress={handleStartInning2}
-          >
-            <MaterialCommunityIcons name="cricket" size={16} color="#FFFFFF" />
-            <Text style={styles.nextBtnText}>START INNING 2</Text>
-          </TouchableOpacity>
         </View>
+
+        {/* SHARED OPENING PLAYERS SELECTOR */}
+        <OpeningPlayersSelector
+          battingTeamName={inn1.bowlingTeam.name}
+          bowlingTeamName={inn1.battingTeam.name}
+          battingRoster={bat2Roster}
+          bowlingRoster={bowl2Roster}
+          striker={inn2Striker}
+          nonStriker={inn2NonStriker}
+          bowler={inn2Bowler}
+          onSelectBatter={handleSelectInning2Opener}
+          onSelectBowler={setInn2Bowler}
+          renderPlayerPhoto={renderSetupPlayerPhoto}
+          bannerNotice={`${inn1.bowlingTeam.name} need ${target} runs from ${totalBalls} balls (RRR: ${rrr})`}
+          ctaText="START 2ND INNINGS (CHASE)"
+          onStart={handleStartInning2}
+          headerTitle="2ND INNINGS OPENERS"
+        />
       </View>
     );
   };
@@ -4512,6 +4601,7 @@ export function AppNavigator() {
     fetchLocalPlayers().then(players => {
       if (Array.isArray(players) && players.length > 0) {
         setGlobalLocalPlayers(players);
+        syncPlayersToPhotoRegistry(players);
       }
     }).catch(() => {});
   }, []);
@@ -5211,8 +5301,8 @@ export function AppNavigator() {
               </View>
             </View>
 
-            <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
-              <View style={{ position: 'relative', minHeight: 54, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-evenly' }}>
+            <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+              <View style={{ position: 'relative', minHeight: 48, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-evenly' }}>
                 {playingXiTabs.map(team => {
                   const active = playingXiTeamTab === team.id;
                   return (
@@ -5220,10 +5310,10 @@ export function AppNavigator() {
                       key={team.id}
                       onLayout={(event) => capturePlayingXiTabLayout(team.id, event)}
                       onPress={() => changePlayingXiTeam(team.id)}
-                      style={{ maxWidth: (screenWidth - 48) / 2, minHeight: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+                      style={{ maxWidth: (screenWidth - 48) / 2, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                     >
-                      <MaterialCommunityIcons name="account-group" size={18} color={active ? '#0284C7' : '#94A3B8'} />
-                      <Text style={{ flexShrink: 1, color: active ? '#0F172A' : '#64748B', fontSize: 12, fontWeight: active ? fontWeights.bold : '700', fontFamily: systemFont }} numberOfLines={1}>
+                      <MaterialCommunityIcons name="account-group" size={17} color={active ? '#0284C7' : '#94A3B8'} />
+                      <Text style={{ flexShrink: 1, color: active ? '#0284C7' : '#64748B', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
                         {team.name}
                       </Text>
                     </TouchableOpacity>
@@ -5320,7 +5410,7 @@ export function AppNavigator() {
           onRequestClose={() => pendingFielderDismissal ? setPendingFielderDismissal('') : cancelWicketEntry()}
         >
           <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-            <View style={{ minHeight: 58, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
+            <View style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
               <TouchableOpacity
                 onPress={() => pendingFielderDismissal ? setPendingFielderDismissal('') : cancelWicketEntry()}
                 style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
@@ -5328,14 +5418,14 @@ export function AppNavigator() {
                 <Ionicons name={pendingFielderDismissal ? 'arrow-back' : 'close'} size={22} color="#0F172A" />
               </TouchableOpacity>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#0F172A', fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, fontFamily: systemFont }}>
+                <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: systemFontBold }}>
                   {pendingFielderDismissal === 'caught'
                     ? 'WHO TOOK THE CATCH?'
                     : pendingFielderDismissal === 'stumped'
                       ? 'WHO COMPLETED THE STUMPING?'
                       : 'HOW WAS THE BATTER OUT?'}
                 </Text>
-                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
+                <Text style={{ color: '#64748B', fontSize: 11.5, fontFamily: systemFontMedium, marginTop: 2 }} numberOfLines={1}>
                   {pendingFielderDismissal
                     ? `${curInning?.bowlingTeam?.name || 'Bowling team'} fielders`
                     : curInning?.striker?.name || 'Striker'}
@@ -5347,20 +5437,22 @@ export function AppNavigator() {
               {pendingFielderDismissal ? (
                 <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
                   <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
-                    <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>
-                      {pendingFielderDismissal === 'caught' ? 'FIELDER' : 'WICKETKEEPER / FIELDER'}
+                    <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }}>
+                      {pendingFielderDismissal === 'caught' ? 'SELECT FIELDER' : 'SELECT WICKETKEEPER / FIELDER'}
                     </Text>
                   </View>
                   {getBowlingRoster().map((name, index) => (
                     <TouchableOpacity
                       key={name}
                       onPress={() => handleSelectDismissalFielder(name)}
+                      activeOpacity={0.7}
                       style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}
                     >
-                      <Text style={{ width: 22, color: '#94A3B8', fontSize: 11, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{index + 1}</Text>
-                      <Text selectable {...nameFitProps} style={{ flex: 1, minWidth: 0, color: '#0F172A', fontSize: 14, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{name}</Text>
+                      <Text style={{ width: 22, color: '#94A3B8', fontSize: 11, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>{index + 1}</Text>
+                      <PlayerAvatar name={name} size={36} />
+                      <Text selectable {...nameFitProps} style={{ flex: 1, minWidth: 0, color: '#0F172A', fontSize: 13.5, fontFamily: systemFontMedium }}>{name}</Text>
                       {name === curInning?.bowler?.name ? (
-                        <Text style={{ color: '#0284C7', fontSize: 9, fontWeight: fontWeights.bold, fontFamily: systemFont }}>BOWLER</Text>
+                        <Text style={{ color: '#0284C7', fontSize: 10, fontFamily: systemFontMedium }}>BOWLER</Text>
                       ) : null}
                       <Ionicons name="chevron-forward" size={17} color="#94A3B8" />
                     </TouchableOpacity>
@@ -5369,16 +5461,17 @@ export function AppNavigator() {
               ) : (
                 <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
                   <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
-                    <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>DISMISSAL</Text>
+                    <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }}>SELECT DISMISSAL TYPE</Text>
                   </View>
                   {WICKET_TYPES.map((type) => (
                     <TouchableOpacity
                       key={type.id}
                       onPress={() => handleSelectWicketType(type.id)}
-                      style={{ minHeight: 58, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}
+                      activeOpacity={0.7}
+                      style={{ minHeight: 54, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}
                     >
                       <Ionicons name={type.icon} size={19} color={type.id === 'runOut' ? '#E11D48' : '#475569'} />
-                      <Text style={{ flex: 1, color: '#0F172A', fontSize: 14, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{type.label}</Text>
+                      <Text style={{ flex: 1, color: '#0F172A', fontSize: 13.5, fontFamily: systemFontMedium }}>{type.label}</Text>
                       <Ionicons name="chevron-forward" size={17} color="#94A3B8" />
                     </TouchableOpacity>
                   ))}

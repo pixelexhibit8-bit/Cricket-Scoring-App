@@ -441,9 +441,12 @@ export const getCleanPlayerNames = (names = []) => {
 };
 
 export const makeTeamCode = (name = '') => {
-  const words = String(name).trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return words.slice(0, 2).map(word => word[0]).join('').toUpperCase();
-  return String(name).replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'TM';
+  const clean = String(name || '').trim();
+  if (!clean) return 'TM';
+  if (clean.length <= 4) return clean.toUpperCase();
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return words.slice(0, 3).map(word => word[0]).join('').toUpperCase();
+  return clean.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'TM';
 };
 
 export const getTeamShortCode = (team, fallbackName = '') => {
@@ -759,19 +762,57 @@ export const parseFinishedScoreText = (scoreText = '') => {
 };
 
 export const getFinishedResultCardText = (match) => {
-  const rawResult = String(match?.resultText || match?.winner || '').replace(/!+$/g, '').trim();
-  if (!rawResult) return { title: 'Result', detail: '' };
-  if (/tie|tied/i.test(rawResult)) return { title: 'Match Tied', detail: '' };
+  const team1 = match?.team1 || {};
+  const team2 = match?.team2 || {};
+  const t1Name = team1.name || 'Team 1';
+  const t2Name = team2.name || 'Team 2';
+  const t1Code = team1.code || getTeamShortCode(team1, t1Name) || t1Name.slice(0, 2).toUpperCase();
+  const t2Code = team2.code || getTeamShortCode(team2, t2Name) || t2Name.slice(0, 2).toUpperCase();
 
-  const winnerTeam = [match?.team1, match?.team2].find(team => team?.name === match?.winnerTeamName);
-  const winnerCode = winnerTeam?.code || (match?.winnerTeamName ? match.winnerTeamName.slice(0, 2).toUpperCase() : '');
-  const detail = match?.winnerTeamName
-    ? rawResult.replace(new RegExp(`^${escapeRegExp(match.winnerTeamName)}\\s+won\\s*`, 'i'), '').trim()
-    : rawResult.replace(/^.*?\bwon\b\s*/i, '').trim();
+  const t1Parsed = parseFinishedScoreText(team1.score);
+  const t2Parsed = parseFinishedScoreText(team2.score);
+  const t1Runs = Number(team1.runs ?? t1Parsed.runs ?? 0);
+  const t2Runs = Number(team2.runs ?? t2Parsed.runs ?? 0);
+  const t2Wkts = Number(team2.wickets ?? t2Parsed.wickets ?? 0);
+  const maxWkts = team2.batting?.length > 1 ? team2.batting.length - 1 : (match?.maxWickets || 10);
+
+  const rawResult = String(match?.resultText || match?.winner || '').replace(/!+$/g, '').trim();
+
+  if (/tie|tied/i.test(rawResult) || (t1Runs === t2Runs && t1Runs > 0 && team2.score && team2.score !== 'Yet to bat')) {
+    return { title: 'Match Tied', detail: '' };
+  }
+
+  // Determine winner name
+  let winnerName = match?.winnerTeamName || '';
+  if (!winnerName && rawResult && rawResult !== 'Match Completed') {
+    if (rawResult.toLowerCase().includes(t1Name.toLowerCase())) winnerName = t1Name;
+    else if (rawResult.toLowerCase().includes(t2Name.toLowerCase())) winnerName = t2Name;
+  }
+
+  if (!winnerName) {
+    if (t2Runs > t1Runs) winnerName = t2Name;
+    else if (t1Runs > t2Runs) winnerName = t1Name;
+  }
+
+  const winnerCode = (winnerName === t2Name || t2Runs > t1Runs) ? t2Code : t1Code;
+
+  // Determine win margin
+  let detail = '';
+  if (winnerName === t2Name || t2Runs > t1Runs) {
+    const wicketsLeft = Math.max(1, maxWkts - t2Wkts);
+    detail = `by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}`;
+  } else if (winnerName === t1Name || t1Runs > t2Runs) {
+    const runsDiff = Math.max(1, t1Runs - t2Runs);
+    detail = `by ${runsDiff} run${runsDiff !== 1 ? 's' : ''}`;
+  }
+
+  if (!detail && rawResult && rawResult !== 'Match Completed') {
+    detail = rawResult.replace(new RegExp(`^${escapeRegExp(winnerName)}\\s+won\\s*`, 'i'), '').replace(/^.*?\bwon\b\s*/i, '').trim();
+  }
 
   return {
-    title: `${winnerCode || 'Team'} Won`,
-    detail
+    title: `${winnerCode} Won`,
+    detail: detail || ''
   };
 };
 

@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, Image, TextInput, Alert } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { systemFont, typeScale, fontWeights } from '../../theme.js';
-import { MASTER_PLAYERS_DB } from '../../../mockData.js';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { systemFont, systemFontBold, systemFontMedium, typeScale } from '../../theme.js';
+import { PlayerAvatar } from '../PlayerAvatar.jsx';
 import { getBowlerFigureFromInning } from '../../utils/cricketUtils.js';
 
 const nameFitProps = {
@@ -26,116 +26,147 @@ export function BowlerChangeModal({
 }) {
   if (!visible) return null;
 
+  const availableBowlers = getAvailableBowlers ? getAvailableBowlers() : [];
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        {/* Top Navigation Bar */}
-        <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View>
-            <Text style={{ fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>SELECT NEXT BOWLER</Text>
-            <Text style={{ fontSize: 12, color: '#64748B', fontWeight: fontWeights.medium, marginTop: 2, fontFamily: systemFont }}>
-              Inning {activeMatch?.inning} - {curInning?.bowlingTeam.name || 'Bowling Team'}
+        {/* Top Header Bar */}
+        <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <MaterialCommunityIcons name="baseball" size={20} color="#E11D48" />
+              <Text style={{ fontSize: 16, color: '#0F172A', fontFamily: systemFontBold }}>SELECT NEXT BOWLER</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium, marginTop: 2 }}>
+              Inning {activeMatch?.inning} — {curInning?.bowlingTeam?.name || 'Bowling Team'}
             </Text>
           </View>
           <TouchableOpacity
             onPress={onClose}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0' }}
+            activeOpacity={0.7}
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}
           >
-            <Ionicons name="close" size={16} color="#0F172A" />
-            <Text style={{ color: '#0F172A', fontWeight: fontWeights.bold, fontSize: 12, fontFamily: systemFont }}>Close</Text>
+            <Ionicons name="close" size={20} color="#0F172A" />
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }} showsVerticalScrollIndicator={false}>
-          {/* Squad Header Pill */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFont }}>BOWLING SQUAD</Text>
-            <Text style={{ fontSize: 11, fontWeight: fontWeights.semibold, color: '#94A3B8', fontFamily: systemFont }}>TAP TO SELECT</Text>
-          </View>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* Card: Available Bowlers */}
+          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
+            <View style={{ minHeight: 42, paddingHorizontal: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>
+                BOWLING SQUAD ({availableBowlers.length})
+              </Text>
+              <Text style={{ fontSize: 11, color: '#E11D48', fontFamily: systemFontMedium }}>TAP TO BOWL</Text>
+            </View>
 
-          {/* Full Squad Minimal Player Cards List */}
-          <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
-            {getAvailableBowlers().map((name, idx, arr) => {
-              const playerObj = MASTER_PLAYERS_DB.find(p => p.name === name);
-              const avatar = playerObj?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80';
+            {availableBowlers.length === 0 ? (
+              <View style={{ padding: 24, alignItems: 'center' }}>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: systemFontMedium }}>No available bowlers found.</Text>
+              </View>
+            ) : (
+              availableBowlers.map((name, idx, arr) => {
+                const existingFigures = curInning?.bowlingStats?.[name];
+                const figuresText = existingFigures ? `${existingFigures.overs || '0.0'} ov • ${existingFigures.wickets || 0}w • ${existingFigures.runs || 0}r` : 'Yet to bowl';
 
-              return (
-                <TouchableOpacity
-                  key={name}
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14,
-                    borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: '#E2E8F0',
-                    backgroundColor: '#FFFFFF'
-                  }}
-                  onPress={() => {
-                    if ((curInning?.currentOverBalls || []).length > 0 && !curInning?.isOverComplete) {
-                      Alert.alert('Change Bowler', 'Normal bowler change is allowed only after the over is complete.');
-                      return;
-                    }
-                    setActiveMatch(prev => {
-                      const innings = prev.innings.map(x => ({ ...x }));
-                      const inn = { ...innings[prev.inning - 1] };
-                      if ((inn.currentOverBalls || []).length > 0 && !inn.isOverComplete) {
+                return (
+                  <TouchableOpacity
+                    key={name}
+                    activeOpacity={0.7}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      minHeight: 56,
+                      borderBottomWidth: idx < arr.length - 1 ? 1 : 0,
+                      borderBottomColor: '#F1F5F9',
+                      backgroundColor: '#FFFFFF'
+                    }}
+                    onPress={() => {
+                      if ((curInning?.currentOverBalls || []).length > 0 && !curInning?.isOverComplete) {
                         Alert.alert('Change Bowler', 'Normal bowler change is allowed only after the over is complete.');
-                        return prev;
+                        return;
                       }
-                      const savedBowlerFigure = getBowlerFigureFromInning(inn, name);
-                      inn.bowlingStats = { ...(inn.bowlingStats || {}), [name]: savedBowlerFigure };
-                      inn.bowler = {
-                        name,
-                        runs: savedBowlerFigure.runs,
-                        wickets: savedBowlerFigure.wickets,
-                        overs: savedBowlerFigure.overs
-                      };
-                      inn.bowlerLegalBalls = savedBowlerFigure.balls;
-                      innings[prev.inning - 1] = inn;
-                      return { ...prev, innings };
-                    });
-                    setNextBowlerName('');
-                    onClose();
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, paddingRight: 10 }}>
-                    <Image source={{ uri: avatar }} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#F1F5F9' }} />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text selectable {...nameFitProps} style={{ fontSize: 16, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{name}</Text>
+                      setActiveMatch(prev => {
+                        const innings = prev.innings.map(x => ({ ...x }));
+                        const inn = { ...innings[prev.inning - 1] };
+                        if ((inn.currentOverBalls || []).length > 0 && !inn.isOverComplete) {
+                          Alert.alert('Change Bowler', 'Normal bowler change is allowed only after the over is complete.');
+                          return prev;
+                        }
+                        const savedBowlerFigure = getBowlerFigureFromInning(inn, name);
+                        inn.bowlingStats = { ...(inn.bowlingStats || {}), [name]: savedBowlerFigure };
+                        inn.bowler = {
+                          name,
+                          runs: savedBowlerFigure.runs,
+                          wickets: savedBowlerFigure.wickets,
+                          overs: savedBowlerFigure.overs
+                        };
+                        inn.bowlerLegalBalls = savedBowlerFigure.balls;
+                        innings[prev.inning - 1] = inn;
+                        return { ...prev, innings };
+                      });
+                      setNextBowlerName('');
+                      onClose();
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, paddingRight: 10 }}>
+                      <PlayerAvatar name={name} size={38} />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text selectable {...nameFitProps} style={{ fontSize: 14, color: '#0F172A', fontFamily: systemFontMedium }}>{name}</Text>
+                        <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, marginTop: 1 }}>{figuresText}</Text>
+                      </View>
                     </View>
-                  </View>
-                  <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8 }}>
-                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: fontWeights.bold, fontFamily: systemFont }}>Select</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+                    <View style={{ backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECDD3', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <MaterialCommunityIcons name="baseball" size={14} color="#E11D48" />
+                      <Text style={{ color: '#E11D48', fontSize: 11, fontFamily: systemFontMedium }}>Select</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </View>
 
-          {/* Or Add Custom Bowler */}
-          <View style={{ gap: 6, marginTop: 4 }}>
-            <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont }}>ADD NEW BOWLER</Text>
+          {/* Add New Bowler On-The-Fly */}
+          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, padding: 14, gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="person-add-outline" size={16} color="#E11D48" />
+              <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>ADD NEW BOWLER MID-MATCH</Text>
+            </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
                 style={{
                   flex: 1,
-                  height: 48,
-                  borderRadius: 10,
+                  height: 46,
+                  borderRadius: 8,
                   borderWidth: 1,
                   borderColor: '#CBD5E1',
-                  paddingHorizontal: 14,
-                  backgroundColor: '#FFFFFF',
-                  fontSize: 14,
+                  paddingHorizontal: 12,
+                  backgroundColor: '#F8FAFC',
+                  fontSize: 13,
                   color: '#0F172A',
-                  fontFamily: systemFont
+                  fontFamily: systemFontMedium
                 }}
-                placeholder="Type bowler name..."
+                placeholder="Type new bowler name..."
                 placeholderTextColor="#94A3B8"
                 value={nextBowlerName}
                 onChangeText={setNextBowlerName}
               />
               <TouchableOpacity
-                style={{ backgroundColor: nextBowlerName.trim() ? '#0F172A' : '#94A3B8', paddingHorizontal: 16, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}
+                disabled={!nextBowlerName.trim()}
+                style={{
+                  backgroundColor: nextBowlerName.trim() ? '#E11D48' : '#94A3B8',
+                  paddingHorizontal: 14,
+                  borderRadius: 8,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
                 onPress={handleNewBowler}
               >
-                <Text style={{ color: '#FFFFFF', fontWeight: fontWeights.bold, fontSize: 13, fontFamily: systemFont }}>Add & Select</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Add & Select</Text>
               </TouchableOpacity>
             </View>
           </View>

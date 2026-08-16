@@ -35,7 +35,8 @@ import {
   signOutUser,
   sendPhoneOtp,
   verifyPhoneOtp,
-  calculatePlayerCareerStats
+  calculatePlayerCareerStats,
+  isPlayerNameMatch
 } from '../services/authService.js';
 import { supabase } from '../services/supabaseClient.js';
 import { registerPlayerPhoto } from '../services/playerPhotoStore.js';
@@ -46,7 +47,10 @@ import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
 
 export function MyProfileScreen({
   finishedMatches = [],
+  activeMatch = null,
   onSelectMatch,
+  onStartQuickMatch = null,
+  onJoinMatchByCode = null,
   targetPlayer = null,
   onBack = null,
   readOnly = false
@@ -56,6 +60,9 @@ export function MyProfileScreen({
     : (targetPlayer?.name || targetPlayer?.fullName || targetPlayer?.playerName || '');
   const isPublicView = Boolean(targetPlayer) || readOnly;
   const [currentUser, setCurrentUser] = useState(null);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [inputMatchCode, setInputMatchCode] = useState('');
   const [profile, setProfile] = useState(targetPlayer ? {
     name: targetPlayerName || 'Cricket Player',
     role: targetPlayer?.role || 'All-Rounder',
@@ -67,12 +74,57 @@ export function MyProfileScreen({
     photoUrl: targetPlayer?.photoUrl || targetPlayer?.avatar || ''
   } : null);
   const [loading, setLoading] = useState(!targetPlayer);
+  const [matchesList, setMatchesList] = useState(Array.isArray(finishedMatches) ? finishedMatches : []);
 
   // Floating Toast State
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const showToast = (message, type = 'success') => {
     setToast({ visible: true, message, type });
   };
+
+  const loadMatchesForCareer = async () => {
+    try {
+      let combined = Array.isArray(finishedMatches) ? [...finishedMatches] : [];
+      if (supabase) {
+        const { data: dbMatches } = await supabase
+          .from('matches')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (Array.isArray(dbMatches) && dbMatches.length > 0) {
+          dbMatches.forEach(m => {
+            const matchId = m.id;
+            const matchTitle = m.match_title;
+            const idx = combined.findIndex(c => (c.id && c.id === matchId) || (c.title && c.title === matchTitle) || (c.matchTitle && c.matchTitle === matchTitle));
+            if (idx >= 0) {
+              combined[idx] = m;
+            } else {
+              combined.unshift(m);
+            }
+          });
+        }
+      }
+      const raw = await AsyncStorage.getItem('cricflow.mobile.match-state.v2');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.finishedMatches)) {
+          parsed.finishedMatches.forEach(m => {
+            if (!combined.some(c => (c.id && c.id === m.id) || (c.title && c.title === m.title))) {
+              combined.push(m);
+            }
+          });
+        }
+      }
+      if (combined.length > 0) {
+        setMatchesList(combined);
+      }
+    } catch (err) {
+      console.warn('Failed to load matches for career:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadMatchesForCareer();
+  }, [finishedMatches, targetPlayer]);
 
   // Edit Modal State
   const [isEditing, setIsEditing] = useState(false);
@@ -112,13 +164,15 @@ export function MyProfileScreen({
       setCurrentUser(userObj);
 
       let p = await getPlayerProfile(userObj.id);
+      const isNewAccount = !p || !p.phone;
+
       if (!p) {
         p = await savePlayerProfile({
           name: userObj.name,
           auth_user_id: userObj.id,
           photoUrl: userObj.photoUrl,
           phone: quickPhone.trim(),
-          isProfileComplete: false
+          isProfileComplete: Boolean(quickPhone.trim())
         });
       }
 
@@ -131,8 +185,11 @@ export function MyProfileScreen({
       setEditPhone(p.phone || quickPhone.trim() || '');
       setEditJerseyNumber(p.jerseyNumber || '');
 
-      if (!p.isProfileComplete) {
+      // Only open Edit drawer for 1st-time user if mobile number / profile is missing
+      if (isNewAccount && !p.phone) {
         setIsEditing(true);
+      } else {
+        setIsEditing(false);
       }
     } catch (err) {
       console.warn('Error handling authenticated user:', err);
@@ -154,6 +211,7 @@ export function MyProfileScreen({
 
   useEffect(() => {
     loadUserSession();
+    loadMatchesForCareer();
 
     // 1. Listen for Supabase OAuth state change
     let authListener;
@@ -223,7 +281,18 @@ export function MyProfileScreen({
             .ilike('name', pName.trim())
             .limit(1)
             .maybeSingle();
-          if (data) dbP = data;
+          if (data) {
+            dbP = data;
+          } else {
+            // Fallback smart name match
+            const { data: allPlayers } = await supabase
+              .from('local_players')
+              .select('*')
+              .limit(100);
+            if (Array.isArray(allPlayers)) {
+              dbP = allPlayers.find(pl => isPlayerNameMatch(pl.name, pName));
+            }
+          }
         }
 
         const finalPhoto = dbP?.photo_url || dbP?.photoUrl || directPhoto || '';
@@ -239,7 +308,7 @@ export function MyProfileScreen({
         }
 
         setProfile({
-          name: pName,
+          name: dbP?.name || pName,
           role: finalRole,
           battingStyle: finalBatting,
           bowlingStyle: finalBowling,
@@ -295,14 +364,10 @@ export function MyProfileScreen({
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      if (targetPlayer) {
-        const fresh = await getPlayerProfile(null, targetPlayer.phone || targetPlayer.id);
-        if (fresh) {
-          setProfile(prev => ({ ...prev, ...fresh }));
-        }
-      } else {
-        await loadUserSession();
-      }
+      await Promise.all([
+        loadMatchesForCareer(),
+        loadUserSession()
+      ]);
       showToast('Profile refreshed', 'success');
     } catch (e) {
       console.warn('Refresh error:', e);
@@ -311,11 +376,65 @@ export function MyProfileScreen({
     }
   };
 
-  const handlePickImage = async () => {
+  const [photoSourcePickerVisible, setPhotoSourcePickerVisible] = useState(false);
+
+  const processAndUploadPhoto = async (asset) => {
+    if (!asset) return;
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        showToast('Camera roll permission needed for photo', 'error');
+      const dataUri = asset.base64
+        ? `data:image/jpeg;base64,${asset.base64}`
+        : asset.uri;
+
+      showToast('Uploading profile photo...', 'info');
+
+      let finalPhotoUrl = asset.uri;
+      const uploadedUrl = await uploadImageToCloudinary(dataUri);
+      if (uploadedUrl) {
+        finalPhotoUrl = uploadedUrl;
+      }
+
+      const currentName = profile?.name || currentUser?.name || 'Local Player';
+      registerPlayerPhoto(currentName, finalPhotoUrl);
+      setProfile(prev => ({ ...prev, photoUrl: finalPhotoUrl }));
+      await savePlayerProfile({ photoUrl: finalPhotoUrl });
+      showToast('Profile photo updated successfully!', 'success');
+    } catch (e) {
+      console.warn('Image pick error:', e);
+      showToast('Could not update photo', 'error');
+    }
+  };
+
+  const handlePickFromCamera = async () => {
+    setPhotoSourcePickerVisible(false);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        showToast('Camera permission is required to take photo', 'error');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.75,
+        base64: true
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        await processAndUploadPhoto(result.assets[0]);
+      }
+    } catch (e) {
+      console.warn('Camera error:', e);
+      showToast('Could not open camera', 'error');
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    setPhotoSourcePickerVisible(false);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showToast('Gallery permission is required to choose photo', 'error');
         return;
       }
 
@@ -323,34 +442,21 @@ export function MyProfileScreen({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7,
+        quality: 0.75,
         base64: true
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
-        const asset = result.assets[0];
-        const dataUri = asset.base64
-          ? `data:image/jpeg;base64,${asset.base64}`
-          : asset.uri;
-
-        showToast('Uploading photo to Cloudinary...', 'info');
-
-        let finalPhotoUrl = asset.uri;
-        const uploadedUrl = await uploadImageToCloudinary(dataUri);
-        if (uploadedUrl) {
-          finalPhotoUrl = uploadedUrl;
-        }
-
-        const currentName = profile?.name || currentUser?.name || 'Local Player';
-        registerPlayerPhoto(currentName, finalPhotoUrl);
-        setProfile(prev => ({ ...prev, photoUrl: finalPhotoUrl }));
-        await savePlayerProfile({ photoUrl: finalPhotoUrl });
-        showToast('Profile photo updated on Cloudinary!', 'success');
+        await processAndUploadPhoto(result.assets[0]);
       }
     } catch (e) {
-      console.warn('Image pick error:', e);
-      showToast('Could not update photo', 'error');
+      console.warn('Gallery error:', e);
+      showToast('Could not open gallery', 'error');
     }
+  };
+
+  const handlePickImage = () => {
+    setPhotoSourcePickerVisible(true);
   };
 
   // Phone Auth State
@@ -459,9 +565,40 @@ export function MyProfileScreen({
     }
   };
 
+  const handleInstantLogin = async (customName = 'Basti Ram') => {
+    try {
+      setLoading(true);
+      const instantUser = {
+        id: 'usr_expo_scorer_01',
+        name: customName,
+        email: 'scorer@cricflow.app',
+        phone: '9876543210',
+        photoUrl: null,
+        provider: 'instant',
+        signedInAt: new Date().toISOString()
+      };
+
+      await handleAuthenticatedUser({
+        id: instantUser.id,
+        email: instantUser.email,
+        user_metadata: { full_name: instantUser.name, avatar_url: null }
+      });
+      showToast(`Welcome ${customName}! Logged in as Verified Scorer.`, 'success');
+    } catch (e) {
+      showToast('Unable to sign in. Please try again', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!editName.trim()) {
       showToast('Please enter your player full name', 'error');
+      return;
+    }
+    const cleanPhone = editPhone.trim().replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      showToast('Mobile number is mandatory (10 digits)', 'error');
       return;
     }
     setLoading(true);
@@ -471,27 +608,25 @@ export function MyProfileScreen({
         role: editRole,
         battingStyle: editBatting,
         bowlingStyle: editBowling,
-        jerseyNumber: editJerseyNumber.trim(),
-        dob: editDob,
         city: editCity.trim() || 'Local Ground',
-        phone: editPhone.trim() || authPhone.trim(),
+        jerseyNumber: editJerseyNumber.trim(),
+        phone: cleanPhone,
+        dob: editDob || profile?.dob || '',
+        photoUrl: profile?.photoUrl || null,
         isProfileComplete: true
       });
-      if (updated.name && updated.photoUrl) {
-        registerPlayerPhoto(updated.name, updated.photoUrl);
-      }
       setProfile(updated);
       setIsEditing(false);
-      showToast('Profile saved successfully!', 'success');
+      showToast('Profile updated successfully!', 'success');
     } catch (e) {
-      showToast('Could not save profile changes', 'error');
+      showToast('Failed to update profile', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+  const handleSignOut = async () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out of your cricketer account?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out',
@@ -527,7 +662,7 @@ export function MyProfileScreen({
             <Image source={require('../../assets/logo.png')} style={{ width: 88, height: 88, resizeMode: 'contain', marginBottom: 14 }} />
             <Text style={styles.authTitle}>Welcome to CricScorer</Text>
             <Text style={styles.authSub}>
-              Sign in with your Google account to track your lifetime career stats, match records and rankings.
+              Sign in with your Google account or 1-tap fast login to track your career stats, match records and rankings.
             </Text>
 
             {/* Feature Perks */}
@@ -542,7 +677,7 @@ export function MyProfileScreen({
               </View>
               <View style={styles.benefitItem}>
                 <Ionicons name="cloud-done-outline" size={16} color="#16A34A" />
-                <Text style={styles.benefitText}>Lifetime cloud backup linked to your Google ID</Text>
+                <Text style={styles.benefitText}>Lifetime cloud backup linked to your account</Text>
               </View>
             </View>
 
@@ -579,6 +714,34 @@ export function MyProfileScreen({
               </Text>
             </TouchableOpacity>
 
+            {/* Dev Mode Instant Login (Automatically hidden in production/release builds) */}
+            {__DEV__ && (
+              <TouchableOpacity
+                style={{
+                  width: '100%',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  backgroundColor: '#071B2C',
+                  borderRadius: 14,
+                  paddingVertical: 13,
+                  paddingHorizontal: 16,
+                  borderWidth: 1,
+                  borderColor: '#38BDF8',
+                  marginTop: 10,
+                  elevation: 2
+                }}
+                onPress={() => handleInstantLogin('Basti Ram')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="flash" size={16} color="#38BDF8" />
+                <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontFamily: systemFontBold }}>
+                  ⚡ Quick Test Login (Dev Mode)
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <Text style={styles.authTerms}>
               Fast 1-tap sign in. No phone number or password required.
             </Text>
@@ -597,7 +760,7 @@ export function MyProfileScreen({
 
   // ─── 2. PLAYER PROFILE VIEW (SELF OR PUBLIC) ───
   const playerName = targetPlayerName || profile?.name || currentUser?.name || 'Local Player';
-  const stats = calculatePlayerCareerStats(playerName, finishedMatches);
+  const stats = calculatePlayerCareerStats(playerName, matchesList.length > 0 ? matchesList : finishedMatches);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
@@ -683,22 +846,122 @@ export function MyProfileScreen({
         </View>
       </View>
 
+      {/* GROUND MATCH SCORING & CO-SCORER HUB (Only for profile owner) */}
+      {!isPublicView && (
+        <View style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 16,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
+          gap: 12
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <MaterialCommunityIcons name="scoreboard-outline" size={18} color="#0284C7" />
+              <Text style={{ fontSize: 11, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFontBold }}>
+                GROUND MATCH SCORING
+              </Text>
+            </View>
+            <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#BAE6FD' }}>
+              <Text style={{ fontSize: 10, color: '#0284C7', fontFamily: systemFontBold }}>Verified Scorer</Text>
+            </View>
+          </View>
+
+          {/* Primary Action: Start Quick Match */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => {
+              if (onStartQuickMatch) onStartQuickMatch();
+            }}
+            style={{
+              backgroundColor: '#0284C7',
+              borderRadius: 12,
+              height: 44,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8
+            }}
+          >
+            <MaterialCommunityIcons name="cricket" size={18} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>
+              START NEW QUICK MATCH
+            </Text>
+          </TouchableOpacity>
+
+          {/* Secondary Co-Scorer Actions */}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setJoinModalVisible(true)}
+              style={{
+                flex: 1,
+                backgroundColor: '#F8FAFC',
+                borderRadius: 10,
+                paddingVertical: 9,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 6,
+                borderWidth: 1,
+                borderColor: '#E2E8F0'
+              }}
+            >
+              <Ionicons name="key-outline" size={14} color="#0284C7" />
+              <Text style={{ color: '#334155', fontSize: 11.5, fontFamily: systemFontMedium }}>Enter Match Code</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setShareModalVisible(true)}
+              style={{
+                flex: 1,
+                backgroundColor: '#F8FAFC',
+                borderRadius: 10,
+                paddingVertical: 9,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 6,
+                borderWidth: 1,
+                borderColor: '#E2E8F0'
+              }}
+            >
+              <Ionicons name="share-social-outline" size={14} color="#0284C7" />
+              <Text style={{ color: '#334155', fontSize: 11.5, fontFamily: systemFontMedium }}>Share Access</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* QUICK CAREER OVERVIEW (4 TILES) */}
       <Text style={styles.sectionHeader}>CAREER SUMMARY</Text>
       <View style={styles.summaryGrid}>
+        {/* Matches */}
         <View style={styles.summaryCard}>
+          <MaterialCommunityIcons name="scoreboard-outline" size={48} color="#0F172A" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.06 }} />
           <Text style={styles.summaryVal}>{stats.matchesPlayed}</Text>
           <Text style={styles.summaryLbl}>Matches</Text>
         </View>
+
+        {/* Total Runs */}
         <View style={styles.summaryCard}>
+          <MaterialCommunityIcons name="cricket" size={48} color="#0284C7" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.08 }} />
           <Text style={[styles.summaryVal, { color: '#0284C7' }]}>{stats.totalRuns}</Text>
           <Text style={styles.summaryLbl}>Total Runs</Text>
         </View>
+
+        {/* High Score */}
         <View style={styles.summaryCard}>
+          <Ionicons name="trophy-outline" size={44} color="#059669" style={{ position: 'absolute', right: -6, bottom: -6, opacity: 0.08 }} />
           <Text style={[styles.summaryVal, { color: '#059669' }]}>{stats.highestScore}</Text>
           <Text style={styles.summaryLbl}>High Score</Text>
         </View>
+
+        {/* Wickets */}
         <View style={styles.summaryCard}>
+          <MaterialCommunityIcons name="baseball" size={48} color="#7C3AED" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.08 }} />
           <Text style={[styles.summaryVal, { color: '#7C3AED' }]}>{stats.wickets}</Text>
           <Text style={styles.summaryLbl}>Wickets</Text>
         </View>
@@ -706,6 +969,13 @@ export function MyProfileScreen({
 
       {/* DETAILED BATTING RECORD */}
       <View style={styles.statsCard}>
+        {/* Subtle Batsman Background Watermark Graphic */}
+        <MaterialCommunityIcons
+          name="cricket"
+          size={135}
+          color="#0284C7"
+          style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.05, transform: [{ rotate: '-12deg' }] }}
+        />
         <View style={styles.statsCardHeader}>
           <MaterialCommunityIcons name="cricket" size={18} color="#0284C7" />
           <Text style={styles.statsCardTitle}>Batting Performance</Text>
@@ -740,6 +1010,13 @@ export function MyProfileScreen({
 
       {/* DETAILED BOWLING RECORD */}
       <View style={styles.statsCard}>
+        {/* Subtle Bowler Background Watermark Graphic */}
+        <MaterialCommunityIcons
+          name="baseball"
+          size={135}
+          color="#7C3AED"
+          style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.05, transform: [{ rotate: '12deg' }] }}
+        />
         <View style={styles.statsCardHeader}>
           <MaterialCommunityIcons name="baseball" size={18} color="#7C3AED" />
           <Text style={styles.statsCardTitle}>Bowling Performance</Text>
@@ -783,21 +1060,32 @@ export function MyProfileScreen({
           </Text>
         </View>
       ) : (
-        stats.participatedMatches.map((m, idx) => (
-          <TouchableOpacity
-            key={m.id || `match_${idx}`}
-            style={styles.matchHistoryItem}
-            onPress={() => onSelectMatch && onSelectMatch(m)}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.matchTitle}>{m.title || `${m.team1?.name} vs ${m.team2?.name}`}</Text>
-              <Text style={styles.matchDate}>{m.dateText || m.dateLabel || 'Recent Match'}</Text>
-              <Text style={styles.matchResultText} numberOfLines={1}>{m.resultText || 'Match Completed'}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#0284C7" />
-          </TouchableOpacity>
-        ))
+        stats.participatedMatches.map((m, idx) => {
+          const matchTitle = m.match_title || m.matchTitle || m.title || (m.team1_name && m.team2_name ? `${m.team1_name} vs ${m.team2_name}` : '') || (m.match_data?.matchTitle || (m.match_data?.team1?.name && m.match_data?.team2?.name ? `${m.match_data.team1.name} vs ${m.match_data.team2.name}` : '')) || (m.team1?.name && m.team2?.name ? `${m.team1.name} vs ${m.team2.name}` : 'Cricket Match');
+          const matchResult = m.result_text || m.resultText || m.match_data?.resultText || m.winner || 'Match Completed';
+          const matchDate = m.dateText || m.dateLabel || (m.created_at ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent Match');
+
+          return (
+            <TouchableOpacity
+              key={`match_history_${m.id || 'item'}_${idx}`}
+              style={styles.matchHistoryItem}
+              onPress={() => {
+                if (onSelectMatch) {
+                  const fullMatch = m.match_data ? { ...m.match_data, id: m.id, title: matchTitle, matchTitle, resultText: matchResult, dateText: matchDate } : m;
+                  onSelectMatch(fullMatch);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.matchTitle}>{matchTitle}</Text>
+                <Text style={styles.matchDate}>{matchDate}</Text>
+                <Text style={styles.matchResultText} numberOfLines={1}>{matchResult}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#0284C7" />
+            </TouchableOpacity>
+          );
+        })
       )}
 
       {/* EDIT PROFILE MODAL */}
@@ -812,6 +1100,23 @@ export function MyProfileScreen({
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Photo Change in Edit Modal */}
+              <View style={{ alignItems: 'center', marginBottom: 18, marginTop: 4 }}>
+                <TouchableOpacity
+                  onPress={handlePickImage}
+                  style={{ position: 'relative' }}
+                  activeOpacity={0.85}
+                >
+                  <PlayerAvatar name={editName || playerName} photoUrl={profile?.photoUrl} size={76} />
+                  <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#0284C7', width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' }}>
+                    <Ionicons name="camera" size={13} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handlePickImage} style={{ marginTop: 6 }}>
+                  <Text style={{ color: '#0284C7', fontSize: 12.5, fontFamily: systemFontMedium }}>Change Profile Photo</Text>
+                </TouchableOpacity>
+              </View>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Player Name</Text>
                 <TextInput
@@ -908,13 +1213,16 @@ export function MyProfileScreen({
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Mobile Phone</Text>
+                <Text style={styles.inputLabel}>
+                  Mobile Number <Text style={{ color: '#EF4444' }}>* (Mandatory)</Text>
+                </Text>
                 <TextInput
                   style={styles.textInput}
                   value={editPhone}
                   onChangeText={setEditPhone}
-                  placeholder="Enter mobile number"
+                  placeholder="10-digit mobile number"
                   keyboardType="phone-pad"
+                  maxLength={10}
                 />
               </View>
 
@@ -1037,6 +1345,7 @@ export function MyProfileScreen({
               </TouchableOpacity>
             </View>
 
+
             {/* Edit Profile Option */}
             <TouchableOpacity
               style={styles.actionMenuItem}
@@ -1092,6 +1401,230 @@ export function MyProfileScreen({
                 <Text style={styles.actionMenuSub}>Log out of your cricketer account</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#FECACA" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* JOIN MATCH VIA CODE MODAL */}
+      <Modal
+        visible={joinModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setJoinModalVisible(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setJoinModalVisible(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(7, 27, 44, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={{ width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, gap: 14, borderWidth: 1, borderColor: '#E2E8F0' }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="key" size={20} color="#0284C7" />
+                <Text style={{ fontSize: 16, color: '#0F172A', fontFamily: systemFontBold }}>Enter Match Code</Text>
+              </View>
+              <TouchableOpacity onPress={() => setJoinModalVisible(false)}>
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }}>
+              Enter the 6-character match code shared by the match creator to score or view live.
+            </Text>
+
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#F8FAFC',
+              borderRadius: 12,
+              borderWidth: 1.5,
+              borderColor: '#CBD5E1',
+              paddingHorizontal: 14,
+              height: 48,
+              gap: 10
+            }}>
+              <Ionicons name="barcode-outline" size={20} color="#0284C7" />
+              <TextInput
+                style={{
+                  flex: 1,
+                  fontSize: 15,
+                  fontFamily: systemFontBold,
+                  color: '#0F172A',
+                  paddingVertical: 0
+                }}
+                placeholder="e.g. CF-8421"
+                placeholderTextColor="#94A3B8"
+                value={inputMatchCode}
+                onChangeText={setInputMatchCode}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+              {Boolean(inputMatchCode) && (
+                <TouchableOpacity onPress={() => setInputMatchCode('')} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              onPress={async () => {
+                if (!inputMatchCode.trim()) {
+                  showToast('Please enter a match code', 'error');
+                  return;
+                }
+                if (onJoinMatchByCode) {
+                  const success = await onJoinMatchByCode(inputMatchCode.trim());
+                  if (success) {
+                    setJoinModalVisible(false);
+                    setInputMatchCode('');
+                    showToast(`Scoring connected for match!`, 'success');
+                  } else {
+                    showToast(`No live match found for "${inputMatchCode.trim()}"`, 'error');
+                  }
+                } else {
+                  setJoinModalVisible(false);
+                  showToast(`Searching match ${inputMatchCode.trim()}...`, 'success');
+                }
+              }}
+              style={{ backgroundColor: '#0284C7', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>Join Match</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* SHARE SCORER ACCESS MODAL */}
+      <Modal
+        visible={shareModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShareModalVisible(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShareModalVisible(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(7, 27, 44, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={{ width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, gap: 14, borderWidth: 1, borderColor: '#E2E8F0' }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="share-social" size={20} color="#0284C7" />
+                <Text style={{ fontSize: 16, color: '#0F172A', fontFamily: systemFontBold }}>Share Scoring Access</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShareModalVisible(false)}>
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {activeMatch && (activeMatch.phase === 'playing' || activeMatch.phase === 'inningBreak') ? (
+              <>
+                <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }}>
+                  Share this access code with your co-scorer or umpire on the ground for <Text style={{ color: '#0F172A', fontFamily: systemFontBold }}>{activeMatch.matchTitle || 'Live Match'}</Text>.
+                </Text>
+
+                <View style={{ backgroundColor: '#F0F9FF', padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#BAE6FD' }}>
+                  <Text style={{ fontSize: 24, letterSpacing: 4, color: '#0284C7', fontFamily: systemFontBold }}>
+                    {activeMatch.matchCode || activeMatch.scorerPin || ('CF-' + (activeMatch.id || '8421').slice(-4).toUpperCase())}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#0369A1', marginTop: 4, fontFamily: systemFontMedium }}>Valid for current active match</Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setShareModalVisible(false);
+                    const code = activeMatch.matchCode || activeMatch.scorerPin || ('CF-' + (activeMatch.id || '8421').slice(-4).toUpperCase());
+                    showToast(`Scorer code ${code} copied!`, 'success');
+                  }}
+                  style={{ backgroundColor: '#0284C7', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>Copy Access Code</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={{ gap: 12, alignItems: 'center', paddingVertical: 8 }}>
+                <MaterialCommunityIcons name="cricket" size={32} color="#94A3B8" />
+                <Text style={{ fontSize: 13, color: '#0F172A', fontFamily: systemFontBold, textAlign: 'center' }}>
+                  No Active Match Currently
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont, textAlign: 'center' }}>
+                  Start a quick match first. While the match is live, you can share its unique code from here anytime!
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShareModalVisible(false);
+                    if (onStartQuickMatch) onStartQuickMatch();
+                  }}
+                  style={{ backgroundColor: '#0284C7', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, marginTop: 4 }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Start New Match</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* PHOTO SOURCE SELECTION MODAL (CAMERA vs GALLERY) */}
+      <Modal
+        visible={photoSourcePickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoSourcePickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.actionModalOverlay}
+          activeOpacity={1}
+          onPress={() => setPhotoSourcePickerVisible(false)}
+        >
+          <View style={styles.actionMenuCard}>
+            <View style={styles.actionMenuHeader}>
+              <Text style={styles.actionMenuTitle}>Select Profile Photo</Text>
+              <TouchableOpacity
+                onPress={() => setPhotoSourcePickerVisible(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Camera Option */}
+            <TouchableOpacity
+              style={styles.actionMenuItem}
+              onPress={handlePickFromCamera}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F0F9FF' }]}>
+                <Ionicons name="camera" size={20} color="#0284C7" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionMenuLabel}>Take Photo</Text>
+                <Text style={styles.actionMenuSub}>Use your phone camera to click a new picture</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+            </TouchableOpacity>
+
+            {/* Gallery Option */}
+            <TouchableOpacity
+              style={[styles.actionMenuItem, { borderBottomWidth: 0 }]}
+              onPress={handlePickFromGallery}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8FAFC' }]}>
+                <Ionicons name="images" size={20} color="#0284C7" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionMenuLabel}>Choose from Gallery</Text>
+                <Text style={styles.actionMenuSub}>Select an existing photo from device albums</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -1410,7 +1943,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0'
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    position: 'relative'
   },
   summaryVal: {
     fontSize: 18,
@@ -1429,7 +1964,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0'
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    position: 'relative'
   },
   statsCardHeader: {
     flexDirection: 'row',

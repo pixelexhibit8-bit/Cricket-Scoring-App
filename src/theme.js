@@ -111,28 +111,19 @@ export const radius = {
   pill: 999
 };
 
-// ─── 4. SHADOWS (Light Theme) ─────────────────────────────────────────────────
+// ─── 4. SHADOWS (Clean Border-Led Flat Design) ──────────────────────────────────
 export const shadows = {
   small: {
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1
+    elevation: 0,
+    shadowOpacity: 0
   },
   medium: {
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3
+    elevation: 0,
+    shadowOpacity: 0
   },
   large: {
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 6
+    elevation: 0,
+    shadowOpacity: 0
   }
 };
 

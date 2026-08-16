@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native';
+import React from 'react';
+import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { systemFont, typeScale, fontWeights } from '../../theme.js';
-import { MASTER_PLAYERS_DB } from '../../../mockData.js';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { systemFont, systemFontBold, systemFontMedium, typeScale } from '../../theme.js';
+import { PlayerAvatar } from '../PlayerAvatar.jsx';
 
 const nameFitProps = {
   numberOfLines: 1,
@@ -24,79 +24,98 @@ export function WicketPendingModal({
 }) {
   if (!visible) return null;
 
+  const availableBatters = getAvailableBatsmen ? getAvailableBatsmen() : [];
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        {/* Top Navigation Bar */}
-        <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View>
-            <Text style={{ fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>SELECT NEW BATTER</Text>
-            <Text style={{ fontSize: 12, color: '#64748B', fontWeight: fontWeights.medium, marginTop: 2, fontFamily: systemFont }}>
+        {/* Top Header Bar */}
+        <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <MaterialCommunityIcons name="cricket" size={20} color="#0284C7" />
+              <Text style={{ fontSize: 16, color: '#0F172A', fontFamily: systemFontBold }}>SELECT NEXT BATTER</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium, marginTop: 2 }}>
               {curInning?.pendingBatterEnd === 'nonStriker' ? 'Will join at non-striker end' : 'Will take strike'}
             </Text>
           </View>
           <TouchableOpacity
             onPress={onClose}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0' }}
+            activeOpacity={0.7}
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}
           >
-            <Ionicons name="close" size={16} color="#0F172A" />
-            <Text style={{ color: '#0F172A', fontWeight: fontWeights.bold, fontSize: 12, fontFamily: systemFont }}>Close</Text>
+            <Ionicons name="close" size={20} color="#0F172A" />
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }} showsVerticalScrollIndicator={false}>
-          {/* Squad Header Pill */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFont }}>PLAYING SQUAD</Text>
-            <Text style={{ fontSize: 11, fontWeight: fontWeights.semibold, color: '#94A3B8', fontFamily: systemFont }}>TAP TO SEND IN</Text>
-          </View>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* Card: Available Batters */}
+          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
+            <View style={{ minHeight: 42, paddingHorizontal: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>
+                AVAILABLE PLAYERS ({availableBatters.length})
+              </Text>
+              <Text style={{ fontSize: 11, color: '#0284C7', fontFamily: systemFontMedium }}>TAP TO SEND IN</Text>
+            </View>
 
-          {/* Full Squad Minimal Player Cards List */}
-          <View style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
-            {getAvailableBatsmen().map((name, idx, arr) => {
-              const playerObj = MASTER_PLAYERS_DB.find(p => p.name === name);
-              const avatar = playerObj?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80';
-
-              return (
+            {availableBatters.length === 0 ? (
+              <View style={{ padding: 24, alignItems: 'center' }}>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: systemFontMedium }}>No available batters left in squad.</Text>
+              </View>
+            ) : (
+              availableBatters.map((name, idx, arr) => (
                 <TouchableOpacity
                   key={name}
+                  activeOpacity={0.7}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14,
-                    borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: '#E2E8F0',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    minHeight: 56,
+                    borderBottomWidth: idx < arr.length - 1 ? 1 : 0,
+                    borderBottomColor: '#F1F5F9',
                     backgroundColor: '#FFFFFF'
                   }}
                   onPress={() => selectNewBatsman(name)}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, paddingRight: 10 }}>
-                    <Image source={{ uri: avatar }} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#F1F5F9' }} />
+                    <PlayerAvatar name={name} size={38} />
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text selectable {...nameFitProps} style={{ fontSize: 16, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{name}</Text>
+                      <Text selectable {...nameFitProps} style={{ fontSize: 14, color: '#0F172A', fontFamily: systemFontMedium }}>{name}</Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, marginTop: 1 }}>Batter #{idx + 1}</Text>
                     </View>
                   </View>
-                  <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8 }}>
-                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: fontWeights.bold, fontFamily: systemFont }}>Select</Text>
+                  <View style={{ backgroundColor: '#F0F9FF', borderWidth: 1, borderColor: '#BAE6FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <MaterialCommunityIcons name="cricket" size={14} color="#0284C7" />
+                    <Text style={{ color: '#0284C7', fontSize: 11, fontFamily: systemFontMedium }}>Bat In</Text>
                   </View>
                 </TouchableOpacity>
-              );
-            })}
+              ))
+            )}
           </View>
 
-          {/* Or Add Custom Player */}
-          <View style={{ gap: 6, marginTop: 4 }}>
-            <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont }}>ADD NEW PLAYER</Text>
+          {/* Add New Batter On-The-Fly */}
+          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, padding: 14, gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="person-add-outline" size={16} color="#0284C7" />
+              <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>ADD NEW PLAYER MID-MATCH</Text>
+            </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
                 style={{
                   flex: 1,
-                  height: 48,
-                  borderRadius: 10,
+                  height: 46,
+                  borderRadius: 8,
                   borderWidth: 1,
                   borderColor: '#CBD5E1',
-                  paddingHorizontal: 14,
-                  backgroundColor: '#FFFFFF',
-                  fontSize: 14,
+                  paddingHorizontal: 12,
+                  backgroundColor: '#F8FAFC',
+                  fontSize: 13,
                   color: '#0F172A',
-                  fontFamily: systemFont
+                  fontFamily: systemFontMedium
                 }}
                 placeholder="Type new player name..."
                 placeholderTextColor="#94A3B8"
@@ -104,10 +123,17 @@ export function WicketPendingModal({
                 onChangeText={setNewBatsmanName}
               />
               <TouchableOpacity
-                style={{ backgroundColor: newBatsmanName.trim() ? '#0F172A' : '#94A3B8', paddingHorizontal: 16, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}
+                disabled={!newBatsmanName.trim()}
+                style={{
+                  backgroundColor: newBatsmanName.trim() ? '#0284C7' : '#94A3B8',
+                  paddingHorizontal: 14,
+                  borderRadius: 8,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
                 onPress={handleNewBatsman}
               >
-                <Text style={{ color: '#FFFFFF', fontWeight: fontWeights.bold, fontSize: 13, fontFamily: systemFont }}>Add & Select</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Add & Select</Text>
               </TouchableOpacity>
             </View>
           </View>

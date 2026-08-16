@@ -45,22 +45,20 @@ export const fetchLocalPlayers = async () => {
     }
   }
 
-  // Helper to deduplicate players by normalized name / phone
+  // Helper to deduplicate players by unique id or exact name + phone
   const deduplicatePlayers = (players) => {
     if (!Array.isArray(players)) return [];
     const seen = new Map();
     for (const p of players) {
       if (!p || !p.name) continue;
-      // Key by phone if available, or normalized lowercased name without spaces
-      const normName = String(p.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-      const key = p.phone ? `phone_${p.phone.replace(/\D/g, '')}` : `name_${normName}`;
+      const key = p.id || `${p.name.trim().toLowerCase()}_${p.phone ? p.phone.trim() : ''}`;
       
       const existing = seen.get(key);
       if (!existing) {
         seen.set(key, p);
       } else {
-        // Keep the more complete record (e.g. has photo or longer formatted name)
-        const preferCurrent = (p.photoUrl && !existing.photoUrl) || (p.name.length > existing.name.length);
+        // Keep the more complete record (e.g. has photo or formatted name)
+        const preferCurrent = (p.photoUrl && !existing.photoUrl) || (p.name.length >= existing.name.length);
         if (preferCurrent) {
           seen.set(key, { ...existing, ...p });
         }
@@ -153,7 +151,7 @@ export const saveLocalPlayer = async (newPlayer) => {
   // 2. Save to AsyncStorage cache by ID
   try {
     const existing = await fetchLocalPlayers();
-    const updated = [playerObj, ...existing.filter(p => p.id !== playerObj.id && p.name.toLowerCase() !== playerObj.name.toLowerCase())];
+    const updated = [playerObj, ...existing.filter(p => p.id !== playerObj.id)];
     await AsyncStorage.setItem(LOCAL_PLAYERS_STORAGE_KEY, JSON.stringify(updated));
     registerPlayerPhoto(playerObj.name, playerObj.photoUrl);
     return playerObj;

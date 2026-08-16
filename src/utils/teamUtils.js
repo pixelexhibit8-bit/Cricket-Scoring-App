@@ -1,7 +1,11 @@
 export const makeTeamCode = (name = '') => {
-  const words = String(name).trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return words.slice(0, 2).map(word => word[0]).join('').toUpperCase();
-  return String(name).replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'TM';
+  const clean = String(name || '').trim();
+  if (!clean) return 'TM';
+  // If team name is up to 4 characters (e.g. CSK, GT, LSG, MI, SRH, DC, PBKS, RR, RCB, KKR, IND, AUS), DO NOT shorten it!
+  if (clean.length <= 4) return clean.toUpperCase();
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return words.slice(0, 3).map(word => word[0]).join('').toUpperCase();
+  return clean.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'TM';
 };
 
 export const getTeamShortCode = (team, fallbackName = '') => {
@@ -13,11 +17,46 @@ export const DEFAULT_TEAM_1_LOGO_URL = 'https://res.cloudinary.com/aov9a8tl/imag
 export const DEFAULT_TEAM_2_LOGO_URL = 'https://res.cloudinary.com/aov9a8tl/image/upload/v1786749091/cricflow_default_team_2.png';
 export const DEFAULT_APP_LOGO_URL = 'https://res.cloudinary.com/aov9a8tl/image/upload/v1786749092/cricflow_app_logo.png';
 
+// 10 Authentic Local & Franchise Team Logos with Auto-Name Fill
+export const PRESET_TEAM_LOGOS = [
+  { id: 'csk', label: 'CSK', name: 'CSK', source: require('../../assets/team_logos/csk.png'), color: '#FACC15' },
+  { id: 'gt', label: 'GT', name: 'GT', source: require('../../assets/team_logos/gt.jpg'), color: '#1E293B' },
+  { id: 'lsg', label: 'LSG', name: 'LSG', source: require('../../assets/team_logos/lsg.jpg'), color: '#0284C7' },
+  { id: 'mi', label: 'MI', name: 'MI', source: require('../../assets/team_logos/mi.jpg'), color: '#0284C7' },
+  { id: 'srh', label: 'SRH', name: 'SRH', source: require('../../assets/team_logos/srh.jpg'), color: '#F97316' },
+  { id: 'dc', label: 'DC', name: 'DC', source: require('../../assets/team_logos/dc.jpg'), color: '#1E3A8A' },
+  { id: 'pbks', label: 'PBKS', name: 'PBKS', source: require('../../assets/team_logos/pbks.jpg'), color: '#DC2626' },
+  { id: 'rcb', label: 'RCB', name: 'RCB', source: require('../../assets/team_logos/rcb.jpg'), color: '#B45309' },
+  { id: 'rr', label: 'RR', name: 'RR', source: require('../../assets/team_logos/rr.jpg'), color: '#EC4899' },
+  { id: 'kkr', label: 'KKR', name: 'KKR', source: require('../../assets/team_logos/kkr.jpg'), color: '#581C87' }
+];
+
 export const getTeamLogoSource = (team) => {
   if (team?.logoUri) return { uri: team.logoUri };
-  if (team?.logoKey === 'default-team-1') return { uri: DEFAULT_TEAM_1_LOGO_URL };
-  if (team?.logoKey === 'default-team-2') return { uri: DEFAULT_TEAM_2_LOGO_URL };
-  return { uri: DEFAULT_APP_LOGO_URL };
+  if (team?.logoUrl) return { uri: team.logoUrl };
+  const rawKey = String(team?.logoKey || '').toLowerCase().trim();
+  const rawName = String(team?.name || '').toLowerCase().trim();
+  const key = rawKey || rawName;
+
+  // Direct ID or Label match
+  const foundPreset = PRESET_TEAM_LOGOS.find(p => p.id === key || p.label.toLowerCase() === key || p.name.toLowerCase() === key);
+  if (foundPreset) return foundPreset.source;
+
+  // Name keyword matching
+  if (key.includes('csk') || key.includes('chennai') || key.includes('super king')) return require('../../assets/team_logos/csk.png');
+  if (key.includes('rcb') || key.includes('bangalore') || key.includes('bengaluru') || key.includes('challenger')) return require('../../assets/team_logos/rcb.jpg');
+  if (key.includes('mi') || key.includes('mumbai') || key.includes('indian')) return require('../../assets/team_logos/mi.jpg');
+  if (key.includes('gt') || key.includes('gujarat') || key.includes('titan')) return require('../../assets/team_logos/gt.jpg');
+  if (key.includes('lsg') || key.includes('lucknow') || key.includes('giant')) return require('../../assets/team_logos/lsg.jpg');
+  if (key.includes('srh') || key.includes('hyderabad') || key.includes('sunriser')) return require('../../assets/team_logos/srh.jpg');
+  if (key.includes('dc') || key.includes('delhi') || key.includes('capital')) return require('../../assets/team_logos/dc.jpg');
+  if (key.includes('pbks') || key.includes('punjab') || key.includes('king')) return require('../../assets/team_logos/pbks.jpg');
+  if (key.includes('rr') || key.includes('rajasthan') || key.includes('royal')) return require('../../assets/team_logos/rr.jpg');
+  if (key.includes('kkr') || key.includes('kolkata') || key.includes('knight')) return require('../../assets/team_logos/kkr.jpg');
+
+  if (key === 'default-team-1' || key === 'logo_team_1') return require('../../assets/default_team_1.png');
+  if (key === 'default-team-2' || key === 'logo_team_2') return require('../../assets/default_team_2.png');
+  return require('../../assets/default_team_1.png');
 };
 
 export const getScorePartsFromText = (scoreText = '') => {
@@ -29,7 +68,8 @@ export const getScorePartsFromText = (scoreText = '') => {
     const score = match[1].replace(/\s+/g, '');
     const oversStr = (match[2] || '').trim();
     const oversMatch = oversStr.match(/([0-9]+(?:\.[0-9]+)?)\s*ov(?:s)?/i) || oversStr.match(/([0-9]+(?:\.[0-9]+)?)/);
-    const overs = oversMatch ? oversMatch[1] : '';
+    const ovNum = oversMatch ? oversMatch[1] : oversStr;
+    const overs = ovNum ? (ovNum.toLowerCase().includes('ov') ? `(${ovNum})` : `(${ovNum} ov)`) : '';
     return { score, overs };
   }
 
@@ -37,7 +77,8 @@ export const getScorePartsFromText = (scoreText = '') => {
   if (directScoreMatch) {
     const score = directScoreMatch[1].replace(/\s+/g, '');
     const oversMatch = raw.match(/([0-9]+\.[0-9]+)/);
-    return { score, overs: oversMatch ? oversMatch[1] : '' };
+    const overs = oversMatch ? `(${oversMatch[1]} ov)` : '';
+    return { score, overs };
   }
 
   return { score: raw, overs: '' };

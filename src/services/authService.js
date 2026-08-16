@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabaseClient.js';
+import { syncPlayerNameToPastMatches } from './matchService.js';
 
 const AUTH_STORAGE_KEY = '@cricscorer_auth_user';
 const PROFILE_STORAGE_KEY = '@cricscorer_player_profile';
@@ -125,6 +126,13 @@ export async function savePlayerProfile(profileData) {
       } catch (err) {
         console.warn('Supabase local_players upsert notice:', err?.message || err);
       }
+
+      // Automatically sync and link official player name into past match scorecards
+      try {
+        if (updated.name) {
+          syncPlayerNameToPastMatches(updated.name).catch(() => {});
+        }
+      } catch {}
     }
     return updated;
   } catch (e) {
@@ -443,12 +451,63 @@ export async function signOutUser() {
 /**
  * Calculate dynamic career statistics for a player from finished matches
  */
+/**
+ * Smart matching for player names (handles case, spaces, and minor spelling differences like Dasrath / Dashrath)
+ */
+export function isPlayerNameMatch(name1, name2) {
+  if (!name1 || !name2) return false;
+  const n1 = String(name1).toLowerCase().trim().replace(/\s+/g, ' ').replace(/[^a-z0-9 ]/g, '');
+  const n2 = String(name2).toLowerCase().trim().replace(/\s+/g, ' ').replace(/[^a-z0-9 ]/g, '');
+  if (n1 === n2) return true;
+  if (!n1 || !n2) return false;
+
+  // Handle common phonetic/spelling variation with 'h' e.g., 'dasrath' vs 'dashrath'
+  if (n1.replace(/h/g, '') === n2.replace(/h/g, '')) return true;
+
+  const tokens1 = n1.split(' ');
+  const tokens2 = n2.split(' ');
+
+  // If one name is a subset (e.g. 'Dashrath' vs 'Dashrath Sangwa')
+  if (tokens1.length === 1 && tokens2.includes(tokens1[0])) return true;
+  if (tokens2.length === 1 && tokens1.includes(tokens2[0])) return true;
+
+  // Token-by-token comparison with minor edit distance
+  if (tokens1.length === tokens2.length) {
+    const allMatch = tokens1.every((t1, i) => {
+      const t2 = tokens2[i];
+      if (t1 === t2) return true;
+      if (t1.replace(/h/g, '') === t2.replace(/h/g, '')) return true;
+      if (Math.abs(t1.length - t2.length) <= 1) {
+        let diff = 0;
+        let i1 = 0, i2 = 0;
+        while (i1 < t1.length && i2 < t2.length) {
+          if (t1[i1] !== t2[i2]) {
+            diff++;
+            if (t1.length > t2.length) i1++;
+            else if (t2.length > t1.length) i2++;
+            else { i1++; i2++; }
+          } else {
+            i1++; i2++;
+          }
+        }
+        return diff <= 2;
+      }
+      return false;
+    });
+    if (allMatch) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Calculate dynamic career statistics for a player from finished matches
+ */
 export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
   if (!playerName || !Array.isArray(finishedMatches)) {
     return getBlankCareerStats();
   }
 
-  const pNameLower = playerName.trim().toLowerCase();
   let matchesPlayed = 0;
   let inningsBatted = 0;
   let totalRuns = 0;
@@ -468,13 +527,19 @@ export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
   let bestRuns = 999;
   const participatedMatches = [];
 
-  finishedMatches.forEach(m => {
-    if (!m) return;
+  finishedMatches.forEach(rawM => {
+    if (!rawM) return;
+    const m = typeof rawM.match_data === 'string'
+      ? (() => { try { return JSON.parse(rawM.match_data); } catch { return rawM; } })()
+      : (rawM.match_data || rawM);
+
     let didParticipate = false;
 
-    // Check innings 1 & 2
-    const checkTeamBatting = (battingList = []) => {
-      const bat = battingList.find(b => b && b.name && b.name.trim().toLowerCase() === pNameLower);
+    // Check batting stats
+    const checkBatting = (battingListOrObj) => {
+      if (!battingListOrObj) return;
+      const list = Array.isArray(battingListOrObj) ? battingListOrObj : Object.values(battingListOrObj);
+      const bat = list.find(b => b && b.name && isPlayerNameMatch(b.name, playerName));
       if (bat) {
         didParticipate = true;
         inningsBatted++;
@@ -490,15 +555,20 @@ export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
         if (runs > highestScore) highestScore = runs;
         if (runs >= 100) hundreds++;
         else if (runs >= 50) fifties++;
-        if (bat.dismissal === 'not out' || !bat.dismissal) notOuts++;
+        if (bat.dismissal === 'not out' || bat.dismissal === 'Not out' || !bat.dismissal || bat.isOut === false) {
+          notOuts++;
+        }
       }
     };
 
-    const checkTeamBowling = (bowlingList = []) => {
-      const bowl = bowlingList.find(b => b && b.name && b.name.trim().toLowerCase() === pNameLower);
+    // Check bowling stats
+    const checkBowling = (bowlingListOrObj) => {
+      if (!bowlingListOrObj) return;
+      const list = Array.isArray(bowlingListOrObj) ? bowlingListOrObj : Object.values(bowlingListOrObj);
+      const bowl = list.find(b => b && b.name && isPlayerNameMatch(b.name, playerName));
       if (bowl) {
         didParticipate = true;
-        const ov = Number(bowl.overs) || 0;
+        const ov = parseFloat(bowl.overs) || 0;
         const md = Number(bowl.maidens) || 0;
         const rc = Number(bowl.runs) || 0;
         const wk = Number(bowl.wickets) || 0;
@@ -515,18 +585,49 @@ export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
       }
     };
 
-    if (m.team1?.batting) checkTeamBatting(m.team1.batting);
-    if (m.team2?.batting) checkTeamBatting(m.team2.batting);
-    if (m.team1?.bowling) checkTeamBowling(m.team1.bowling);
-    if (m.team2?.bowling) checkTeamBowling(m.team2.bowling);
+    // 1. Check innings arrays / objects
+    if (m.innings && Array.isArray(m.innings)) {
+      m.innings.forEach(inn => {
+        if (inn.allBatters) checkBatting(inn.allBatters);
+        if (inn.batters) checkBatting(inn.batters);
+        if (inn.battingStats) checkBatting(inn.battingStats);
+        if (inn.bowlingStats) checkBowling(inn.bowlingStats);
+        if (inn.batting) checkBatting(inn.batting);
+        if (inn.bowling) checkBowling(inn.bowling);
+      });
+    }
 
-    // Also check Playing XI squads
-    const inSquad1 = (m.team1?.players || []).some(p => (typeof p === 'string' ? p : p?.name)?.trim().toLowerCase() === pNameLower);
-    const inSquad2 = (m.team2?.players || []).some(p => (typeof p === 'string' ? p : p?.name)?.trim().toLowerCase() === pNameLower);
+    // 2. Check team1 / team2 structures
+    if (m.team1?.batting) checkBatting(m.team1.batting);
+    if (m.team2?.batting) checkBatting(m.team2.batting);
+    if (m.team1?.bowling) checkBowling(m.team1.bowling);
+    if (m.team2?.bowling) checkBowling(m.team2.bowling);
 
-    if (didParticipate || inSquad1 || inSquad2) {
+    // 3. Check Playing XI / squads
+    let inSquad = false;
+    if (m.playingXI && typeof m.playingXI === 'object') {
+      Object.values(m.playingXI).forEach(teamRoster => {
+        if (Array.isArray(teamRoster)) {
+          if (teamRoster.some(p => isPlayerNameMatch(typeof p === 'string' ? p : p?.name, playerName))) {
+            inSquad = true;
+          }
+        }
+      });
+    }
+    if (m.team1?.players && Array.isArray(m.team1.players)) {
+      if (m.team1.players.some(p => isPlayerNameMatch(typeof p === 'string' ? p : p?.name, playerName))) {
+        inSquad = true;
+      }
+    }
+    if (m.team2?.players && Array.isArray(m.team2.players)) {
+      if (m.team2.players.some(p => isPlayerNameMatch(typeof p === 'string' ? p : p?.name, playerName))) {
+        inSquad = true;
+      }
+    }
+
+    if (didParticipate || inSquad) {
       matchesPlayed++;
-      participatedMatches.push(m);
+      participatedMatches.push(rawM);
     }
   });
 
@@ -582,3 +683,4 @@ function getBlankCareerStats() {
     participatedMatches: []
   };
 }
+
