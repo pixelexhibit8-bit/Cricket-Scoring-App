@@ -565,15 +565,15 @@ export function MyProfileScreen({
     }
   };
 
-  const handleInstantLogin = async (customName = 'Basti Ram') => {
+  const handleInstantLogin = async (customName = 'Basti Ram Suthar') => {
     try {
       setLoading(true);
       const instantUser = {
         id: 'usr_expo_scorer_01',
         name: customName,
         email: 'scorer@cricflow.app',
-        phone: '9876543210',
-        photoUrl: null,
+        phone: '9983228208',
+        photoUrl: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1786783565/bo80oa5ztg1ub1uf0tet.jpg',
         provider: 'instant',
         signedInAt: new Date().toISOString()
       };
@@ -732,7 +732,7 @@ export function MyProfileScreen({
                   marginTop: 10,
                   elevation: 2
                 }}
-                onPress={() => handleInstantLogin('Basti Ram')}
+                onPress={() => handleInstantLogin('Basti Ram Suthar')}
                 activeOpacity={0.85}
               >
                 <Ionicons name="flash" size={16} color="#38BDF8" />
