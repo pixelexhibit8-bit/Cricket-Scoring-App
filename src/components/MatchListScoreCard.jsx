@@ -104,11 +104,11 @@ export const MatchListScoreCard = ({
         onPress={onPress}
         style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: 16,
-          padding: 16,
+          borderRadius: 14,
+          padding: 13,
           borderWidth: 1,
           borderColor: '#E2E8F0',
-          gap: 12
+          gap: 10
         }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
@@ -119,23 +119,23 @@ export const MatchListScoreCard = ({
         </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1, gap: 10 }}>
+        <View style={{ flex: 1, gap: 8 }}>
           {renderTeamRow(teamOne, teamOneScore, teamOneOvers)}
           {renderTeamRow(teamTwo, teamTwoScore, teamTwoOvers, !teamTwoScore)}
         </View>
 
-        <View style={{ width: 1, height: 48, backgroundColor: '#F1F5F9', marginHorizontal: 14 }} />
+        <View style={{ width: 1, height: 44, backgroundColor: '#F1F5F9', marginHorizontal: 12 }} />
 
         {resultTitle ? (
           <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
             <Text
               selectable
               style={{
-                fontSize: 13.5,
-                lineHeight: 18,
-                color: resultColor,
+                fontSize: 15,
+                lineHeight: 20,
+                color: resultColor || '#166534',
                 textAlign: 'center',
-                fontFamily: systemFontMedium
+                fontFamily: systemFontBold
               }}
               numberOfLines={2}
               adjustsFontSizeToFit
@@ -147,11 +147,11 @@ export const MatchListScoreCard = ({
               <Text
                 selectable
                 style={{
-                  fontSize: 12,
-                  lineHeight: 16,
+                  fontSize: 11.5,
+                  lineHeight: 15,
                   color: '#64748B',
                   textAlign: 'center',
-                  marginTop: 3,
+                  marginTop: 2,
                   fontFamily: systemFontMedium
                 }}
                 numberOfLines={1}

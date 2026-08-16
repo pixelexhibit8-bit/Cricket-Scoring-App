@@ -80,7 +80,7 @@ export function HomeScreen({
   const homeTabs = [
     { id: 'home', label: 'For you' },
     { id: 'live', label: activeMatchVisible ? 'Live (1)' : 'Live (0)' },
-    { id: 'upcoming', label: `Upcoming (${upcomingMatches?.length || 0})` },
+    { id: 'upcoming', label: 'Upcoming' },
     { id: 'finished', label: 'Finished' },
     { id: 'playerStats', label: 'Rankings' }
   ];
@@ -759,95 +759,100 @@ export function HomeScreen({
                   </Text>
                 </View>
               ) : (
-                upcomingMatches.map((m, idx) => {
-                  const t1Name = m.team1Name || m.team1?.name || m.teams?.[0]?.name || 'Team A';
-                  const t2Name = m.team2Name || m.team2?.name || m.teams?.[1]?.name || 'Team B';
-                  const t1Logo = m.team1LogoKey || m.team1?.logoKey || 'csk';
-                  const t2Logo = m.team2LogoKey || m.team2?.logoKey || 'rcb';
-                  const schedTime = m.matchDate || m.scheduledAt || 'Upcoming';
-                  const venue = m.venueName || m.venue || 'Sadokan Ground';
-                  const overs = m.totalOvers || m.maxOvers || 5;
+                (() => {
+                  const groups = {};
+                  upcomingMatches.forEach(m => {
+                    const dKey = m.dateText || (m.matchDate ? m.matchDate.split(',')[0] : 'Upcoming Matches');
+                    if (!groups[dKey]) groups[dKey] = [];
+                    groups[dKey].push(m);
+                  });
 
-                  return (
-                    <View
-                      key={`upcoming-${m.id || idx}`}
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 14,
-                        padding: 14,
-                        marginBottom: 10,
-                        borderWidth: 1,
-                        borderColor: '#E2E8F0',
-                        gap: 10
-                      }}
-                    >
-                      {/* Top Header: Schedule Badge & Venue */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#BAE6FD', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                          <Ionicons name="calendar" size={11} color="#0284C7" />
-                          <Text style={{ color: '#0284C7', fontSize: 10.5, fontFamily: systemFontBold }}>
-                            {schedTime}
-                          </Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Ionicons name="location-outline" size={12} color="#64748B" />
-                          <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }} numberOfLines={1}>
-                            {venue}
-                          </Text>
-                        </View>
+                  return Object.keys(groups).map(dateKey => (
+                    <View key={`up-grp-${dateKey}`} style={{ marginBottom: 14 }}>
+                      <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
+                        <Text style={{ fontSize: 15, fontFamily: systemFontBold, color: '#0F172A' }}>{dateKey}</Text>
                       </View>
+                      {groups[dateKey].map((m, idx) => {
+                        const t1Name = m.team1Name || m.team1?.name || m.teams?.[0]?.name || 'Team A';
+                        const t2Name = m.team2Name || m.team2?.name || m.teams?.[1]?.name || 'Team B';
+                        const t1Logo = m.team1LogoKey || m.team1?.logoKey || 'csk';
+                        const t2Logo = m.team2LogoKey || m.team2?.logoKey || 'rcb';
+                        const schedTime = m.timeText || (m.matchDate && m.matchDate.includes('•') ? m.matchDate.split('•')[1]?.trim() : 'Scheduled');
+                        const venue = m.venueName || m.venue || 'Sadokan Ground';
+                        const overs = m.totalOvers || m.maxOvers || 5;
 
-                      {/* Teams Matchup Center Row */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
-                        {/* Team 1 */}
-                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <TeamIdentityMark team={{ name: t1Name, logoKey: t1Logo }} size={38} />
-                          <Text style={{ color: '#0F172A', fontSize: 14, fontFamily: systemFontBold, flex: 1 }} numberOfLines={1}>
-                            {t1Name}
-                          </Text>
-                        </View>
+                        return (
+                          <View
+                            key={`upcoming-${m.id || idx}`}
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderRadius: 14,
+                              padding: 13,
+                              marginBottom: 8,
+                              borderWidth: 1,
+                              borderColor: '#E2E8F0',
+                              gap: 10
+                            }}
+                          >
+                            {/* Card Header Subtitle (Like Reference Screenshot) */}
+                            <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>
+                              {overs}-Over Match • Tennis Ball • {venue}
+                            </Text>
 
-                        {/* VS Chip */}
-                        <View style={{ paddingHorizontal: 8, alignItems: 'center' }}>
-                          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                            <Text style={{ color: '#64748B', fontSize: 9.5, fontFamily: systemFontBold }}>VS</Text>
+                            {/* Center Matchup Row */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                              {/* Left Teams Column */}
+                              <View style={{ flex: 1, gap: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                  <TeamIdentityMark team={{ name: t1Name, logoKey: t1Logo }} size={26} />
+                                  <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                                    {t1Name}
+                                  </Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                  <TeamIdentityMark team={{ name: t2Name, logoKey: t2Logo }} size={26} />
+                                  <Text style={{ fontSize: 14.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
+                                    {t2Name}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Divider */}
+                              <View style={{ width: 1, height: 44, backgroundColor: '#F1F5F9', marginHorizontal: 12 }} />
+
+                              {/* Right Column: Time & Start Button */}
+                              <View style={{ minWidth: 110, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                <Text style={{ fontSize: 13, fontFamily: systemFontBold, color: '#0284C7' }}>
+                                  {schedTime}
+                                </Text>
+                                {onStartUpcomingMatch ? (
+                                  <TouchableOpacity
+                                    onPress={() => onStartUpcomingMatch(m)}
+                                    activeOpacity={0.8}
+                                    style={{
+                                      backgroundColor: '#0284C7',
+                                      paddingHorizontal: 10,
+                                      paddingVertical: 5,
+                                      borderRadius: 6,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4
+                                    }}
+                                  >
+                                    <MaterialCommunityIcons name="cricket" size={12} color="#FFFFFF" />
+                                    <Text style={{ color: '#FFFFFF', fontSize: 10.5, fontFamily: systemFontBold }}>
+                                      SCORE
+                                    </Text>
+                                  </TouchableOpacity>
+                                ) : null}
+                              </View>
+                            </View>
                           </View>
-                          <Text style={{ color: '#94A3B8', fontSize: 9, fontFamily: systemFontMedium, marginTop: 2 }}>{overs} Ov</Text>
-                        </View>
-
-                        {/* Team 2 */}
-                        <View style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-                          <TeamIdentityMark team={{ name: t2Name, logoKey: t2Logo }} size={38} />
-                          <Text style={{ color: '#0F172A', fontSize: 14, fontFamily: systemFontBold, flex: 1, textAlign: 'right' }} numberOfLines={1}>
-                            {t2Name}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Scorer Action: Start Match Button */}
-                      {onStartUpcomingMatch && (
-                        <TouchableOpacity
-                          onPress={() => onStartUpcomingMatch(m)}
-                          activeOpacity={0.8}
-                          style={{
-                            backgroundColor: '#0284C7',
-                            paddingVertical: 9,
-                            borderRadius: 8,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 6
-                          }}
-                        >
-                          <MaterialCommunityIcons name="cricket" size={15} color="#FFFFFF" />
-                          <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>
-                            START SCORING MATCH
-                          </Text>
-                        </TouchableOpacity>
-                      )}
+                        );
+                      })}
                     </View>
-                  );
-                })
+                  ));
+                })()
               )}
             </ScrollView>
           </View>
@@ -890,11 +895,9 @@ export function HomeScreen({
                 });
 
                 return Object.keys(groups).map(dateKey => (
-                  <View key={dateKey} style={{ marginBottom: 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 4 }}>
-                      <Ionicons name="calendar-outline" size={14} color="#0284C7" />
-                      <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{dateKey}</Text>
-                      <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0', marginLeft: 4 }} />
+                  <View key={dateKey} style={{ marginBottom: 14 }}>
+                    <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
+                      <Text style={{ fontSize: 15, fontFamily: systemFontBold, color: '#0F172A' }}>{dateKey}</Text>
                     </View>
                     {groups[dateKey].map(f => renderFinishedMatchListCard && renderFinishedMatchListCard(f))}
                   </View>

@@ -42,6 +42,7 @@ import { supabase } from '../services/supabaseClient.js';
 import { registerPlayerPhoto } from '../services/playerPhotoStore.js';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { DobPickerModal } from '../components/modals/DobPickerModal.jsx';
+import { LocationPickerModal } from '../components/modals/LocationPickerModal.jsx';
 import { CricToast } from '../components/CricToast.jsx';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
 
@@ -137,6 +138,7 @@ export function MyProfileScreen({
   const [editJerseyNumber, setEditJerseyNumber] = useState('');
   const [editDob, setEditDob] = useState('');
   const [dobPickerVisible, setDobPickerVisible] = useState(false);
+  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   const [optionsMenuVisible, setOptionsMenuVisible] = useState(false);
 
@@ -1203,13 +1205,20 @@ export function MyProfileScreen({
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>City / Ground</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editCity}
-                  onChangeText={setEditCity}
-                  placeholder="Enter city or ground"
-                />
+                <Text style={styles.inputLabel}>City / District / Ground</Text>
+                <TouchableOpacity
+                  onPress={() => setLocationPickerVisible(true)}
+                  style={[styles.textInput, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 10 }]}
+                  activeOpacity={0.75}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <Ionicons name="location-outline" size={18} color="#0284C7" />
+                    <Text style={{ color: editCity ? '#0F172A' : '#94A3B8', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
+                      {editCity || 'Select City, District or Village'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </TouchableOpacity>
               </View>
 
               <View style={styles.inputGroup}>
@@ -1234,6 +1243,16 @@ export function MyProfileScreen({
         </View>
       </Modal>
       </ScrollView>
+
+      {/* Location Hierarchy Picker Modal */}
+      <LocationPickerModal
+        visible={locationPickerVisible}
+        currentCity={editCity}
+        onClose={() => setLocationPickerVisible(false)}
+        onSelectLocation={(loc) => {
+          setEditCity(loc.formatted || loc.city);
+        }}
+      />
 
       {/* Premium Date of Birth Modal */}
       <DobPickerModal

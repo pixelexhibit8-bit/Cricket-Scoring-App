@@ -4543,13 +4543,13 @@ export default function App() {
     const resultCardText = getFinishedResultCardText(match);
     const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
 
-    const matchDateStr = formatMatchDateTime(match.completedAt || match.startedAt || match.date || match.updatedAt);
-    const oversText = `${match.maxOvers || 20}-over match`;
-    const venueText = match.venue ? ` • ${match.venue}` : '';
-    const subtitleText = `${oversText}${venueText}${matchDateStr ? ` on ${matchDateStr}` : ''}`;
+    const oversText = `${match.maxOvers || 5} Overs`;
+    const ballTypeText = match.ballType ? ` • ${match.ballType.charAt(0).toUpperCase() + match.ballType.slice(1)} Ball` : ' • Tennis Ball';
+    const venueText = match.venue ? ` • ${match.venue}` : ' • Sadokan Ground';
+    const subtitleText = `${oversText}${ballTypeText}${venueText}`;
 
     return (
-      <View key={`${match.id || match.title || 'match'}-${index}`} style={{ marginBottom: 12 }}>
+      <View key={`${match.id || match.title || 'match'}-${index}`} style={{ marginBottom: 8 }}>
         <MatchListScoreCard
           subtitle={subtitleText}
           teamOne={match.team1}

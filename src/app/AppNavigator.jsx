@@ -4577,10 +4577,15 @@ export function AppNavigator() {
     const resultCardText = getFinishedResultCardText(match);
     const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
 
+    const oversText = `${match.maxOvers || 5} Overs`;
+    const ballTypeText = match.ballType ? ` • ${match.ballType.charAt(0).toUpperCase() + match.ballType.slice(1)} Ball` : ' • Tennis Ball';
+    const venueText = match.venue ? ` • ${match.venue}` : ' • Sadokan Ground';
+    const subtitleText = `${oversText}${ballTypeText}${venueText}`;
+
     return (
-      <MatchListScoreCard
-        key={match.id}
-        subtitle={`${match.maxOvers}-over match${match.venue ? ` - ${match.venue}` : ''}`}
+      <View key={match.id} style={{ marginBottom: 8 }}>
+        <MatchListScoreCard
+          subtitle={subtitleText}
         teamOne={match.team1}
         teamTwo={match.team2}
         teamOneScore={teamOneScore.score}
