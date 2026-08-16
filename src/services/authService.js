@@ -461,15 +461,25 @@ export function isPlayerNameMatch(name1, name2) {
   if (n1 === n2) return true;
   if (!n1 || !n2) return false;
 
+  const noSpace1 = n1.replace(/\s+/g, '');
+  const noSpace2 = n2.replace(/\s+/g, '');
+  if (noSpace1 === noSpace2) return true;
+
   // Handle common phonetic/spelling variation with 'h' e.g., 'dasrath' vs 'dashrath'
-  if (n1.replace(/h/g, '') === n2.replace(/h/g, '')) return true;
+  if (noSpace1.replace(/h/g, '') === noSpace2.replace(/h/g, '')) return true;
 
-  const tokens1 = n1.split(' ');
-  const tokens2 = n2.split(' ');
+  // If one name starts with the other or contains the full first+last without space (e.g. 'Bastiram' in 'Basti Ram Suthar')
+  if (noSpace1.length >= 4 && noSpace2.length >= 4) {
+    if (noSpace1.startsWith(noSpace2) || noSpace2.startsWith(noSpace1)) return true;
+    if (noSpace1.includes(noSpace2) || noSpace2.includes(noSpace1)) return true;
+  }
 
-  // If one name is a subset (e.g. 'Dashrath' vs 'Dashrath Sangwa')
-  if (tokens1.length === 1 && tokens2.includes(tokens1[0])) return true;
-  if (tokens2.length === 1 && tokens1.includes(tokens2[0])) return true;
+  const tokens1 = n1.split(' ').filter(Boolean);
+  const tokens2 = n2.split(' ').filter(Boolean);
+
+  // If one token matches (e.g. 'Bastiram' in ['Basti', 'Ram', 'Suthar'] when collapsed)
+  if (tokens1.some(t => noSpace2.includes(t) && t.length >= 4)) return true;
+  if (tokens2.some(t => noSpace1.includes(t) && t.length >= 4)) return true;
 
   // Token-by-token comparison with minor edit distance
   if (tokens1.length === tokens2.length) {
@@ -538,7 +548,9 @@ export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
     // Check batting stats
     const checkBatting = (battingListOrObj) => {
       if (!battingListOrObj) return;
-      const list = Array.isArray(battingListOrObj) ? battingListOrObj : Object.values(battingListOrObj);
+      const list = Array.isArray(battingListOrObj)
+        ? battingListOrObj
+        : Object.entries(battingListOrObj).map(([k, v]) => ({ name: v.name || k, ...v }));
       const bat = list.find(b => b && b.name && isPlayerNameMatch(b.name, playerName));
       if (bat) {
         didParticipate = true;
@@ -564,7 +576,9 @@ export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
     // Check bowling stats
     const checkBowling = (bowlingListOrObj) => {
       if (!bowlingListOrObj) return;
-      const list = Array.isArray(bowlingListOrObj) ? bowlingListOrObj : Object.values(bowlingListOrObj);
+      const list = Array.isArray(bowlingListOrObj)
+        ? bowlingListOrObj
+        : Object.entries(bowlingListOrObj).map(([k, v]) => ({ name: v.name || k, ...v }));
       const bowl = list.find(b => b && b.name && isPlayerNameMatch(b.name, playerName));
       if (bowl) {
         didParticipate = true;
