@@ -89,11 +89,12 @@ export function HomeScreen({
         yesterday.setDate(today.getDate() - 1);
         const isToday = d.toDateString() === today.toDateString();
         const isYesterday = d.toDateString() === yesterday.toDateString();
-        const formattedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const day = d.getDate();
+        const monthFull = d.toLocaleDateString('en-GB', { month: 'long' });
         const shortDay = d.toLocaleDateString('en-GB', { weekday: 'short' });
-        if (isToday) return `Today • ${formattedDate}`;
-        if (isYesterday) return `Yesterday • ${formattedDate}`;
-        return `${shortDay}, ${formattedDate}`;
+        if (isToday) return `Today, ${day} ${monthFull}`;
+        if (isYesterday) return `Yesterday, ${day} ${monthFull}`;
+        return `${shortDay}, ${day} ${monthFull}`;
       }
     }
     if (m.dateText && m.dateText !== 'Recent Matches' && m.dateText !== 'Recent Match') {
@@ -702,7 +703,7 @@ export function HomeScreen({
                     <View key={`foryou-grp-${dKey}`} style={{ marginTop: 10 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
                         <Ionicons name="calendar-outline" size={13} color="#64748B" />
-                        <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                        <Text style={{ fontSize: 12.5, fontFamily: systemFontMedium, color: '#475569' }}>
                           {dKey}
                         </Text>
                       </View>
@@ -765,7 +766,7 @@ export function HomeScreen({
                     <View key={`live-grp-${dKey}`} style={{ marginTop: 12 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
                         <Ionicons name="calendar-outline" size={13} color="#64748B" />
-                        <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                        <Text style={{ fontSize: 12.5, fontFamily: systemFontMedium, color: '#475569' }}>
                           {dKey}
                         </Text>
                       </View>
@@ -827,7 +828,7 @@ export function HomeScreen({
                     <View key={`up-grp-${dateKey}`} style={{ marginBottom: 12 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
                         <Ionicons name="calendar-outline" size={13} color="#64748B" />
-                        <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                        <Text style={{ fontSize: 12.5, fontFamily: systemFontMedium, color: '#475569' }}>
                           {dateKey}
                         </Text>
                       </View>
@@ -960,7 +961,7 @@ export function HomeScreen({
                   <View key={`fin-grp-${dateKey}`} style={{ marginBottom: 12 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
                       <Ionicons name="calendar-outline" size={13} color="#64748B" />
-                      <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                      <Text style={{ fontSize: 12.5, fontFamily: systemFontMedium, color: '#475569' }}>
                         {dateKey}
                       </Text>
                     </View>
