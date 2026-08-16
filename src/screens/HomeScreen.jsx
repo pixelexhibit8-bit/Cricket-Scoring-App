@@ -555,11 +555,11 @@ export function HomeScreen({
               {activeMatchVisible && (
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
-                    <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, letterSpacing: 0.5, textTransform: 'uppercase' }}>
                       FEATURED LIVE MATCH
                     </Text>
                     <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontBold }}>LIVE</Text>
+                      <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontMedium }}>LIVE</Text>
                     </View>
                   </View>
                   {renderActiveMatchListCard && renderActiveMatchListCard()}
@@ -570,7 +570,7 @@ export function HomeScreen({
               {(TOP_BATTERS.length > 0 || TOP_BOWLERS.length > 0 || TOP_ALLROUNDERS.length > 0) && (
                 <View style={{ marginTop: 14 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
-                    <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, letterSpacing: 0.5, textTransform: 'uppercase' }}>
                       GROUND SPOTLIGHT
                     </Text>
                     <TouchableOpacity onPress={() => onTabPress('playerStats', 3)}>
@@ -599,17 +599,17 @@ export function HomeScreen({
                         <View style={{ position: 'relative' }}>
                           <PlayerAvatar name={TOP_BATTERS[0].name} photoUrl={TOP_BATTERS[0].photoUrl} size={38} />
                           <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#0284C7', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, borderWidth: 1.5, borderColor: '#FFFFFF' }}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontBold }}>#1</Text>
+                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontMedium }}>#1</Text>
                           </View>
                         </View>
-                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontBold, textAlign: 'center' }} numberOfLines={1}>
+                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontMedium, textAlign: 'center' }} numberOfLines={1}>
                           {TOP_BATTERS[0].name}
                         </Text>
                         <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1, borderColor: '#BAE6FD' }}>
-                          <Text style={{ fontSize: 9, color: '#0284C7', fontFamily: systemFontBold }}>BATTER</Text>
+                          <Text style={{ fontSize: 9, color: '#0284C7', fontFamily: systemFontMedium }}>BATTER</Text>
                         </View>
                         <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 5, alignItems: 'center' }}>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>{TOP_BATTERS[0].runs} Runs</Text>
+                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontMedium }}>{TOP_BATTERS[0].runs} Runs</Text>
                           <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>SR: {TOP_BATTERS[0].sr || '0.0'}</Text>
                         </View>
                       </TouchableOpacity>
@@ -635,17 +635,17 @@ export function HomeScreen({
                         <View style={{ position: 'relative' }}>
                           <PlayerAvatar name={TOP_BOWLERS[0].name} photoUrl={TOP_BOWLERS[0].photoUrl} size={38} />
                           <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#7C3AED', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, borderWidth: 1.5, borderColor: '#FFFFFF' }}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontBold }}>#1</Text>
+                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontMedium }}>#1</Text>
                           </View>
                         </View>
-                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontBold, textAlign: 'center' }} numberOfLines={1}>
+                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontMedium, textAlign: 'center' }} numberOfLines={1}>
                           {TOP_BOWLERS[0].name}
                         </Text>
                         <View style={{ backgroundColor: '#FDF4FF', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1, borderColor: '#F5D0FE' }}>
-                          <Text style={{ fontSize: 9, color: '#7C3AED', fontFamily: systemFontBold }}>BOWLER</Text>
+                          <Text style={{ fontSize: 9, color: '#7C3AED', fontFamily: systemFontMedium }}>BOWLER</Text>
                         </View>
                         <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 5, alignItems: 'center' }}>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>{TOP_BOWLERS[0].wickets} Wkts</Text>
+                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontMedium }}>{TOP_BOWLERS[0].wickets} Wkts</Text>
                           <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>Eco: {TOP_BOWLERS[0].econ || '0.0'}</Text>
                         </View>
                       </TouchableOpacity>
@@ -671,17 +671,17 @@ export function HomeScreen({
                         <View style={{ position: 'relative' }}>
                           <PlayerAvatar name={TOP_ALLROUNDERS[0].name} photoUrl={TOP_ALLROUNDERS[0].photoUrl} size={38} />
                           <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#059669', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, borderWidth: 1.5, borderColor: '#FFFFFF' }}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontBold }}>#1</Text>
+                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontMedium }}>#1</Text>
                           </View>
                         </View>
-                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontBold, textAlign: 'center' }} numberOfLines={1}>
+                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontMedium, textAlign: 'center' }} numberOfLines={1}>
                           {TOP_ALLROUNDERS[0].name}
                         </Text>
                         <View style={{ backgroundColor: '#F0FDF4', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1, borderColor: '#BBF7D0' }}>
-                          <Text style={{ fontSize: 9, color: '#059669', fontFamily: systemFontBold }}>ALL-R</Text>
+                          <Text style={{ fontSize: 9, color: '#059669', fontFamily: systemFontMedium }}>ALL-R</Text>
                         </View>
                         <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 5, alignItems: 'center' }}>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>{TOP_ALLROUNDERS[0].runs}R • {TOP_ALLROUNDERS[0].wickets}W</Text>
+                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontMedium }}>{TOP_ALLROUNDERS[0].runs}R • {TOP_ALLROUNDERS[0].wickets}W</Text>
                           <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>{TOP_ALLROUNDERS[0].matches || 1} Matches</Text>
                         </View>
                       </TouchableOpacity>
@@ -874,7 +874,7 @@ export function HomeScreen({
 
                               {/* Right Column: Time & Start Button */}
                               <View style={{ minWidth: 105, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                                <Text style={{ fontSize: 14, fontFamily: systemFontBold, color: '#0284C7' }}>
+                                <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#0284C7' }}>
                                   {schedTime}
                                 </Text>
                                 {onStartUpcomingMatch ? (
@@ -892,7 +892,7 @@ export function HomeScreen({
                                     }}
                                   >
                                     <MaterialCommunityIcons name="cricket" size={13} color="#FFFFFF" />
-                                    <Text style={{ color: '#FFFFFF', fontSize: 11, fontFamily: systemFontBold }}>
+                                    <Text style={{ color: '#FFFFFF', fontSize: 11, fontFamily: systemFontMedium }}>
                                       SCORE
                                     </Text>
                                   </TouchableOpacity>

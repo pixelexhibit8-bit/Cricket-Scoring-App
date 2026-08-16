@@ -58,7 +58,7 @@ export const MatchListScoreCard = ({
                 color: scoreColor,
                 fontSize: 16.5,
                 fontVariant: ['tabular-nums'],
-                fontFamily: systemFontBold
+                fontFamily: systemFontMedium
               }}
               numberOfLines={1}
             >
@@ -139,7 +139,7 @@ export const MatchListScoreCard = ({
                   lineHeight: 22,
                   color: resultColor || '#0284C7',
                   textAlign: 'center',
-                  fontFamily: systemFontBold
+                  fontFamily: systemFontMedium
                 }}
                 numberOfLines={2}
                 adjustsFontSizeToFit
@@ -168,7 +168,7 @@ export const MatchListScoreCard = ({
             <View style={{ minWidth: 90, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <View style={{ width: 6.5, height: 6.5, borderRadius: 3.5, backgroundColor: statusDotColor }} />
-                <Text style={{ fontSize: 14, color: statusColor, fontFamily: systemFontBold }}>
+                <Text style={{ fontSize: 14, color: statusColor, fontFamily: systemFontMedium }}>
                   {statusLabel}
                 </Text>
               </View>
