@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,388 +15,331 @@ import {
   systemFontMedium,
   fontWeights
 } from '../../theme.js';
-
-// Popular Indian States & Districts (with focus on Rajasthan & Local Grounds)
-const INDIAN_STATES_DATA = [
-  {
-    state: 'Rajasthan',
-    districts: [
-      {
-        name: 'Nagaur',
-        villages: ['Sadokan', 'Deh', 'Jayal', 'Merta', 'Kuchaman', 'Didwana', 'Ladnun', 'Makrana', 'Riyan Badi', 'Degana', 'Parbatsar', 'Khinwsar', 'Mundwa', 'Gachhipura']
-      },
-      {
-        name: 'Jodhpur',
-        villages: ['Jodhpur City', 'Piparcity', 'Bilara', 'Osian', 'Bhopalgarh', 'Luni', 'Phalodi', 'Shergarh', 'Balesar']
-      },
-      {
-        name: 'Jaipur',
-        villages: ['Jaipur City', 'Chomu', 'Amer', 'Sanganer', 'Kotputli', 'Shahpura', 'Dudu', 'Phulera', 'Chaksu']
-      },
-      {
-        name: 'Bikaner',
-        villages: ['Bikaner City', 'Nokha', 'Kolayat', 'Lunkaransar', 'Khajuwala', 'Dungargarh', 'Chhatargarh']
-      },
-      {
-        name: 'Ajmer',
-        villages: ['Ajmer City', 'Kishangarh', 'Beawar', 'Pushkar', 'Nasirabad', 'Kekri', 'Sarwar']
-      },
-      {
-        name: 'Sikar',
-        villages: ['Sikar City', 'Neem Ka Thana', 'Fatehpur', 'Laxmangarh', 'Danta Ramgarh', 'Sri Madhopur']
-      },
-      {
-        name: 'Pali',
-        villages: ['Pali City', 'Sojat', 'Jaitaran', 'Bali', 'Desuri', 'Rani', 'Rohat', 'Sumerpur']
-      },
-      {
-        name: 'Churu',
-        villages: ['Churu City', 'Ratangarh', 'Sujangarh', 'Sardarshahar', 'Rajgarh', 'Taranagar', 'Bidasar']
-      },
-      {
-        name: 'Jhunjhunu',
-        villages: ['Jhunjhunu City', 'Nawalgarh', 'Khetri', 'Chirawa', 'Buhana', 'Udaipurwati']
-      },
-      {
-        name: 'Udaipur',
-        villages: ['Udaipur City', 'Mavli', 'Vallabhnagar', 'Salumber', 'Kherwara', 'Gogunda']
-      }
-    ]
-  },
-  {
-    state: 'Gujarat',
-    districts: [
-      { name: 'Ahmedabad', villages: ['Ahmedabad City', 'Sanand', 'Dholka', 'Viramgam'] },
-      { name: 'Surat', villages: ['Surat City', 'Bardoli', 'Mandvi', 'Kamrej'] },
-      { name: 'Rajkot', villages: ['Rajkot City', 'Gondal', 'Jetpur', 'Dhoraji'] },
-      { name: 'Vadodara', villages: ['Vadodara City', 'Padra', 'Dabhoi', 'Karjan'] }
-    ]
-  },
-  {
-    state: 'Delhi (NCR)',
-    districts: [
-      { name: 'Central Delhi', villages: ['Connaught Place', 'Karol Bagh', 'Pahar Ganj'] },
-      { name: 'South Delhi', villages: ['Saket', 'Hauz Khas', 'Greater Kailash'] },
-      { name: 'North Delhi', villages: ['Model Town', 'Civil Lines', 'Rohini'] },
-      { name: 'West Delhi', villages: ['Janakpuri', 'Rajouri Garden', 'Dwarka'] }
-    ]
-  },
-  {
-    state: 'Haryana',
-    districts: [
-      { name: 'Gurugram', villages: ['Gurugram City', 'Sohna', 'Pataudi', 'Manesar'] },
-      { name: 'Faridabad', villages: ['Faridabad City', 'Ballabgarh', 'NIT'] },
-      { name: 'Hisar', villages: ['Hisar City', 'Hansi', 'Barwala', 'Adampur'] },
-      { name: 'Rohtak', villages: ['Rohtak City', 'Meham', 'Sampla', 'Kalanaur'] }
-    ]
-  },
-  {
-    state: 'Punjab',
-    districts: [
-      { name: 'Ludhiana', villages: ['Ludhiana City', 'Khanna', 'Jagraon', 'Samrala'] },
-      { name: 'Amritsar', villages: ['Amritsar City', 'Ajnala', 'Baba Bakala'] },
-      { name: 'Patiala', villages: ['Patiala City', 'Nabha', 'Rajpura', 'Samana'] }
-    ]
-  },
-  {
-    state: 'Uttar Pradesh',
-    districts: [
-      { name: 'Noida / G.B. Nagar', villages: ['Noida City', 'Greater Noida', 'Dadri', 'Jewar'] },
-      { name: 'Lucknow', villages: ['Lucknow City', 'Malihabad', 'Mohanlalganj'] },
-      { name: 'Agra', villages: ['Agra City', 'Fatehabad', 'Bah', 'Kheragarh'] }
-    ]
-  },
-  {
-    state: 'Maharashtra',
-    districts: [
-      { name: 'Mumbai', villages: ['Mumbai City', 'Andheri', 'Bandra', 'Borivali'] },
-      { name: 'Pune', villages: ['Pune City', 'Haveli', 'Baramati', 'Shirur'] }
-    ]
-  },
-  {
-    state: 'Madhya Pradesh',
-    districts: [
-      { name: 'Indore', villages: ['Indore City', 'Mhow', 'Sanwer', 'Depalpur'] },
-      { name: 'Bhopal', villages: ['Bhopal City', 'Berasia'] }
-    ]
-  }
-];
+import {
+  COUNTRIES,
+  INDIA_STATES_AND_DISTRICTS,
+  POPULAR_VILLAGES_BY_DISTRICT
+} from '../../utils/locationData.js';
 
 export function LocationPickerModal({
   visible,
-  currentCity,
+  currentLocation = null,
+  currentCity = '',
   onClose,
   onSelectLocation
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState(
+    COUNTRIES.find(c => c.code === 'IN') || COUNTRIES[0]
+  );
   const [selectedState, setSelectedState] = useState('Rajasthan');
   const [selectedDistrict, setSelectedDistrict] = useState('Nagaur');
-  const [customVillageInput, setCustomVillageInput] = useState('');
+  const [selectedVillage, setSelectedVillage] = useState(currentCity || 'Sadokan');
+  const [customVillageText, setCustomVillageText] = useState('');
 
-  // 1. Search Filtering Across Entire Hierarchy
-  const searchResults = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return [];
+  // Active sub-sheet selector: null | 'country' | 'state' | 'district' | 'village'
+  const [activePicker, setActivePicker] = useState(null);
+  const [subSearchQuery, setSubSearchQuery] = useState('');
 
-    const results = [];
-    INDIAN_STATES_DATA.forEach(st => {
-      st.districts.forEach(dist => {
-        // Match District
-        if (dist.name.toLowerCase().includes(q)) {
-          results.push({
-            type: 'district',
-            display: `${dist.name}, ${st.state}`,
-            city: dist.name,
-            district: dist.name,
-            state: st.state
-          });
-        }
-        // Match Villages
-        (dist.villages || []).forEach(v => {
-          if (v.toLowerCase().includes(q)) {
-            results.push({
-              type: 'village',
-              display: `${v}, ${dist.name}`,
-              city: v,
-              district: dist.name,
-              state: st.state
-            });
-          }
-        });
-      });
-    });
-
-    return results.slice(0, 15);
-  }, [searchQuery]);
+  // Initialize from currentCity if provided
+  useEffect(() => {
+    if (currentCity) {
+      if (currentCity.includes(',')) {
+        const parts = currentCity.split(',').map(s => s.trim());
+        if (parts[0]) setSelectedVillage(parts[0]);
+        if (parts[1]) setSelectedDistrict(parts[1]);
+      } else {
+        setSelectedVillage(currentCity);
+      }
+    }
+  }, [currentCity, visible]);
 
   // Current State & District Objects
-  const stateObj = INDIAN_STATES_DATA.find(s => s.state === selectedState) || INDIAN_STATES_DATA[0];
-  const districtObj = stateObj?.districts.find(d => d.name === selectedDistrict) || stateObj?.districts[0];
+  const stateObj = INDIA_STATES_AND_DISTRICTS.find(s => s.state === selectedState) || INDIA_STATES_AND_DISTRICTS[0];
+  const availableDistricts = stateObj?.districts || [];
+  const availableVillages = POPULAR_VILLAGES_BY_DISTRICT[selectedDistrict] || [];
 
-  const handleSelectResult = (item) => {
-    onSelectLocation({
-      city: item.city,
-      district: item.district,
-      state: item.state,
-      country: 'India',
-      formatted: `${item.city}${item.district && item.district !== item.city ? `, ${item.district}` : ''}`
-    });
-    onClose();
-  };
+  // Filtered Lists for Pickers
+  const filteredCountries = useMemo(() => {
+    const q = subSearchQuery.trim().toLowerCase();
+    if (!q) return COUNTRIES;
+    return COUNTRIES.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
+  }, [subSearchQuery]);
 
-  const handleSelectDistrictDirectly = (distName) => {
+  const filteredStates = useMemo(() => {
+    const q = subSearchQuery.trim().toLowerCase();
+    if (!q) return INDIA_STATES_AND_DISTRICTS;
+    return INDIA_STATES_AND_DISTRICTS.filter(s => s.state.toLowerCase().includes(q));
+  }, [subSearchQuery]);
+
+  const filteredDistricts = useMemo(() => {
+    const q = subSearchQuery.trim().toLowerCase();
+    if (!q) return availableDistricts;
+    return availableDistricts.filter(d => d.toLowerCase().includes(q));
+  }, [availableDistricts, subSearchQuery]);
+
+  const filteredVillages = useMemo(() => {
+    const q = subSearchQuery.trim().toLowerCase();
+    if (!q) return availableVillages;
+    return availableVillages.filter(v => v.toLowerCase().includes(q));
+  }, [availableVillages, subSearchQuery]);
+
+  const handleSave = () => {
+    const finalVillage = customVillageText.trim() || selectedVillage || selectedDistrict;
+    const formatted = `${finalVillage}${selectedDistrict && selectedDistrict !== finalVillage ? `, ${selectedDistrict}` : ''}`;
+
     onSelectLocation({
-      city: distName,
-      district: distName,
+      country: selectedCountry.name,
+      countryFlag: selectedCountry.flag,
+      countryCode: selectedCountry.code,
       state: selectedState,
-      country: 'India',
-      formatted: `${distName}, ${selectedState}`
+      district: selectedDistrict,
+      city: finalVillage,
+      formatted
     });
-    onClose();
-  };
-
-  const handleSelectVillage = (villageName) => {
-    onSelectLocation({
-      city: villageName,
-      district: districtObj.name,
-      state: selectedState,
-      country: 'India',
-      formatted: `${villageName}, ${districtObj.name}`
-    });
-    onClose();
-  };
-
-  const handleApplyCustomVillage = () => {
-    const custom = customVillageInput.trim();
-    if (!custom) return;
-    onSelectLocation({
-      city: custom,
-      district: districtObj.name,
-      state: selectedState,
-      country: 'India',
-      formatted: `${custom}, ${districtObj.name}`
-    });
-    setCustomVillageInput('');
     onClose();
   };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.backdrop}>
-        <TouchableOpacity activeOpacity={1} style={styles.drawerCard}>
+        <TouchableOpacity activeOpacity={1} style={styles.card}>
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="location-outline" size={20} color="#0284C7" />
-              <Text style={styles.title}>Select City / Ground Location</Text>
+              <Ionicons name="location" size={20} color="#0284C7" />
+              <Text style={styles.title}>Select Player Location</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={20} color="#64748B" />
             </TouchableOpacity>
           </View>
 
-          {/* Search Input Bar */}
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={16} color="#64748B" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search Sadokan, Nagaur, Jaipur, Ground..."
-              placeholderTextColor="#94A3B8"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="words"
-            />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={16} color="#94A3B8" />
-              </TouchableOpacity>
-            ) : null}
+          {/* Location Summary Breadcrumb */}
+          <View style={styles.breadcrumbBadge}>
+            <Text style={styles.breadcrumbFlag}>{selectedCountry.flag}</Text>
+            <Text style={styles.breadcrumbText} numberOfLines={1}>
+              {selectedCountry.name} ➜ {selectedState} ➜ {selectedDistrict} ➜ {customVillageText.trim() || selectedVillage || 'Select Village'}
+            </Text>
           </View>
 
-          {/* SEARCH RESULTS VIEW */}
-          {searchQuery ? (
-            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
-              <Text style={styles.sectionHeading}>MATCHING LOCATIONS</Text>
-              {searchResults.length === 0 ? (
-                <View style={{ padding: 20, alignItems: 'center', gap: 6 }}>
-                  <Text style={{ color: '#64748B', fontSize: 13, fontFamily: systemFontMedium }}>
-                    No standard city found for "{searchQuery}"
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      onSelectLocation({
-                        city: searchQuery.trim(),
-                        district: districtObj.name,
-                        state: selectedState,
-                        country: 'India',
-                        formatted: `${searchQuery.trim()}, ${districtObj.name}`
-                      });
-                      onClose();
-                    }}
-                    style={styles.useCustomQueryBtn}
-                  >
-                    <Text style={styles.useCustomQueryText}>
-                      Use "{searchQuery.trim()}" as Custom Ground/Village ➜
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                searchResults.map((item, idx) => (
-                  <TouchableOpacity
-                    key={`sr-${idx}`}
-                    onPress={() => handleSelectResult(item)}
-                    style={styles.searchResultItem}
-                  >
-                    <View style={styles.pinIconWrap}>
-                      <Ionicons name="location" size={16} color="#0284C7" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.resultMainText}>{item.display}</Text>
-                      <Text style={styles.resultSubText}>{item.state} • India</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
-                  </TouchableOpacity>
-                ))
-              )}
-            </ScrollView>
-          ) : (
-            /* STEP-BY-STEP HIERARCHY SELECTOR */
-            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-              {/* 1. State Selector Horizontal Chips */}
-              <Text style={styles.sectionHeading}>SELECT STATE</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
-                {INDIAN_STATES_DATA.map(st => {
-                  const active = selectedState === st.state;
-                  return (
-                    <TouchableOpacity
-                      key={st.state}
-                      onPress={() => {
-                        setSelectedState(st.state);
-                        setSelectedDistrict(st.districts[0]?.name || '');
-                      }}
-                      style={[styles.stateChip, active && styles.stateChipActive]}
-                    >
-                      <Text style={[styles.stateChipText, active && styles.stateChipTextActive]}>
-                        {st.state}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-
-              {/* 2. District Selector Chips */}
-              <Text style={[styles.sectionHeading, { marginTop: 14 }]}>SELECT DISTRICT IN {selectedState.toUpperCase()}</Text>
-              <View style={styles.districtsGrid}>
-                {stateObj?.districts.map(dist => {
-                  const active = selectedDistrict === dist.name;
-                  return (
-                    <TouchableOpacity
-                      key={dist.name}
-                      onPress={() => setSelectedDistrict(dist.name)}
-                      style={[styles.distChip, active && styles.distChipActive]}
-                    >
-                      <Text style={[styles.distChipText, active && styles.distChipTextActive]}>
-                        {dist.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* 3. Direct District Stop / City Level Button */}
+          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            {/* 1. COUNTRY DROPDOWN */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>1. COUNTRY</Text>
               <TouchableOpacity
-                onPress={() => handleSelectDistrictDirectly(selectedDistrict)}
-                style={styles.directDistrictBtn}
+                onPress={() => {
+                  setSubSearchQuery('');
+                  setActivePicker('country');
+                }}
+                activeOpacity={0.7}
+                style={styles.dropdownBtn}
               >
-                <Ionicons name="checkmark-circle-outline" size={16} color="#0284C7" />
-                <Text style={styles.directDistrictText}>
-                  I live in {selectedDistrict} city directly (Save as "{selectedDistrict}, {selectedState}")
-                </Text>
-              </TouchableOpacity>
-
-              {/* 4. Villages & Local Grounds in Selected District */}
-              <Text style={[styles.sectionHeading, { marginTop: 14 }]}>
-                VILLAGES & GROUNDS IN {selectedDistrict.toUpperCase()}
-              </Text>
-              <View style={styles.villagesGrid}>
-                {(districtObj?.villages || []).map(v => (
-                  <TouchableOpacity
-                    key={v}
-                    onPress={() => handleSelectVillage(v)}
-                    style={styles.villageChip}
-                  >
-                    <Ionicons name="flag-outline" size={12} color="#475569" />
-                    <Text style={styles.villageChipText}>{v}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* 5. Custom Village Input Field */}
-              <View style={styles.customVillageBox}>
-                <Text style={styles.customVillageLabel}>
-                  Village/Ground not in list? Type village name:
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                  <TextInput
-                    style={styles.customVillageInput}
-                    value={customVillageInput}
-                    onChangeText={setCustomVillageInput}
-                    placeholder={`e.g. Sadokan Ground, ${selectedDistrict}`}
-                    placeholderTextColor="#94A3B8"
-                  />
-                  <TouchableOpacity
-                    onPress={handleApplyCustomVillage}
-                    disabled={!customVillageInput.trim()}
-                    style={[styles.applyCustomBtn, !customVillageInput.trim() && { backgroundColor: '#CBD5E1' }]}
-                  >
-                    <Text style={styles.applyCustomText}>Add</Text>
-                  </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 18 }}>{selectedCountry.flag}</Text>
+                  <Text style={styles.dropdownValueText}>{selectedCountry.name}</Text>
                 </View>
+                <Ionicons name="chevron-down" size={16} color="#0284C7" />
+              </TouchableOpacity>
+            </View>
+
+            {/* 2. STATE DROPDOWN */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>2. STATE / PROVINCE</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSubSearchQuery('');
+                  setActivePicker('state');
+                }}
+                activeOpacity={0.7}
+                style={styles.dropdownBtn}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="map-outline" size={16} color="#0284C7" />
+                  <Text style={styles.dropdownValueText}>{selectedState}</Text>
+                </View>
+                <Ionicons name="chevron-down" size={16} color="#0284C7" />
+              </TouchableOpacity>
+            </View>
+
+            {/* 3. DISTRICT DROPDOWN */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>3. DISTRICT</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSubSearchQuery('');
+                  setActivePicker('district');
+                }}
+                activeOpacity={0.7}
+                style={styles.dropdownBtn}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="business-outline" size={16} color="#0284C7" />
+                  <Text style={styles.dropdownValueText}>{selectedDistrict}</Text>
+                </View>
+                <Ionicons name="chevron-down" size={16} color="#0284C7" />
+              </TouchableOpacity>
+            </View>
+
+            {/* 4. VILLAGE / CITY / GROUND SELECTOR */}
+            <View style={styles.fieldGroup}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.fieldLabel}>4. VILLAGE, CITY OR GROUND</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedVillage(selectedDistrict);
+                    setCustomVillageText('');
+                  }}
+                >
+                  <Text style={styles.cityDirectTag}>I live in {selectedDistrict} City</Text>
+                </TouchableOpacity>
               </View>
-            </ScrollView>
-          )}
+
+              {/* Quick Village Chips Grid */}
+              {availableVillages.length > 0 && (
+                <View style={styles.villageChipsGrid}>
+                  {availableVillages.map(v => {
+                    const active = (selectedVillage === v && !customVillageText.trim());
+                    return (
+                      <TouchableOpacity
+                        key={v}
+                        onPress={() => {
+                          setSelectedVillage(v);
+                          setCustomVillageText('');
+                        }}
+                        style={[styles.villageChip, active && styles.villageChipActive]}
+                      >
+                        <Text style={[styles.villageChipText, active && styles.villageChipTextActive]}>
+                          {v}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Custom Village / Ground Input */}
+              <View style={styles.customVillageRow}>
+                <TextInput
+                  style={styles.customVillageInput}
+                  value={customVillageText}
+                  onChangeText={(txt) => {
+                    setCustomVillageText(txt);
+                    if (txt) setSelectedVillage(txt);
+                  }}
+                  placeholder={`Or type custom village/ground in ${selectedDistrict}...`}
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Footer Save Button */}
+          <View style={styles.footer}>
+            <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
+              <Text style={styles.saveText}>Save Location</Text>
+            </TouchableOpacity>
+          </View>
         </TouchableOpacity>
       </TouchableOpacity>
+
+      {/* SUB-PICKER POPUP SHEET (COUNTRY, STATE, DISTRICT) */}
+      <Modal visible={Boolean(activePicker)} transparent animationType="fade" onRequestClose={() => setActivePicker(null)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setActivePicker(null)} style={styles.subBackdrop}>
+          <TouchableOpacity activeOpacity={1} style={styles.subCard}>
+            {/* Header */}
+            <View style={styles.subHeader}>
+              <Text style={styles.subTitle}>
+                Select {activePicker === 'country' ? 'Country' : activePicker === 'state' ? 'State' : 'District'}
+              </Text>
+              <TouchableOpacity onPress={() => setActivePicker(null)}>
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <View style={styles.subSearchBar}>
+              <Ionicons name="search" size={16} color="#64748B" />
+              <TextInput
+                style={styles.subSearchInput}
+                placeholder={`Search ${activePicker}...`}
+                placeholderTextColor="#94A3B8"
+                value={subSearchQuery}
+                onChangeText={setSubSearchQuery}
+                autoCapitalize="words"
+              />
+              {subSearchQuery ? (
+                <TouchableOpacity onPress={() => setSubSearchQuery('')}>
+                  <Ionicons name="close-circle" size={15} color="#94A3B8" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* List */}
+            <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+              {activePicker === 'country' && filteredCountries.map(c => {
+                const active = selectedCountry.code === c.code;
+                return (
+                  <TouchableOpacity
+                    key={c.code}
+                    onPress={() => {
+                      setSelectedCountry(c);
+                      setActivePicker(null);
+                    }}
+                    style={[styles.itemRow, active && styles.itemRowActive]}
+                  >
+                    <Text style={{ fontSize: 18 }}>{c.flag}</Text>
+                    <Text style={[styles.itemRowText, active && styles.itemRowTextActive]}>{c.name}</Text>
+                    {active && <Ionicons name="checkmark-circle" size={18} color="#0284C7" />}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {activePicker === 'state' && filteredStates.map(s => {
+                const active = selectedState === s.state;
+                return (
+                  <TouchableOpacity
+                    key={s.state}
+                    onPress={() => {
+                      setSelectedState(s.state);
+                      const firstDist = s.districts[0] || '';
+                      setSelectedDistrict(firstDist);
+                      setSelectedVillage(POPULAR_VILLAGES_BY_DISTRICT[firstDist]?.[0] || firstDist);
+                      setActivePicker(null);
+                    }}
+                    style={[styles.itemRow, active && styles.itemRowActive]}
+                  >
+                    <Ionicons name="map" size={16} color={active ? '#0284C7' : '#64748B'} />
+                    <Text style={[styles.itemRowText, active && styles.itemRowTextActive]}>{s.state}</Text>
+                    {active && <Ionicons name="checkmark-circle" size={18} color="#0284C7" />}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {activePicker === 'district' && filteredDistricts.map(d => {
+                const active = selectedDistrict === d;
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    onPress={() => {
+                      setSelectedDistrict(d);
+                      setSelectedVillage(POPULAR_VILLAGES_BY_DISTRICT[d]?.[0] || d);
+                      setActivePicker(null);
+                    }}
+                    style={[styles.itemRow, active && styles.itemRowActive]}
+                  >
+                    <Ionicons name="business" size={16} color={active ? '#0284C7' : '#64748B'} />
+                    <Text style={[styles.itemRowText, active && styles.itemRowTextActive]}>{d}</Text>
+                    {active && <Ionicons name="checkmark-circle" size={18} color="#0284C7" />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </Modal>
   );
 }
@@ -407,7 +350,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'flex-end'
   },
-  drawerCard: {
+  card: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -416,7 +359,7 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    maxHeight: '85%'
+    maxHeight: '90%'
   },
   header: {
     flexDirection: 'row',
@@ -439,192 +382,194 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center'
   },
-  searchBar: {
+  breadcrumbBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 8
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13.5,
-    fontFamily: systemFontMedium,
-    color: '#0F172A',
-    padding: 0
-  },
-  sectionHeading: {
-    fontSize: 10.5,
-    fontFamily: systemFontBold,
-    color: '#64748B',
-    letterSpacing: 0.5,
-    marginBottom: 6
-  },
-  stateChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1'
-  },
-  stateChipActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7'
-  },
-  stateChipText: {
-    fontSize: 12,
-    fontFamily: systemFontMedium,
-    color: '#475569'
-  },
-  stateChipTextActive: {
-    color: '#FFFFFF',
-    fontFamily: systemFontBold
-  },
-  districtsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6
-  },
-  distChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0'
-  },
-  distChipActive: {
-    backgroundColor: '#E0F2FE',
-    borderColor: '#0284C7'
-  },
-  distChipText: {
-    fontSize: 12,
-    fontFamily: systemFontMedium,
-    color: '#334155'
-  },
-  distChipTextActive: {
-    color: '#0284C7',
-    fontFamily: systemFontBold
-  },
-  directDistrictBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: '#F0F9FF',
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#BAE6FD',
-    marginTop: 10
+    borderColor: '#BAE6FD'
   },
-  directDistrictText: {
+  breadcrumbFlag: {
+    fontSize: 15
+  },
+  breadcrumbText: {
     fontSize: 11.5,
     fontFamily: systemFontBold,
     color: '#0284C7',
     flex: 1
   },
-  villagesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  fieldGroup: {
     gap: 6
   },
-  villageChip: {
+  fieldLabel: {
+    fontSize: 10.5,
+    fontFamily: systemFontBold,
+    color: '#64748B',
+    letterSpacing: 0.5
+  },
+  dropdownBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1'
+  },
+  dropdownValueText: {
+    fontSize: 13.5,
+    fontFamily: systemFontMedium,
+    color: '#0F172A'
+  },
+  cityDirectTag: {
+    fontSize: 10.5,
+    fontFamily: systemFontBold,
+    color: '#0284C7'
+  },
+  villageChipsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2
+  },
+  villageChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0'
+  },
+  villageChipActive: {
+    backgroundColor: '#0284C7',
+    borderColor: '#0284C7'
   },
   villageChipText: {
     fontSize: 11.5,
     fontFamily: systemFontMedium,
     color: '#334155'
   },
-  customVillageBox: {
-    marginTop: 14,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0'
+  villageChipTextActive: {
+    color: '#FFFFFF',
+    fontFamily: systemFontBold
   },
-  customVillageLabel: {
-    fontSize: 11,
-    fontFamily: systemFontMedium,
-    color: '#64748B'
+  customVillageRow: {
+    marginTop: 6
   },
   customVillageInput: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     fontSize: 12.5,
     fontFamily: systemFontMedium,
     color: '#0F172A'
   },
-  applyCustomBtn: {
-    backgroundColor: '#0284C7',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
+  footer: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 6
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center'
   },
-  applyCustomText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontFamily: systemFontBold
+  cancelText: {
+    fontSize: 13,
+    fontFamily: systemFontMedium,
+    color: '#64748B'
   },
-  searchResultItem: {
+  saveBtn: {
+    flex: 1.6,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#0284C7',
+    alignItems: 'center'
+  },
+  saveText: {
+    fontSize: 13,
+    fontFamily: systemFontBold,
+    color: '#FFFFFF'
+  },
+  subBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  subCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    elevation: 8
+  },
+  subHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 6,
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    gap: 10
+    paddingBottom: 8
   },
-  pinIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F0F9FF',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  resultMainText: {
-    fontSize: 13,
+  subTitle: {
+    fontSize: 15,
     fontFamily: systemFontBold,
     color: '#0F172A'
   },
-  resultSubText: {
-    fontSize: 11,
+  subSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 6
+  },
+  subSearchInput: {
+    flex: 1,
+    fontSize: 13,
     fontFamily: systemFontMedium,
-    color: '#64748B',
-    marginTop: 1
+    color: '#0F172A',
+    padding: 0
   },
-  useCustomQueryBtn: {
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderRadius: 8,
-    marginTop: 6
+    gap: 10
   },
-  useCustomQueryText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+  itemRowActive: {
+    backgroundColor: '#F0F9FF'
+  },
+  itemRowText: {
+    fontSize: 13.5,
+    fontFamily: systemFontMedium,
+    color: '#334155',
+    flex: 1
+  },
+  itemRowTextActive: {
+    color: '#0284C7',
     fontFamily: systemFontBold
   }
 });
