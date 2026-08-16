@@ -328,7 +328,7 @@ export function HomeScreen({
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, flexDirection: 'row', gap: 20 }}
+            contentContainerStyle={{ paddingHorizontal: 16, flexDirection: 'row', gap: 22 }}
           >
             {homeTabs.map((t, idx) => {
               const active = matchesSubTab === t.id;
@@ -339,16 +339,17 @@ export function HomeScreen({
                   onPress={() => onTabPress(t.id, idx)}
                   activeOpacity={0.7}
                   style={{
-                    paddingVertical: 12,
-                    paddingHorizontal: 2,
+                    paddingVertical: 13,
+                    paddingHorizontal: 3,
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}
                 >
                   <Text style={{
-                    fontSize: 14,
-                    color: active ? '#0284C7' : '#64748B',
-                    fontFamily: systemFontMedium
+                    fontSize: 15.5,
+                    color: active ? '#0284C7' : '#475569',
+                    fontFamily: systemFontMedium,
+                    letterSpacing: -0.1
                   }}>
                     {t.label}
                   </Text>
@@ -362,8 +363,8 @@ export function HomeScreen({
               bottom: 0,
               left: 0,
               width: animatedUnderlineWidth,
-              height: 2.5,
-              borderRadius: 1.5,
+              height: 3,
+              borderRadius: 2,
               backgroundColor: '#0284C7',
               transform: [{ translateX: animatedUnderlineX }]
             }} />
@@ -700,10 +701,10 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dKey => (
-                    <View key={`foryou-grp-${dKey}`} style={{ marginTop: 10 }}>
+                    <View key={`foryou-grp-${dKey}`} style={{ marginTop: 12 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
-                        <Ionicons name="calendar-outline" size={13} color="#64748B" />
-                        <Text style={{ fontSize: 12.5, fontFamily: systemFontMedium, color: '#475569' }}>
+                        <Ionicons name="calendar-outline" size={15} color="#0284C7" />
+                        <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#334155' }}>
                           {dKey}
                         </Text>
                       </View>
@@ -763,10 +764,10 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dKey => (
-                    <View key={`live-grp-${dKey}`} style={{ marginTop: 12 }}>
+                    <View key={`live-grp-${dKey}`} style={{ marginTop: 14 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
-                        <Ionicons name="calendar-outline" size={13} color="#64748B" />
-                        <Text style={{ fontSize: 12.5, fontFamily: systemFontMedium, color: '#475569' }}>
+                        <Ionicons name="calendar-outline" size={15} color="#0284C7" />
+                        <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#334155' }}>
                           {dKey}
                         </Text>
                       </View>
@@ -827,8 +828,8 @@ export function HomeScreen({
                   return Object.keys(groups).map(dateKey => (
                     <View key={`up-grp-${dateKey}`} style={{ marginBottom: 12 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
-                        <Ionicons name="calendar-outline" size={13} color="#64748B" />
-                        <Text style={{ fontSize: 12.5, fontFamily: systemFontMedium, color: '#475569' }}>
+                        <Ionicons name="calendar-outline" size={15} color="#0284C7" />
+                        <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#334155' }}>
                           {dateKey}
                         </Text>
                       </View>
@@ -960,8 +961,8 @@ export function HomeScreen({
                 return Object.keys(groups).map(dateKey => (
                   <View key={`fin-grp-${dateKey}`} style={{ marginBottom: 12 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
-                      <Ionicons name="calendar-outline" size={13} color="#64748B" />
-                      <Text style={{ fontSize: 12.5, fontFamily: systemFontMedium, color: '#475569' }}>
+                      <Ionicons name="calendar-outline" size={15} color="#0284C7" />
+                      <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#334155' }}>
                         {dateKey}
                       </Text>
                     </View>
