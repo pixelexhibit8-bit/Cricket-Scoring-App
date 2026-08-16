@@ -6,9 +6,12 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  StyleSheet
+  StyleSheet,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import {
   systemFont,
   systemFontBold,
@@ -35,10 +38,98 @@ export function LocationPickerModal({
   const [selectedDistrict, setSelectedDistrict] = useState('Nagaur');
   const [selectedVillage, setSelectedVillage] = useState(currentCity || 'Sadokan');
   const [customVillageText, setCustomVillageText] = useState('');
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsStatusText, setGpsStatusText] = useState('');
 
   // Active sub-sheet selector: null | 'country' | 'state' | 'district' | 'village'
   const [activePicker, setActivePicker] = useState(null);
   const [subSearchQuery, setSubSearchQuery] = useState('');
+
+  // GPS Auto-Detect Pinpoint Accurate Location
+  const handleDetectGpsLocation = async () => {
+    setGpsLoading(true);
+    setGpsStatusText('Detecting GPS Satellites...');
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('GPS Permission Denied', 'Please enable Location permission to auto-detect your exact ground/city.');
+        setGpsLoading(false);
+        setGpsStatusText('');
+        return;
+      }
+
+      setGpsStatusText('Pinpointing coordinates...');
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High
+      });
+
+      const { latitude, longitude } = location.coords;
+      setGpsStatusText('Resolving Village & District...');
+
+      // 1. Native Reverse Geocode
+      const reverseList = await Location.reverseGeocodeAsync({ latitude, longitude });
+      let geo = reverseList && reverseList[0] ? reverseList[0] : null;
+
+      // 2. OpenStreetMap High-Precision Fallback for rural grounds
+      try {
+        const osmRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
+          headers: { 'User-Agent': 'CricFlowMobile/1.0' }
+        });
+        const osmData = await osmRes.json();
+        if (osmData && osmData.address) {
+          const addr = osmData.address;
+          const foundVillage = addr.village || addr.suburb || addr.neighbourhood || addr.hamlet || addr.town || addr.city_district || addr.county || geo?.city || geo?.name;
+          const foundDistrict = addr.state_district || addr.county || addr.district || geo?.district || geo?.subregion;
+          const foundState = addr.state || geo?.region;
+
+          if (foundVillage || foundDistrict) {
+            geo = {
+              city: foundVillage || geo?.city,
+              district: foundDistrict || geo?.district,
+              region: foundState || geo?.region,
+              country: addr.country || geo?.country
+            };
+          }
+        }
+      } catch (osmErr) {
+        // Fallback to native geo
+      }
+
+      if (geo) {
+        const detectedState = geo.region || selectedState;
+        const detectedDistrict = geo.district || geo.subregion || selectedDistrict;
+        const detectedVillage = geo.name || geo.city || geo.street || selectedVillage;
+
+        // Match state in list
+        const matchedState = INDIA_STATES_AND_DISTRICTS.find(s =>
+          s.state.toLowerCase().includes(String(detectedState).toLowerCase())
+        );
+        if (matchedState) {
+          setSelectedState(matchedState.state);
+          const matchedDist = matchedState.districts.find(d =>
+            d.toLowerCase().includes(String(detectedDistrict).toLowerCase())
+          );
+          if (matchedDist) {
+            setSelectedDistrict(matchedDist);
+          } else {
+            setSelectedDistrict(detectedDistrict);
+          }
+        }
+
+        setSelectedVillage(detectedVillage);
+        setCustomVillageText(detectedVillage);
+
+        const formatted = `${detectedVillage}, ${detectedDistrict}`;
+        setGpsStatusText(`Found: ${formatted}`);
+        setTimeout(() => setGpsStatusText(''), 3000);
+      }
+    } catch (err) {
+      console.warn('GPS detection error:', err);
+      Alert.alert('GPS Notice', 'Could not lock GPS location automatically. You can select your state & district below.');
+    } finally {
+      setGpsLoading(false);
+    }
+  };
 
   // Initialize from currentCity if provided
   useEffect(() => {
@@ -114,6 +205,36 @@ export function LocationPickerModal({
             </TouchableOpacity>
           </View>
 
+          {/* GPS Auto-Detect Pinpoint Button */}
+          <TouchableOpacity
+            onPress={handleDetectGpsLocation}
+            disabled={gpsLoading}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              backgroundColor: '#0284C7',
+              paddingVertical: 11,
+              borderRadius: 12,
+              shadowColor: '#0284C7',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 6,
+              elevation: 3
+            }}
+          >
+            {gpsLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="navigate-circle" size={20} color="#FFFFFF" />
+            )}
+            <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontFamily: systemFontBold }}>
+              {gpsLoading ? (gpsStatusText || 'Detecting GPS Satellite...') : '📍 AUTO-DETECT EXACT GROUND (GPS PINPOINT)'}
+            </Text>
+          </TouchableOpacity>
+
           {/* Location Summary Breadcrumb */}
           <View style={styles.breadcrumbBadge}>
             <Text style={styles.breadcrumbFlag}>{selectedCountry.flag}</Text>
@@ -122,7 +243,7 @@ export function LocationPickerModal({
             </Text>
           </View>
 
-          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+          <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
             {/* 1. COUNTRY DROPDOWN */}
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>1. COUNTRY</Text>
