@@ -4603,6 +4603,7 @@ export function AppNavigator() {
           setCurrentScreen('finishedView');
         }}
       />
+      </View>
     );
   };
   const searchNeedle = searchQuery.trim().toLowerCase();

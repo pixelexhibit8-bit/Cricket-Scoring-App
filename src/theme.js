@@ -1,9 +1,25 @@
 import { Platform } from 'react-native';
 
-// ─── 2. TYPOGRAPHY ───────────────────────────────────────────────────────────
-export const systemFont = 'SFProDisplay-Regular';
-export const systemFontMedium = 'SFProDisplay-Medium';
-export const systemFontBold = 'SFProDisplay-Bold';
+// ─── 1. CORE FONTS & TYPOGRAPHY TOKENS ───────────────────────────────────────
+export const fonts = {
+  regular: 'SFProDisplay-Regular', // 400 - Paragraphs, meta info, commentary, helper text
+  medium: 'SFProDisplay-Medium',   // 500 - Player names, rankings, tab labels, table rows
+  bold: 'SFProDisplay-Bold',       // 700 - Big match scores, titles, primary buttons
+};
+
+export const typography = {
+  body: fonts.regular,
+  subheading: fonts.medium,
+  heading: fonts.bold,
+  caption: fonts.regular,
+  label: fonts.medium,
+  score: fonts.bold,
+};
+
+// Aliases for seamless backward compatibility across all existing screens & modals
+export const systemFont = fonts.regular;
+export const systemFontMedium = fonts.medium;
+export const systemFontBold = fonts.bold;
 
 // ─── 1. DESIGN TOKENS (COLORS) ────────────────────────────────────────────────
 export const themeColors = {
