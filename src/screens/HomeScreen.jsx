@@ -701,8 +701,8 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dKey => (
-                    <View key={`foryou-grp-${dKey}`} style={{ marginTop: 16, marginBottom: 4 }}>
-                      <Text style={{ fontSize: 16.5, fontFamily: systemFontBold, color: '#0F172A', marginBottom: 10, paddingHorizontal: 2 }}>
+                    <View key={`foryou-grp-${dKey}`} style={{ marginTop: 10, marginBottom: 2 }}>
+                      <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
                         {dKey}
                       </Text>
                       {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
@@ -761,8 +761,8 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dKey => (
-                    <View key={`live-grp-${dKey}`} style={{ marginTop: 16, marginBottom: 4 }}>
-                      <Text style={{ fontSize: 16.5, fontFamily: systemFontBold, color: '#0F172A', marginBottom: 10, paddingHorizontal: 2 }}>
+                    <View key={`live-grp-${dKey}`} style={{ marginTop: 10, marginBottom: 2 }}>
+                      <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
                         {dKey}
                       </Text>
                       {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
@@ -820,8 +820,8 @@ export function HomeScreen({
                   });
 
                   return Object.keys(groups).map(dateKey => (
-                    <View key={`up-grp-${dateKey}`} style={{ marginTop: 16, marginBottom: 4 }}>
-                      <Text style={{ fontSize: 16.5, fontFamily: systemFontBold, color: '#0F172A', marginBottom: 10, paddingHorizontal: 2 }}>
+                    <View key={`up-grp-${dateKey}`} style={{ marginTop: 10, marginBottom: 2 }}>
+                      <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
                         {dateKey}
                       </Text>
                       {groups[dateKey].map((m, idx) => {
@@ -950,8 +950,8 @@ export function HomeScreen({
                 });
 
                 return Object.keys(groups).map(dateKey => (
-                  <View key={`fin-grp-${dateKey}`} style={{ marginTop: 16, marginBottom: 4 }}>
-                    <Text style={{ fontSize: 16.5, fontFamily: systemFontBold, color: '#0F172A', marginBottom: 10, paddingHorizontal: 2 }}>
+                  <View key={`fin-grp-${dateKey}`} style={{ marginTop: 10, marginBottom: 2 }}>
+                    <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
                       {dateKey}
                     </Text>
                     {groups[dateKey].map(f => renderFinishedMatchListCard && renderFinishedMatchListCard(f))}
