@@ -90,52 +90,11 @@ export function WicketPendingModal({
                   </View>
                   <View style={{ backgroundColor: '#F0F9FF', borderWidth: 1, borderColor: '#BAE6FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <MaterialCommunityIcons name="cricket" size={14} color="#0284C7" />
-                    <Text style={{ color: '#0284C7', fontSize: 11, fontFamily: systemFontMedium }}>Bat In</Text>
+                    <Text style={{ color: '#0284C7', fontSize: 11, fontFamily: systemFontMedium }}>Select</Text>
                   </View>
                 </TouchableOpacity>
               ))
             )}
-          </View>
-
-          {/* Add New Batter On-The-Fly */}
-          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, padding: 14, gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="person-add-outline" size={16} color="#0284C7" />
-              <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>ADD NEW PLAYER MID-MATCH</Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TextInput
-                style={{
-                  flex: 1,
-                  height: 46,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#CBD5E1',
-                  paddingHorizontal: 12,
-                  backgroundColor: '#F8FAFC',
-                  fontSize: 13,
-                  color: '#0F172A',
-                  fontFamily: systemFontMedium
-                }}
-                placeholder="Type new player name..."
-                placeholderTextColor="#94A3B8"
-                value={newBatsmanName}
-                onChangeText={setNewBatsmanName}
-              />
-              <TouchableOpacity
-                disabled={!newBatsmanName.trim()}
-                style={{
-                  backgroundColor: newBatsmanName.trim() ? '#0284C7' : '#94A3B8',
-                  paddingHorizontal: 14,
-                  borderRadius: 8,
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}
-                onPress={handleNewBatsman}
-              >
-                <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Add & Select</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </ScrollView>
       </SafeAreaView>

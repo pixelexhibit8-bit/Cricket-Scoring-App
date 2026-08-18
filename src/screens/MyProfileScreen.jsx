@@ -25,6 +25,7 @@ import {
   typeScale,
   fontWeights
 } from '../theme.js';
+import { capitalizeWords } from '../utils/textUtils.js';
 import {
   getCurrentUser,
   getPlayerProfile,
@@ -1115,8 +1116,9 @@ export function MyProfileScreen({
                 <TextInput
                   style={styles.textInput}
                   value={editName}
-                  onChangeText={setEditName}
+                  onChangeText={(t) => setEditName(capitalizeWords(t))}
                   placeholder="Enter name"
+                  autoCapitalize="words"
                 />
               </View>
 

@@ -17,6 +17,7 @@ import {
   systemFontBold,
   systemFontMedium
 } from '../../theme.js';
+import { capitalizeWords } from '../../utils/textUtils.js';
 
 export function LocationPickerModal({
   visible,
@@ -245,9 +246,10 @@ export function LocationPickerModal({
                 <TextInput
                   style={styles.manualInput}
                   value={manualInput}
-                  onChangeText={setManualInput}
+                  onChangeText={(t) => setManualInput(capitalizeWords(t))}
                   placeholder="e.g. Sadokan Ground, Nagaur"
                   placeholderTextColor="#94A3B8"
+                  autoCapitalize="words"
                 />
                 <TouchableOpacity
                   onPress={handleApplyManual}

@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured, generateUUID } from './supabaseClient.js';
+import { CURRENT_BUILD_TOKEN } from '../config/appBuild.js';
 
 export const syncMatchToSupabase = async (match) => {
   if (!match || !isSupabaseConfigured() || !supabase) return null;
@@ -63,7 +64,7 @@ export const syncMatchToSupabase = async (match) => {
       toss_winner: updatedMatch.tossWinner || null,
       toss_decision: updatedMatch.tossDecision || updatedMatch.tossChoice || null,
       scorer_pin: updatedMatch.scorerPin || updatedMatch.scorer_pin || null,
-      match_data: { ...updatedMatch, winnerTeamName, resultText: resText },
+      match_data: { ...updatedMatch, app_build_token: CURRENT_BUILD_TOKEN, winnerTeamName, resultText: resText },
       updated_at: nowIso
     };
 
@@ -95,7 +96,11 @@ export const fetchFinishedMatchesFromSupabase = async () => {
     if (error || !Array.isArray(data)) return [];
 
     return data
-      .filter(row => row.phase === 'result' || row.phase === 'finished' || row.phase === 'completed' || row.match_data?.phase === 'result' || row.match_data?.isCompleted)
+      .filter(row => {
+        const isFinished = row.phase === 'result' || row.phase === 'finished' || row.phase === 'completed' || row.match_data?.phase === 'result' || row.match_data?.isCompleted;
+        const isCurrentBuild = row.match_data?.app_build_token === CURRENT_BUILD_TOKEN;
+        return isFinished && isCurrentBuild;
+      })
       .map(row => {
         const match = row.match_data || {};
         const innings = Array.isArray(match.innings) ? match.innings : [];
@@ -272,7 +277,8 @@ export const fetchLiveMatchFromSupabase = async () => {
       .limit(1);
 
     if (error || !Array.isArray(data) || !data.length) return null;
-    return data[0].match_data || null;
+    const currentBuildMatch = data.find(row => row.match_data?.app_build_token === CURRENT_BUILD_TOKEN);
+    return currentBuildMatch?.match_data || null;
   } catch (err) {
     return null;
   }
@@ -295,7 +301,7 @@ export const subscribeToSupabaseLiveMatches = (onUpdate) => {
         { event: '*', schema: 'public', table: 'matches' },
         (payload) => {
           const matchData = payload?.new?.match_data;
-          if (matchData && matchData.phase !== 'result') {
+          if (matchData && matchData.phase !== 'result' && matchData.app_build_token === CURRENT_BUILD_TOKEN) {
             onUpdate(matchData);
           }
         }
@@ -328,6 +334,9 @@ export const fetchMatchesByPinFromSupabase = async (pin) => {
     if (error || !Array.isArray(data)) return [];
 
     return data.filter(row => {
+      const matchesBuild = row.match_data?.app_build_token === CURRENT_BUILD_TOKEN;
+      if (!matchesBuild) return false;
+
       const isFinished = row.phase === 'result'
         || row.phase === 'finished'
         || row.phase === 'completed'

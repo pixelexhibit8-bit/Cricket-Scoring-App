@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { systemFont, systemFontMedium, systemFontBold } from '../theme';
 import { MatchTabBar } from './MatchTabBar';
+import { capitalizeWords } from '../utils/textUtils.js';
 
 const PRESET_LOGOS = [
   { id: 'logo_default', name: 'CricFlow Logo', source: require('../../assets/logo.png') },
@@ -228,7 +229,7 @@ export function TeamPickerModal({
                   <TextInput
                     style={styles.lineInput}
                     value={newTeamName}
-                    onChangeText={setNewTeamName}
+                    onChangeText={(t) => setNewTeamName(capitalizeWords(t))}
                     placeholder="Enter team name"
                     placeholderTextColor="#94A3B8"
                     autoCapitalize="words"
@@ -241,7 +242,7 @@ export function TeamPickerModal({
                   <TextInput
                     style={styles.lineInput}
                     value={newCity}
-                    onChangeText={setNewCity}
+                    onChangeText={(t) => setNewCity(capitalizeWords(t))}
                     placeholder="Nagaur"
                     placeholderTextColor="#94A3B8"
                     autoCapitalize="words"
@@ -268,7 +269,7 @@ export function TeamPickerModal({
                   <TextInput
                     style={styles.lineInput}
                     value={captainName}
-                    onChangeText={setCaptainName}
+                    onChangeText={(t) => setCaptainName(capitalizeWords(t))}
                     placeholder="Captain name"
                     placeholderTextColor="#94A3B8"
                     autoCapitalize="words"

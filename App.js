@@ -35,9 +35,11 @@ import { BowlerChangeModal } from './src/components/modals/BowlerChangeModal.jsx
 import { ExtrasModal } from './src/components/modals/ExtrasModal.jsx';
 import { WicketPendingModal } from './src/components/modals/WicketPendingModal.jsx';
 import { RunOutModal } from './src/components/modals/RunOutModal.jsx';
-import { SquadEditModal } from './src/components/modals/SquadEditModal.jsx';
+import { SquadSelectorModal } from './src/components/modals/SquadSelectorModal.jsx';
+import { AddPlayerModal } from './src/components/modals/AddPlayerModal.jsx';
 import { QuickMatchSetupScreen } from './src/screens/QuickMatchSetupScreen.jsx';
-import { fetchLocalPlayers } from './src/services/localPlayerService.js';
+import { capitalizeWords } from './src/utils/textUtils.js';
+import { fetchLocalPlayers, saveLocalPlayer } from './src/services/localPlayerService.js';
 import { syncPlayersToPhotoRegistry } from './src/services/playerPhotoStore.js';
 import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
 import { showToast } from './src/services/toastService.js';
@@ -497,13 +499,102 @@ export default function App() {
     }
   }, [fontsLoaded]);
 
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const [team1Roster, setTeam1Roster] = useState([]);
   const [team2Roster, setTeam2Roster] = useState([]);
   const [playerPool, setPlayerPool] = useState([]);
   const [localPlayersList, setLocalPlayersList] = useState([]);
   const [selectedPlayerName, setSelectedPlayerName] = useState(null);
+
+  // Mid-Match Squad Edit & Player Creation States
+  const [isEditSquadModalOpen, setIsEditSquadModalOpen] = useState(false);
+  const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
+  const [newPlayerRoleInput, setNewPlayerRoleInput] = useState('All-Rounder');
+  const [newPlayerPhoneInput, setNewPlayerPhoneInput] = useState('');
+  const [selectedLocalImageUri, setSelectedLocalImageUri] = useState(null);
+  const [isAddingPlayer, setIsAddingPlayer] = useState(false);
+
+  const allMidMatchPlayersPool = [...new Set([
+    ...(localPlayersList || []).map(p => p.name),
+    ...MASTER_PLAYERS_DB.map(p => p.name),
+    ...(team1Roster || []),
+    ...(team2Roster || [])
+  ])].filter(Boolean);
+
+  const handleMidMatchMoveToTeam = (playerName, targetTeam) => {
+    if (!activeMatch) return;
+    const t1Name = activeMatch?.teams?.[0]?.name || activeMatch?.innings?.[0]?.battingTeam?.name || 'Team 1';
+    const t2Name = activeMatch?.teams?.[1]?.name || activeMatch?.innings?.[0]?.bowlingTeam?.name || 'Team 2';
+
+    let currentT1 = [...(activeMatch.playingXI?.[t1Name] || team1Roster || [])];
+    let currentT2 = [...(activeMatch.playingXI?.[t2Name] || team2Roster || [])];
+
+    currentT1 = currentT1.filter(p => p !== playerName);
+    currentT2 = currentT2.filter(p => p !== playerName);
+
+    if (targetTeam === 'team1') {
+      currentT1.push(playerName);
+      showToast(`${playerName} added to ${t1Name}!`, 'success');
+    } else if (targetTeam === 'team2') {
+      currentT2.push(playerName);
+      showToast(`${playerName} added to ${t2Name}!`, 'success');
+    } else {
+      showToast(`${playerName} removed from squad`, 'info');
+    }
+
+    setTeam1Roster(currentT1);
+    setTeam2Roster(currentT2);
+
+    const updatedMatch = {
+      ...activeMatch,
+      team1Roster: currentT1,
+      team2Roster: currentT2,
+      playingXI: {
+        ...(activeMatch.playingXI || {}),
+        [t1Name]: currentT1,
+        [t2Name]: currentT2
+      },
+      teams: (activeMatch.teams || []).map((t, idx) => ({
+        ...t,
+        roster: idx === 0 ? currentT1 : currentT2
+      }))
+    };
+
+    setActiveMatch(updatedMatch);
+    syncMatchToSupabase(updatedMatch);
+  };
+
+  const handleMidMatchCreatePlayer = async (newPlayerName) => {
+    if (!newPlayerName || !newPlayerName.trim()) {
+      showToast('Please enter a valid player name', 'error');
+      return;
+    }
+    const cleanName = capitalizeWords(newPlayerName.trim());
+    setIsAddingPlayer(true);
+    try {
+      const playerObj = {
+        id: generateUUID(),
+        name: cleanName,
+        role: newPlayerRoleInput || 'All-Rounder',
+        phone: newPlayerPhoneInput?.trim() || '',
+        photo_url: selectedLocalImageUri || ''
+      };
+      await saveLocalPlayer(playerObj);
+      setLocalPlayersList(prev => [...(prev || []).filter(p => p.name !== cleanName), playerObj]);
+      
+      handleMidMatchMoveToTeam(cleanName, 'team1');
+      
+      setIsAddPlayerModalOpen(false);
+      setNewPlayerPhoneInput('');
+      setSelectedLocalImageUri(null);
+      showToast(`${cleanName} registered & added to squad!`, 'success');
+    } catch (err) {
+      showToast('Could not save player', 'error');
+    } finally {
+      setIsAddingPlayer(false);
+    }
+  };
 
   useEffect(() => {
     const loadPlayers = () => {
@@ -618,9 +709,6 @@ export default function App() {
   const [bowlerChangePending, setBowlerChangePending] = useState(false);
   const [nextBowlerName, setNextBowlerName] = useState('');
   const [extrasSheetVisible, setExtrasSheetVisible] = useState(false);
-
-  // Edit squad modal
-  const [isEditSquadModalOpen, setIsEditSquadModalOpen] = useState(false);
 
   // Undo & Redo History Stack, Info Squad Dropdown, and Poll Vote
   const [matchHistoryStack, setMatchHistoryStack] = useState([]);
@@ -3610,27 +3698,47 @@ export default function App() {
     const scorerCurrentOverRuns = sumDeliveryTokens(scorerCurrentOverBalls);
     const scorerCurrentOverNum = getCurrentOverNumber(inn);
 
+    // Dynamic Responsive Scaling for 100% viewport fit on all devices (Zero scrolling)
+    const isSmallScreen = screenHeight < 720;
+    const isMediumScreen = screenHeight >= 720 && screenHeight < 840;
+
+    const keypadKeyHeight = isSmallScreen ? 62 : (isMediumScreen ? 74 : 84);
+    const keypadBoundariesHeight = isSmallScreen ? 54 : (isMediumScreen ? 66 : 76);
+    const keypadWicketHeight = isSmallScreen ? 56 : (isMediumScreen ? 68 : 78);
+    const keypadExtrasHeight = isSmallScreen ? 44 : (isMediumScreen ? 48 : 52);
+    const topActionsHeight = isSmallScreen ? 42 : (isMediumScreen ? 46 : 50);
+
+    const keypadNumFontSize = isSmallScreen ? 28 : (isMediumScreen ? 32 : 36);
+    const keypadBoundariesFontSize = isSmallScreen ? 18 : (isMediumScreen ? 21 : 24);
+    const keypadActionFontSize = isSmallScreen ? 17 : (isMediumScreen ? 19 : 21);
+
+    const scoreHeroPaddingTop = isSmallScreen ? 10 : (isMediumScreen ? 14 : 16);
+    const scoreHeroPaddingBottom = isSmallScreen ? 12 : (isMediumScreen ? 16 : 18);
+    const scoreFontSize = isSmallScreen ? 38 : (isMediumScreen ? 42 : 46);
+    const containerPadding = isSmallScreen ? 6 : 10;
+    const containerGap = isSmallScreen ? 6 : 10;
+
     return (
       <View style={{ flex: 1, backgroundColor: '#EBF0F5' }}>
         {/* SPACIOUS DARK CREX SCORE HERO */}
-        <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: '#123A56', gap: 10, alignItems: 'center' }}>
+        <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 16, paddingTop: scoreHeroPaddingTop, paddingBottom: scoreHeroPaddingBottom, borderBottomWidth: 1, borderBottomColor: '#123A56', gap: isSmallScreen ? 6 : 10, alignItems: 'center' }}>
           {/* Big Score Center Row (No Brackets, Thin | Line Separator) */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-            <Text style={{ fontSize: 46, lineHeight: 50, color: '#FFFFFF', fontFamily: systemFontBold }}>{inn.battingTeam.runs}-{inn.battingTeam.wickets}</Text>
-            <View style={{ width: 1.5, height: 28, backgroundColor: '#1E4D6B', borderRadius: 1 }} />
-            <Text style={{ fontSize: 20, color: '#9FC4D7', fontFamily: systemFontMedium }}>{formatOvers(inn.totalLegalBalls)} Ov</Text>
+            <Text style={{ fontSize: scoreFontSize, lineHeight: scoreFontSize + 4, color: '#FFFFFF', fontFamily: systemFontBold }}>{inn.battingTeam.runs}-{inn.battingTeam.wickets}</Text>
+            <View style={{ width: 1.5, height: isSmallScreen ? 22 : 28, backgroundColor: '#1E4D6B', borderRadius: 1 }} />
+            <Text style={{ fontSize: isSmallScreen ? 17 : 20, color: '#9FC4D7', fontFamily: systemFontMedium }}>{formatOvers(inn.totalLegalBalls)} Ov</Text>
           </View>
 
           {/* Clean Inning & Batting Info Line (Direct Text, No Extra Background Patch) */}
-          <Text style={{ color: '#9FC4D7', fontSize: 12, fontFamily: systemFontMedium }}>
+          <Text style={{ color: '#9FC4D7', fontSize: isSmallScreen ? 11 : 12, fontFamily: systemFontMedium }}>
             Inning {activeMatch.inning}st • {inn.battingTeam.name} Batting
           </Text>
         </View>
 
-        <ScrollView style={{ flex: 1, backgroundColor: '#EBF0F5' }} contentContainerStyle={{ padding: 10, gap: 10, paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ flex: 1, backgroundColor: '#EBF0F5' }} contentContainerStyle={{ padding: containerPadding, gap: containerGap, paddingBottom: isSmallScreen ? 8 : 14 }} showsVerticalScrollIndicator={false}>
 
           {/* ELEGANT OFF-WHITE DELIVERY TIMELINE CARD */}
-          <View style={{ backgroundColor: '#F4F7FA', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <View style={{ backgroundColor: '#F4F7FA', borderRadius: 12, paddingHorizontal: 12, paddingVertical: isSmallScreen ? 7 : 10, borderWidth: 1, borderColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <View style={{ backgroundColor: '#E2E8F0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#CBD5E1' }}>
               <Text style={{ color: '#0F172A', fontSize: 11, fontFamily: systemFontBold }}>
                 OVER {scorerCurrentOverNum}
@@ -3638,7 +3746,7 @@ export default function App() {
             </View>
 
             <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
-              {renderBallTimeline(scorerCurrentOverBalls, { size: 26, emptyText: 'Over starting...', contentPaddingRight: 4 })}
+              {renderBallTimeline(scorerCurrentOverBalls, { size: isSmallScreen ? 24 : 26, emptyText: 'Over starting...', contentPaddingRight: 4 })}
             </View>
 
             <Text style={{ color: '#0284C7', fontSize: 13, fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>
@@ -3666,11 +3774,10 @@ export default function App() {
             </View>
           ) : null}
 
-          {/* INTEGRATED GRID ACTIVE PLAYERS CARD (NAMES FIXED IN ROW, HIGHLIGHT COLOR SHIFTS ON STRIKE ROTATION) */}
+          {/* CARD 1: SEPARATE BATTING PAIR CARD */}
           {(() => {
             const s = inn.striker || { name: 'Striker', runs: 0, balls: 0 };
             const ns = inn.nonStriker || { name: 'Non-Striker', runs: 0, balls: 0 };
-            // Determine fixed Row 1 and Row 2 batters
             const pinnedRow1 = inn.row1Name || s.name;
             const row1Batter = (pinnedRow1 === ns?.name) ? ns : s;
             const row2Batter = (row1Batter?.name === s?.name) ? ns : s;
@@ -3682,28 +3789,30 @@ export default function App() {
               && (inn.overHistory || []).length === 0;
 
             return (
-              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden' }}>
+              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' }}>
                 {/* Header Row */}
-                <View style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 34 }}>
-                  <Text style={{ fontSize: 11, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFontBold }}>ON PITCH PLAYERS</Text>
-                  <Text style={{ fontSize: 11, color: '#94A3B8', fontFamily: systemFontMedium }}>LIVE STATS</Text>
+                <View style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 5 : 7, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 10.5, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFontBold }}>
+                    BATTING • {inn.battingTeam.name.toUpperCase()}
+                  </Text>
+                  <Text style={{ fontSize: 10.5, color: '#94A3B8', fontFamily: systemFontMedium }}>R (B)</Text>
                 </View>
 
-                {/* Row 1 Batter (Fixed Position 1) */}
+                {/* Row 1 Batter */}
                 {row1Batter && (
-                  <View style={{ minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: isRow1Striker ? '#F0F9FF' : '#FFFFFF' }}>
+                  <View style={{ minHeight: isSmallScreen ? 46 : 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 6 : 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: isRow1Striker ? '#F0F9FF' : '#FFFFFF' }}>
                     <TouchableOpacity
                       onPress={() => handleOpenPlayerProfile(row1Batter.name)}
                       activeOpacity={0.7}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
                     >
-                      <PlayerAvatar name={row1Batter.name} photoUrl={row1Batter.photoUrl || row1Batter.photo_url} size={34} />
+                      <PlayerAvatar name={row1Batter.name} photoUrl={row1Batter.photoUrl || row1Batter.photo_url} size={isSmallScreen ? 28 : 32} />
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 13.5, color: isRow1Striker ? '#0F172A' : '#475569', fontFamily: isRow1Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
+                          <Text style={{ fontSize: isSmallScreen ? 12.5 : 13.5, color: isRow1Striker ? '#0F172A' : '#475569', fontFamily: isRow1Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
                             {row1Batter.name}
                           </Text>
-                          {isRow1Striker ? <MaterialCommunityIcons name="cricket" size={15} color="#0284C7" /> : null}
+                          {isRow1Striker ? <MaterialCommunityIcons name="cricket" size={14} color="#0284C7" /> : null}
                           {isRow1Striker ? (
                             <TouchableOpacity
                               onPress={handleRetireBatsman}
@@ -3713,41 +3822,41 @@ export default function App() {
                             </TouchableOpacity>
                           ) : null}
                         </View>
-                        <Text style={{ fontSize: 10.5, color: isRow1Striker ? '#0284C7' : '#94A3B8', fontFamily: systemFontMedium }}>
+                        <Text style={{ fontSize: 10, color: isRow1Striker ? '#0284C7' : '#94A3B8', fontFamily: systemFontMedium }}>
                           {isRow1Striker ? 'On Strike (*)' : 'Non-Striker'}
                         </Text>
                       </View>
                     </TouchableOpacity>
-                    <Text style={{ fontSize: isRow1Striker ? 16 : 15, color: isRow1Striker ? '#0284C7' : '#475569', fontFamily: isRow1Striker ? systemFontBold : systemFontMedium }}>
-                      {row1Batter.runs}<Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFont }}> ({row1Batter.balls})</Text>
+                    <Text style={{ fontSize: isRow1Striker ? (isSmallScreen ? 15 : 16) : (isSmallScreen ? 13.5 : 14.5), color: isRow1Striker ? '#0284C7' : '#475569', fontFamily: isRow1Striker ? systemFontBold : systemFontMedium }}>
+                      {row1Batter.runs}<Text style={{ fontSize: 11.5, color: '#64748B', fontFamily: systemFont }}> ({row1Batter.balls})</Text>
                     </Text>
                   </View>
                 )}
 
                 {row1Batter?.name && row2Batter?.name && canSwapOpeningStrike ? (
-                  <View style={{ height: 36, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
-                    <TouchableOpacity onPress={handleSwapStrike} style={{ minHeight: 36, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <Ionicons name="swap-vertical" size={16} color="#0284C7" />
-                      <Text style={{ color: '#0284C7', fontSize: 10, fontFamily: systemFontBold }}>SWAP STRIKE</Text>
+                  <View style={{ height: 32, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
+                    <TouchableOpacity onPress={handleSwapStrike} style={{ minHeight: 32, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <Ionicons name="swap-vertical" size={14} color="#0284C7" />
+                      <Text style={{ color: '#0284C7', fontSize: 9.5, fontFamily: systemFontBold }}>SWAP STRIKE</Text>
                     </TouchableOpacity>
                   </View>
                 ) : null}
 
-                {/* Row 2 Batter (Fixed Position 2) */}
+                {/* Row 2 Batter */}
                 {row2Batter && (
-                  <View style={{ minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: isRow2Striker ? '#F0F9FF' : '#FFFFFF' }}>
+                  <View style={{ minHeight: isSmallScreen ? 46 : 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 6 : 8, backgroundColor: isRow2Striker ? '#F0F9FF' : '#FFFFFF' }}>
                     <TouchableOpacity
                       onPress={() => handleOpenPlayerProfile(row2Batter.name)}
                       activeOpacity={0.7}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
                     >
-                      <PlayerAvatar name={row2Batter.name} photoUrl={row2Batter.photoUrl || row2Batter.photo_url} size={34} />
+                      <PlayerAvatar name={row2Batter.name} photoUrl={row2Batter.photoUrl || row2Batter.photo_url} size={isSmallScreen ? 28 : 32} />
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 13.5, color: isRow2Striker ? '#0F172A' : '#475569', fontFamily: isRow2Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
+                          <Text style={{ fontSize: isSmallScreen ? 12.5 : 13.5, color: isRow2Striker ? '#0F172A' : '#475569', fontFamily: isRow2Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
                             {row2Batter.name}
                           </Text>
-                          {isRow2Striker ? <MaterialCommunityIcons name="cricket" size={15} color="#0284C7" /> : null}
+                          {isRow2Striker ? <MaterialCommunityIcons name="cricket" size={14} color="#0284C7" /> : null}
                           {isRow2Striker ? (
                             <TouchableOpacity
                               onPress={handleRetireBatsman}
@@ -3757,180 +3866,173 @@ export default function App() {
                             </TouchableOpacity>
                           ) : null}
                         </View>
-                        <Text style={{ fontSize: 10.5, color: isRow2Striker ? '#0284C7' : '#94A3B8', fontFamily: systemFontMedium }}>
+                        <Text style={{ fontSize: 10, color: isRow2Striker ? '#0284C7' : '#94A3B8', fontFamily: systemFontMedium }}>
                           {isRow2Striker ? 'On Strike (*)' : 'Non-Striker'}
                         </Text>
                       </View>
                     </TouchableOpacity>
-                    <Text style={{ fontSize: isRow2Striker ? 16 : 15, color: isRow2Striker ? '#0284C7' : '#475569', fontFamily: isRow2Striker ? systemFontBold : systemFontMedium }}>
-                      {row2Batter.runs}<Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFont }}> ({row2Batter.balls})</Text>
+                    <Text style={{ fontSize: isRow2Striker ? (isSmallScreen ? 15 : 16) : (isSmallScreen ? 13.5 : 14.5), color: isRow2Striker ? '#0284C7' : '#475569', fontFamily: isRow2Striker ? systemFontBold : systemFontMedium }}>
+                      {row2Batter.runs}<Text style={{ fontSize: 11.5, color: '#64748B', fontFamily: systemFont }}> ({row2Batter.balls})</Text>
                     </Text>
-                  </View>
-                )}
-
-                {/* Bowler Row */}
-                {inn.bowler && (
-                  <View style={{ minHeight: 58, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
-                    <TouchableOpacity
-                      onPress={() => handleOpenPlayerProfile(inn.bowler.name)}
-                      activeOpacity={0.7}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, paddingLeft: 14, paddingRight: 8, paddingVertical: 8 }}
-                    >
-                      <PlayerAvatar name={inn.bowler.name} photoUrl={inn.bowler.photoUrl || inn.bowler.photo_url} size={34} />
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 13.5, color: '#334155', fontFamily: systemFontMedium }} numberOfLines={1}>{inn.bowler.name}</Text>
-                          <MaterialCommunityIcons name="baseball" size={14} color="#0284C7" />
-                          <TouchableOpacity
-                            onPress={() => { setNextBowlerName(inn.bowler.name); setBowlerChangePending(true); }}
-                            style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#BAE6FD', marginLeft: 2 }}
-                          >
-                            <Text style={{ color: '#0284C7', fontSize: 9, fontFamily: systemFontBold }}>Change</Text>
-                          </TouchableOpacity>
-                        </View>
-                        <Text style={{ fontSize: 10, color: '#64748B', fontFamily: systemFontMedium }}>Current Bowler</Text>
-                      </View>
-                    </TouchableOpacity>
-                    <View style={{ width: 148, alignSelf: 'stretch', flexDirection: 'row', borderLeftWidth: 1, borderLeftColor: '#E2E8F0' }}>
-                      {[
-                        ['O', inn.bowler.overs],
-                        ['R', inn.bowler.runs],
-                        ['W', inn.bowler.wickets],
-                        ['ECO', scorerBowlerEconomy]
-                      ].map(([label, value], index) => (
-                        <View
-                          key={label}
-                          style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderLeftWidth: index > 0 ? 1 : 0, borderLeftColor: '#E2E8F0' }}
-                        >
-                          <Text style={{ color: '#94A3B8', fontSize: 8, fontFamily: systemFontBold }}>{label}</Text>
-                          <Text style={{ color: label === 'W' ? '#0284C7' : '#0F172A', fontSize: 12, marginTop: 2, fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>{value}</Text>
-                        </View>
-                      ))}
-                    </View>
                   </View>
                 )}
               </View>
             );
           })()}
 
-          {/* SINGLE INTEGRATED UNIFIED TOUCHPAD GRID (CONTAINS UNDO/REDO + KEYPAD) */}
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden' }}>
+          {/* CARD 2: SEPARATE CURRENT BOWLER CARD (SYMMETRICAL TO BATSMAN ROW) */}
+          {inn.bowler && (
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <View style={{ minHeight: isSmallScreen ? 46 : 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 6 : 8, backgroundColor: '#FFFFFF' }}>
+                <TouchableOpacity
+                  onPress={() => handleOpenPlayerProfile(inn.bowler.name)}
+                  activeOpacity={0.7}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
+                >
+                  <PlayerAvatar name={inn.bowler.name} photoUrl={inn.bowler.photoUrl || inn.bowler.photo_url} size={isSmallScreen ? 28 : 32} />
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontSize: isSmallScreen ? 12.5 : 13.5, color: '#0F172A', fontFamily: systemFontBold }} numberOfLines={1}>
+                        {inn.bowler.name}
+                      </Text>
+                      <MaterialCommunityIcons name="baseball" size={14} color="#0284C7" />
+                      <TouchableOpacity
+                        onPress={() => { setNextBowlerName(inn.bowler.name); setBowlerChangePending(true); }}
+                        style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#BAE6FD' }}
+                      >
+                        <Text style={{ color: '#0284C7', fontSize: 9, fontFamily: systemFontBold }}>Change</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={{ fontSize: 10, color: '#64748B', fontFamily: systemFontMedium }}>
+                      Current Bowler ({inn.bowlingTeam.name})
+                    </Text>
+                  </View>
+                </TouchableOpacity>
 
-            {/* ROW 0: TOP ACTIONS (UNDO | EDIT SQUAD | REDO DIVIDED BY THIN LINES) */}
-            <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
+                {/* Right: Big Overs (e.g. 1.2 Ov) just like batsman runs */}
+                <Text style={{ fontSize: isSmallScreen ? 15 : 16, color: '#0F172A', fontFamily: systemFontBold }}>
+                  {inn.bowler.overs || '0.0'}<Text style={{ fontSize: 11.5, color: '#64748B', fontFamily: systemFont }}> Ov</Text>
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* DEDICATED PROPER CALCULATOR TOUCHPAD (RESPONSIVE HEIGHTS, ZERO GAP, ZERO SCROLL) */}
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0', marginTop: 2 }}>
+
+            {/* ROW 0: TOP ACTIONS (UNDO | VIBRANT COLORFUL EDIT SQUAD | REDO) */}
+            <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
               <TouchableOpacity
                 onPress={handleUndo}
+                activeOpacity={0.7}
                 style={{
-                  flex: 1, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  borderRightWidth: 1, borderRightColor: '#E2E8F0'
+                  flex: 1, height: topActionsHeight, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  borderRightWidth: 1.5, borderRightColor: '#E2E8F0'
                 }}
               >
-                <Ionicons name="arrow-undo" size={15} color="#0F172A" />
-                <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontBold }}>UNDO</Text>
+                <Ionicons name="arrow-undo" size={isSmallScreen ? 15 : 17} color="#0F172A" />
+                <Text style={{ color: '#0F172A', fontSize: isSmallScreen ? 12 : 13, fontFamily: systemFontBold }}>UNDO</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => setIsEditSquadModalOpen(true)}
+                activeOpacity={0.8}
                 style={{
-                  flex: 1.2, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  borderRightWidth: 1, borderRightColor: '#E2E8F0', backgroundColor: '#F0F9FF'
+                  flex: 1.35, height: topActionsHeight, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  backgroundColor: '#0284C7', borderRightWidth: 1.5, borderRightColor: '#E2E8F0'
                 }}
               >
-                <Ionicons name="people-outline" size={16} color="#0284C7" />
-                <Text style={{ color: '#0284C7', fontSize: 12, fontFamily: systemFontBold }}>EDIT SQUAD</Text>
+                <Ionicons name="people" size={isSmallScreen ? 16 : 18} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: isSmallScreen ? 12 : 13, fontFamily: systemFontBold, letterSpacing: 0.4 }}>EDIT SQUAD</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={handleRedo}
+                activeOpacity={0.7}
                 style={{
-                  flex: 1, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6
+                  flex: 1, height: topActionsHeight, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6
                 }}
               >
-                <Ionicons name="arrow-redo" size={15} color="#0F172A" />
-                <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontBold }}>REDO</Text>
+                <Ionicons name="arrow-redo" size={isSmallScreen ? 15 : 17} color="#0F172A" />
+                <Text style={{ color: '#0F172A', fontSize: isSmallScreen ? 12 : 13, fontFamily: systemFontBold }}>REDO</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+
+            {/* ROW 1: 0, 1, 2, 3 CHUNKY KEYS */}
+            <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: '#E2E8F0' }}>
               {[0, 1, 2, 3].map((n, idx) => (
                 <TouchableOpacity
                   key={n}
+                  activeOpacity={0.65}
                   style={{
-                    flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
-                    borderRightWidth: idx < 3 ? 1 : 0, borderRightColor: '#E2E8F0'
+                    flex: 1, height: keypadKeyHeight, alignItems: 'center', justifyContent: 'center',
+                    borderRightWidth: idx < 3 ? 1.5 : 0, borderRightColor: '#E2E8F0',
+                    backgroundColor: '#FFFFFF'
                   }}
                   onPress={() => handleRecordBall(n)}
                 >
-                  <Text style={{ color: '#0F172A', fontSize: typeScale.keypad, fontFamily: systemFontBold }}>{n}</Text>
+                  <Text style={{ color: '#0F172A', fontSize: keypadNumFontSize, fontFamily: systemFontBold, lineHeight: keypadNumFontSize + 4 }}>{n}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* ROW 2: 4 FOUR, 6 SIX */}
-            <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+            <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: '#E2E8F0' }}>
               <TouchableOpacity
-                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E2E8F0', backgroundColor: '#F0F9FF' }}
+                activeOpacity={0.7}
+                style={{ flex: 1, height: keypadBoundariesHeight, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1.5, borderRightColor: '#E2E8F0', backgroundColor: '#F0F9FF' }}
                 onPress={() => handleRecordBall(4)}
               >
-                <Text style={{ color: '#0284C7', fontSize: typeScale.keyAction, fontFamily: systemFontBold }}>4 FOUR</Text>
+                <Text style={{ color: '#0284C7', fontSize: keypadBoundariesFontSize, fontFamily: systemFontBold, letterSpacing: 0.5 }}>4 FOUR</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F3FF' }}
+                activeOpacity={0.7}
+                style={{ flex: 1, height: keypadBoundariesHeight, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F3FF' }}
                 onPress={() => handleRecordBall(6)}
               >
-                <Text style={{ color: '#7C3AED', fontSize: typeScale.keyAction, fontFamily: systemFontBold }}>6 SIX</Text>
+                <Text style={{ color: '#7C3AED', fontSize: keypadBoundariesFontSize, fontFamily: systemFontBold, letterSpacing: 0.5 }}>6 SIX</Text>
               </TouchableOpacity>
             </View>
 
             {/* ROW 3: WIDE, NO BALL, WICKET */}
-            <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+            <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: '#E2E8F0' }}>
               <TouchableOpacity
-                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
+                activeOpacity={0.7}
+                style={{ flex: 1, height: keypadWicketHeight, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1.5, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
                 onPress={() => handleRecordBall(0, 'wd')}
               >
-                <Text style={{ color: '#B45309', fontSize: 15, fontFamily: systemFontBold }}>WIDE</Text>
+                <Text style={{ color: '#B45309', fontSize: keypadActionFontSize, fontFamily: systemFontBold }}>WIDE</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
+                activeOpacity={0.7}
+                style={{ flex: 1, height: keypadWicketHeight, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1.5, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
                 onPress={() => handleRecordBall(0, 'nb')}
               >
-                <Text style={{ color: '#B45309', fontSize: 15, fontFamily: systemFontBold }}>NO BALL</Text>
+                <Text style={{ color: '#B45309', fontSize: keypadActionFontSize, fontFamily: systemFontBold }}>NO BALL</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF1F2' }}
+                activeOpacity={0.7}
+                style={{ flex: 1.15, height: keypadWicketHeight, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF1F2' }}
                 onPress={handleWicketPress}
               >
-                <Text style={{ color: '#E11D48', fontSize: typeScale.keyAction, fontFamily: systemFontBold }}>WICKET</Text>
+                <Text style={{ color: '#E11D48', fontSize: keypadActionFontSize + 1, fontFamily: systemFontBold }}>WICKET</Text>
               </TouchableOpacity>
             </View>
 
-
             {/* ROW 4: ADVANCED EXTRAS */}
             <TouchableOpacity
-              style={{ minHeight: 54, paddingVertical: 15, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, backgroundColor: '#F8FAFC' }}
+              activeOpacity={0.7}
+              style={{ minHeight: keypadExtrasHeight, paddingVertical: isSmallScreen ? 10 : 13, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, backgroundColor: '#F8FAFC' }}
               onPress={() => setExtrasSheetVisible(true)}
             >
-              <Ionicons name="add-circle-outline" size={18} color="#0284C7" />
-              <Text style={{ color: '#0284C7', fontSize: 14, fontFamily: systemFontBold }}>EXTRAS</Text>
-              <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }}>wides, no-ball runs, byes, penalty</Text>
+              <Ionicons name="add-circle-outline" size={isSmallScreen ? 17 : 20} color="#0284C7" />
+              <Text style={{ color: '#0284C7', fontSize: isSmallScreen ? 13 : 14.5, fontFamily: systemFontBold }}>EXTRAS</Text>
+              <Text style={{ color: '#64748B', fontSize: isSmallScreen ? 10.5 : 11.5, fontFamily: systemFontMedium }}>wides, no-balls, byes, penalty</Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            onPress={() => {
-              setPublicLiveTab('live');
-              setLiveViewReturnScreen('scorerWizard');
-              setCurrentScreen('liveView');
-            }}
-            activeOpacity={0.85}
-            style={{ minHeight: 50, borderRadius: 8, backgroundColor: '#0284C7', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-          >
-            <Ionicons name="radio-outline" size={18} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: systemFontBold }}>Live Public View</Text>
-            <Ionicons name="chevron-forward" size={17} color="#FFFFFF" />
-          </TouchableOpacity>
         </ScrollView>
       </View>
     );
@@ -4216,17 +4318,6 @@ export default function App() {
                     <Text style={{ color: '#FFFFFF', fontSize: 15, fontFamily: systemFontBold }}>
                       {getTeamShortCode(activeDisplayTeamOne, activeDisplayTeamOne?.name || 'SA')} vs {getTeamShortCode(activeDisplayTeamTwo, activeDisplayTeamTwo?.name || 'SB')}
                     </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIsScorerUnlocked(false);
-                      setCurrentScreen('home');
-                      Alert.alert('Scorer Logged Out', 'Scorer mode has been locked/logged out.');
-                    }}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: '#1E293B' }}
-                  >
-                    <Ionicons name="lock-closed-outline" size={13} color="#38BDF8" />
-                    <Text style={{ color: '#38BDF8', fontSize: 11, fontFamily: systemFontBold }}>Log Out</Text>
                   </TouchableOpacity>
                 </View>
               ) : (!activeMatch && (wizardStep === 0 || wizardStep === 1 || wizardStep === 2)) || (activeMatch && activeMatch.phase === 'result') ? null : (
@@ -4640,21 +4731,36 @@ export default function App() {
           handleNewBowler={handleNewBowler}
         />
 
-        {/* EDIT SQUAD MODAL */}
-        <SquadEditModal
+        {/* SHARED OFFICIAL SQUAD SELECTOR MODAL (MID-MATCH EDIT) */}
+        <SquadSelectorModal
           visible={isEditSquadModalOpen}
           onClose={() => setIsEditSquadModalOpen(false)}
-          team1Name={activeMatch?.innings?.[0]?.battingTeam?.name || activeMatch?.teams?.[0]?.name || 'Team 1'}
-          team2Name={activeMatch?.innings?.[0]?.bowlingTeam?.name || activeMatch?.teams?.[1]?.name || 'Team 2'}
-          team1Roster={team1Roster}
-          team2Roster={team2Roster}
-          onPlayerAdded={(playerName, teamIndex) => {
-            if (teamIndex === 1) {
-              setTeam1Roster(prev => [...prev, playerName]);
-            } else {
-              setTeam2Roster(prev => [...prev, playerName]);
-            }
-          }}
+          team1Name={activeMatch?.teams?.[0]?.name || activeMatch?.innings?.[0]?.battingTeam?.name || 'Team 1'}
+          team2Name={activeMatch?.teams?.[1]?.name || activeMatch?.innings?.[0]?.bowlingTeam?.name || 'Team 2'}
+          team1LogoKey={activeMatch?.teams?.[0]?.logoKey || 'csk'}
+          team2LogoKey={activeMatch?.teams?.[1]?.logoKey || 'rcb'}
+          team1Roster={activeMatch?.playingXI?.[activeMatch?.teams?.[0]?.name] || team1Roster}
+          team2Roster={activeMatch?.playingXI?.[activeMatch?.teams?.[1]?.name] || team2Roster}
+          allPlayersPool={allMidMatchPlayersPool}
+          localPlayersDb={localPlayersList}
+          onMoveToTeam={handleMidMatchMoveToTeam}
+          onOpenAddPlayerModal={() => setIsAddPlayerModalOpen(true)}
+          onOpenSquadPreview={() => {}}
+          onEditPlayerPhoto={() => {}}
+        />
+
+        {/* SHARED OFFICIAL ADD PLAYER MODAL (MID-MATCH REGISTER) */}
+        <AddPlayerModal
+          visible={isAddPlayerModalOpen}
+          onClose={() => setIsAddPlayerModalOpen(false)}
+          isAddingPlayer={isAddingPlayer}
+          onAddPlayer={handleMidMatchCreatePlayer}
+          newPlayerRoleInput={newPlayerRoleInput}
+          setNewPlayerRoleInput={setNewPlayerRoleInput}
+          newPlayerPhoneInput={newPlayerPhoneInput}
+          setNewPlayerPhoneInput={setNewPlayerPhoneInput}
+          selectedLocalImageUri={selectedLocalImageUri}
+          setSelectedLocalImageUri={setSelectedLocalImageUri}
         />
 
 

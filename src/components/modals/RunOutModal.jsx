@@ -113,22 +113,25 @@ export function RunOutModal({
           </View>
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 14, paddingVertical: 11, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#CBD5E1' }}>
+        <View style={{ paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
           <TouchableOpacity
             disabled={!runOutDismissed || !runOutEnd}
             onPress={handleConfirmRunOut}
+            activeOpacity={0.85}
             style={{
-              height: 48,
-              borderRadius: 6,
+              height: 50,
+              borderRadius: 12,
               backgroundColor: runOutDismissed && runOutEnd ? '#E11D48' : '#94A3B8',
               flexDirection: 'row',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               gap: 8
             }}
           >
-            <Ionicons name="checkmark-circle-outline" size={17} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>CONFIRM RUN OUT</Text>
+            <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: systemFontBold }}>
+              CONFIRM RUN OUT
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

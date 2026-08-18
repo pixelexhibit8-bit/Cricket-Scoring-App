@@ -75,6 +75,7 @@ export function SquadSelectorModal({
 
         {/* Segmented Team Switcher Tabs (Team 1 vs Team 2) */}
         <View style={styles.tabBar}>
+          {/* TEAM 1 TAB */}
           <TouchableOpacity
             onPress={() => setActiveTab('team1')}
             activeOpacity={0.8}
@@ -83,7 +84,7 @@ export function SquadSelectorModal({
               activeTab === 'team1' && styles.tabItemActive
             ]}
           >
-            <TeamIdentityMark team={{ name: team1Name, logoKey: team1LogoKey }} size={24} />
+            <TeamIdentityMark team={{ name: team1Name, logoKey: team1LogoKey }} size={28} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text
                 style={[
@@ -94,21 +95,38 @@ export function SquadSelectorModal({
               >
                 {team1Name}
               </Text>
-              <Text style={[styles.tabCountText, activeTab === 'team1' && { color: '#0284C7' }]}>
-                {team1Roster.length} Selected
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                {team1Roster.length > 0 ? (
+                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 10.5, color: '#15803D', fontFamily: systemFontBold }}>
+                      ✓ {team1Roster.length} Added
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 10.5, color: '#B45309', fontFamily: systemFontMedium }}>
+                      0 Selected
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </TouchableOpacity>
 
+          {/* TEAM 2 TAB */}
           <TouchableOpacity
             onPress={() => setActiveTab('team2')}
             activeOpacity={0.8}
             style={[
               styles.tabItem,
-              activeTab === 'team2' && styles.tabItemActive
+              activeTab === 'team2' && styles.tabItemActive,
+              team2Roster.length === 0 && team1Roster.length > 0 && activeTab === 'team1' && {
+                borderColor: '#F59E0B',
+                backgroundColor: '#FFFBEB'
+              }
             ]}
           >
-            <TeamIdentityMark team={{ name: team2Name, logoKey: team2LogoKey }} size={24} />
+            <TeamIdentityMark team={{ name: team2Name, logoKey: team2LogoKey }} size={28} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text
                 style={[
@@ -119,9 +137,21 @@ export function SquadSelectorModal({
               >
                 {team2Name}
               </Text>
-              <Text style={[styles.tabCountText, activeTab === 'team2' && { color: '#0284C7' }]}>
-                {team2Roster.length} Selected
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                {team2Roster.length > 0 ? (
+                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 10.5, color: '#15803D', fontFamily: systemFontBold }}>
+                      ✓ {team2Roster.length} Added
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ backgroundColor: team1Roster.length > 0 ? '#FEF3C7' : '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 10.5, color: team1Roster.length > 0 ? '#B45309' : '#64748B', fontFamily: systemFontBold }}>
+                      {team1Roster.length > 0 ? 'Needs Players ➔' : '0 Selected'}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </TouchableOpacity>
         </View>
@@ -136,6 +166,7 @@ export function SquadSelectorModal({
               placeholderTextColor="#94A3B8"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              autoCapitalize="words"
             />
             {searchQuery ? (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -257,17 +288,57 @@ export function SquadSelectorModal({
         <View style={styles.bottomBar}>
           <View style={styles.bottomSummaryRow}>
             <Text style={styles.bottomSummaryText}>
-              {team1Name}: <Text style={{ color: '#0284C7', fontFamily: systemFontBold }}>{team1Roster.length}</Text>  •  {team2Name}: <Text style={{ color: '#0284C7', fontFamily: systemFontBold }}>{team2Roster.length}</Text>
+              {team1Name}: <Text style={{ color: team1Roster.length > 0 ? '#15803D' : '#B45309', fontFamily: systemFontBold }}>{team1Roster.length} Players</Text>
+              {'  •  '}
+              {team2Name}: <Text style={{ color: team2Roster.length > 0 ? '#15803D' : '#B45309', fontFamily: systemFontBold }}>{team2Roster.length} Players</Text>
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={onClose}
-            style={styles.confirmBtn}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.confirmBtnText}>CONFIRM SQUADS</Text>
-            <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
+
+          {(() => {
+            // If active on Team 1 and Team 1 has players, but Team 2 has 0 players: Prompt to switch to Team 2!
+            const needsTeam2 = activeTab === 'team1' && team1Roster.length > 0 && team2Roster.length === 0;
+            const bothReady = team1Roster.length > 0 && team2Roster.length > 0;
+            const currentEmpty = (activeTab === 'team1' && team1Roster.length === 0) || (activeTab === 'team2' && team2Roster.length === 0);
+
+            if (needsTeam2) {
+              return (
+                <TouchableOpacity
+                  onPress={() => setActiveTab('team2')}
+                  style={[styles.confirmBtn, { backgroundColor: '#0284C7' }]}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.confirmBtnText}>NEXT: SELECT {team2Name.toUpperCase()} SQUAD</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+              );
+            }
+
+            if (bothReady) {
+              return (
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={[styles.confirmBtn, { backgroundColor: '#16A34A' }]}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.confirmBtnText}>CONFIRM BOTH SQUADS ({team1Roster.length} vs {team2Roster.length})</Text>
+                  <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+              );
+            }
+
+            return (
+              <TouchableOpacity
+                disabled={currentEmpty}
+                onPress={onClose}
+                style={[styles.confirmBtn, { backgroundColor: currentEmpty ? '#94A3B8' : '#0284C7' }]}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.confirmBtnText}>
+                  {activeTab === 'team1' ? `SELECT PLAYERS FOR ${team1Name.toUpperCase()}` : `SELECT PLAYERS FOR ${team2Name.toUpperCase()}`}
+                </Text>
+              </TouchableOpacity>
+            );
+          })()}
         </View>
       </SafeAreaView>
     </Modal>

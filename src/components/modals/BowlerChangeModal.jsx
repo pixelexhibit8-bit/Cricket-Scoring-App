@@ -5,6 +5,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, typeScale } from '../../theme.js';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
 import { getBowlerFigureFromInning } from '../../utils/cricketUtils.js';
+import { capitalizeWords } from '../../utils/textUtils.js';
 
 const nameFitProps = {
   numberOfLines: 1,
@@ -39,7 +40,7 @@ export function BowlerChangeModal({
               <Text style={{ fontSize: 16, color: '#0F172A', fontFamily: systemFontBold }}>SELECT NEXT BOWLER</Text>
             </View>
             <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium, marginTop: 2 }}>
-              Inning {activeMatch?.inning} — {curInning?.bowlingTeam?.name || 'Bowling Team'}
+              Choose who bowls the upcoming over
             </Text>
           </View>
           <TouchableOpacity
@@ -56,14 +57,14 @@ export function BowlerChangeModal({
           <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
             <View style={{ minHeight: 42, paddingHorizontal: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>
-                BOWLING SQUAD ({availableBowlers.length})
+                AVAILABLE BOWLERS ({availableBowlers.length})
               </Text>
               <Text style={{ fontSize: 11, color: '#E11D48', fontFamily: systemFontMedium }}>TAP TO BOWL</Text>
             </View>
 
             {availableBowlers.length === 0 ? (
               <View style={{ padding: 24, alignItems: 'center' }}>
-                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: systemFontMedium }}>No available bowlers found.</Text>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: systemFontMedium }}>No available bowlers found in roster.</Text>
               </View>
             ) : (
               availableBowlers.map((name, idx, arr) => {
@@ -153,7 +154,8 @@ export function BowlerChangeModal({
                 placeholder="Type new bowler name..."
                 placeholderTextColor="#94A3B8"
                 value={nextBowlerName}
-                onChangeText={setNextBowlerName}
+                onChangeText={(t) => setNextBowlerName(capitalizeWords(t))}
+                autoCapitalize="words"
               />
               <TouchableOpacity
                 disabled={!nextBowlerName.trim()}
@@ -164,7 +166,7 @@ export function BowlerChangeModal({
                   justifyContent: 'center',
                   alignItems: 'center'
                 }}
-                onPress={handleNewBowler}
+                onPress={() => handleNewBowler && handleNewBowler(capitalizeWords(nextBowlerName.trim()))}
               >
                 <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Add & Select</Text>
               </TouchableOpacity>

@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, fontWeights } from '../../theme.js';
 import { showToast } from '../../services/toastService.js';
+import { capitalizeWords } from '../../utils/textUtils.js';
 
 export function AddPlayerModal({
   visible,
@@ -34,8 +35,8 @@ export function AddPlayerModal({
   };
 
   const handleSave = async () => {
-    const fName = firstName.trim();
-    const lName = lastName.trim();
+    const fName = capitalizeWords(firstName.trim());
+    const lName = capitalizeWords(lastName.trim());
     const phone = phoneNumber.trim();
 
     if (!fName || !lName) {
@@ -105,7 +106,8 @@ export function AddPlayerModal({
               placeholder="First Name *"
               placeholderTextColor="#94A3B8"
               value={firstName}
-              onChangeText={setFirstName}
+              onChangeText={(t) => setFirstName(capitalizeWords(t))}
+              autoCapitalize="words"
               maxLength={24}
               autoFocus
             />
@@ -115,7 +117,8 @@ export function AddPlayerModal({
               placeholder="Surname *"
               placeholderTextColor="#94A3B8"
               value={lastName}
-              onChangeText={setLastName}
+              onChangeText={(t) => setLastName(capitalizeWords(t))}
+              autoCapitalize="words"
               maxLength={24}
             />
           </View>

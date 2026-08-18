@@ -5,12 +5,29 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
+  Vibration,
   StyleSheet
 } from 'react-native';
-import {
-  systemFontBold
-} from '../theme.js';
-import * as Speech from 'expo-speech';
+import { systemFontBold } from '../theme.js';
+
+const playCoinSound = () => {
+  try {
+    if (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 0.35);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+    }
+  } catch (e) {}
+};
 
 export function InteractiveCoin({
   onFlipEnd = null
@@ -23,17 +40,49 @@ export function InteractiveCoin({
   const jumpAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
+  // History ref to prevent unnatural streaks and guarantee fair balanced distribution
+  const flipHistoryRef = useRef([]);
+
+  const getBalancedOutcome = () => {
+    const history = flipHistoryRef.current;
+    const lastTwo = history.slice(-2);
+    
+    // Fair 50/50 base probability
+    let pTails = 0.5;
+
+    // Break unnatural streaks (if last 2 were H, favor T to keep balance)
+    if (lastTwo.length === 2 && lastTwo[0] === 'H' && lastTwo[1] === 'H') {
+      pTails = 0.75;
+    } else if (lastTwo.length === 2 && lastTwo[0] === 'T' && lastTwo[1] === 'T') {
+      pTails = 0.25;
+    }
+
+    const res = Math.random() < pTails ? 'T' : 'H';
+    history.push(res);
+    if (history.length > 8) history.shift();
+    return res;
+  };
+
   // Track current angle to toggle between H and T in lockstep with rotation
   const flipCoin = () => {
     if (isFlipping) return;
 
     setIsFlipping(true);
 
-    // Fair 50/50 toss result
-    const nextOutcome = Math.random() < 0.5 ? 'H' : 'T';
+    // Play metallic coin spin sound FX
+    playCoinSound();
+
+    try {
+      Vibration.vibrate(35);
+    } catch (e) {}
+
+    // Fair balanced toss result
+    const nextOutcome = getBalancedOutcome();
     
-    // Heads ends at 10 full turns (3600 deg). Tails ends at 9.5 turns (3420 deg).
-    const targetDegrees = nextOutcome === 'H' ? 3600 : 3420;
+    // Vary spin speed & turns unpredictably
+    const spinVariations = nextOutcome === 'H' ? [8, 10, 12] : [7.5, 9.5, 11.5];
+    const turns = spinVariations[Math.floor(Math.random() * spinVariations.length)];
+    const targetDegrees = turns * 360;
 
     // Reset values
     flipAngle.setValue(0);

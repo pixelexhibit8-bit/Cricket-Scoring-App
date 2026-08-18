@@ -34,6 +34,7 @@ import { generateUUID } from '../services/supabaseClient.js';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
 import { showToast } from '../services/toastService.js';
+import { capitalizeWords } from '../utils/textUtils.js';
 
 const DEFAULT_TEAM_A_ROSTER = [];
 const DEFAULT_TEAM_B_ROSTER = [];
@@ -661,7 +662,7 @@ export function QuickMatchSetupScreen({
                         paddingVertical: 2
                       }}
                       value={team1Name}
-                      onChangeText={setTeam1Name}
+                      onChangeText={(t) => setTeam1Name(capitalizeWords(t))}
                       placeholder="Team A"
                       placeholderTextColor="#94A3B8"
                       autoCapitalize="words"
@@ -718,7 +719,7 @@ export function QuickMatchSetupScreen({
                         paddingVertical: 2
                       }}
                       value={team2Name}
-                      onChangeText={setTeam2Name}
+                      onChangeText={(t) => setTeam2Name(capitalizeWords(t))}
                       placeholder="Team B"
                       placeholderTextColor="#94A3B8"
                       autoCapitalize="words"
@@ -971,9 +972,10 @@ export function QuickMatchSetupScreen({
                   <TextInput
                     style={styles.input}
                     value={venueName}
-                    onChangeText={setVenueName}
+                    onChangeText={(t) => setVenueName(capitalizeWords(t))}
                     placeholder="Ground, School or Turf Name"
                     placeholderTextColor="#94A3B8"
+                    autoCapitalize="words"
                   />
                 </View>
 
@@ -982,9 +984,10 @@ export function QuickMatchSetupScreen({
                   <TextInput
                     style={styles.input}
                     value={umpireName}
-                    onChangeText={setUmpireName}
+                    onChangeText={(t) => setUmpireName(capitalizeWords(t))}
                     placeholder="Umpire Name"
                     placeholderTextColor="#94A3B8"
+                    autoCapitalize="words"
                   />
                 </View>
               </View>
