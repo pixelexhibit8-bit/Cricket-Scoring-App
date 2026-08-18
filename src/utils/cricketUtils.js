@@ -67,10 +67,6 @@ export const MATCH_SYNC_URL = process.env.EXPO_PUBLIC_MATCH_SYNC_URL || '';
 export const STORAGE_KEY = 'cricflow.mobile.match-state.v2';
 export const MAX_MATCH_OVERS = 50;
 
-export const SADOKAN_A_PLAYERS = [];
-export const SADOKAN_B_PLAYERS = [];
-export const SADOKAN_TEAM_NAMES = new Set();
-export const SADOKAN_PLAYER_POOL = [];
 export const computeLeaderboardRankings = (finishedMatches = [], localPlayersDb = []) => {
   const playerStatsMap = {};
 
@@ -189,10 +185,6 @@ export const computeLeaderboardRankings = (finishedMatches = [], localPlayersDb 
 
   return { topBatters, topBowlers, topAllRounders };
 };
-
-export const TOP_BATTERS = [];
-export const TOP_BOWLERS = [];
-export const TOP_ALLROUNDERS = [];
 
 // ── Token Parsers ───────────────────────────────────────────────────────────
 export const getTokenNumber = (token) => {
@@ -457,19 +449,6 @@ export const getTeamShortCode = (team, fallbackName = '') => {
 export const hasDuplicateNames = (names = []) => {
   const normalized = names.map(name => String(name || '').trim().toLowerCase()).filter(Boolean);
   return new Set(normalized).size !== normalized.length;
-};
-
-export const isSadokanMatchSnapshot = (match) => {
-  if (!match || typeof match !== 'object') return false;
-  return Boolean(match?.matchTitle && Array.isArray(match?.innings) && match.innings.length > 0);
-};
-
-export const isSadokanFinishedMatch = (match) => {
-  if (!match || typeof match !== 'object') return false;
-  const t1 = match.team1?.name || match.teams?.[0]?.name;
-  const t2 = match.team2?.name || match.teams?.[1]?.name;
-  if (!t1 || !t2) return false;
-  return Boolean(match.team1 || match.teams?.length === 2);
 };
 
 export const makeInning = (battingTeamName, bowlingTeamName) => ({

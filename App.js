@@ -40,10 +40,12 @@ import { QuickMatchSetupScreen } from './src/screens/QuickMatchSetupScreen.jsx';
 import { fetchLocalPlayers } from './src/services/localPlayerService.js';
 import { syncPlayersToPhotoRegistry } from './src/services/playerPhotoStore.js';
 import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
+import { showToast } from './src/services/toastService.js';
 import { AppSplashScreen } from './src/components/common/AppSplashScreen.jsx';
 import { useFonts } from 'expo-font';
 import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, fetchLiveMatchFromSupabase, subscribeToSupabaseLiveMatches, fetchMatchByAccessCode } from './src/services/matchService.js';
 import { getCurrentUser } from './src/services/authService.js';
+import { generateUUID } from './src/services/supabaseClient.js';
 import { AppButton } from './src/components/common/AppButton.jsx';
 import { systemFont, systemFontMedium, systemFontBold, typeScale, fontWeights, publicType, theme } from './src/theme.js';
 
@@ -70,7 +72,6 @@ import {
   MATCH_SYNC_URL,
   STORAGE_KEY,
   MAX_MATCH_OVERS,
-  SADOKAN_PLAYER_POOL,
   isWicketToken,
   getTokenBowlerRuns,
   sumDeliveryTokens,
@@ -89,11 +90,6 @@ import {
   makeTeamCode,
   getTeamShortCode,
   hasDuplicateNames,
-  TOP_BATTERS,
-  TOP_BOWLERS,
-  TOP_ALLROUNDERS,
-  isSadokanMatchSnapshot,
-  isSadokanFinishedMatch,
   makeInning,
   formatOvers,
   makeBowlingFigure,
@@ -502,10 +498,6 @@ export default function App() {
   }, [fontsLoaded]);
 
   const { width: screenWidth } = useWindowDimensions();
-  const fixedSetupTeams = [
-    { id: 'team-a', name: 'Team A', code: 'TA', logoKey: 'default-team-1' },
-    { id: 'team-b', name: 'Team B', code: 'TB', logoKey: 'default-team-2' }
-  ];
 
   const [team1Roster, setTeam1Roster] = useState([]);
   const [team2Roster, setTeam2Roster] = useState([]);
@@ -542,6 +534,8 @@ export default function App() {
   const finishedMatches = Array.isArray(finishedArchive) ? finishedArchive : [];
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [pollVote, setPollVote] = useState(null);
+  const [liveSyncState, setLiveSyncState] = useState('connected');
 
   const handlePullToRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -589,7 +583,7 @@ export default function App() {
   const [venueName, setVenueName] = useState('');
   const [tossWinner, setTossWinner] = useState('');
   const [tossDecision, setTossDecision] = useState('BAT');
-  const [newPlayerNameInput, setNewPlayerNameInput] = useState('');
+
   const [savedTeamsList, setSavedTeamsList] = useState([]);
 
   // â”€â”€ Active match (multi-inning) â”€â”€
@@ -635,16 +629,8 @@ export default function App() {
   const [playingXiVisible, setPlayingXiVisible] = useState(false);
   const [playingXiTeamTab, setPlayingXiTeamTab] = useState(1);
   const [playingXiTabLayouts, setPlayingXiTabLayouts] = useState({});
-  const [pollVote, setPollVote] = useState(null);
-
   const hasRemoteSyncRef = useRef(false);
   const publicAnnouncementFingerprintRef = useRef('');
-
-  // Match Conditions
-  const weatherData = {
-    temp: 31,
-    condition: 'Sunny & Clear'
-  };
   useEffect(() => {
     fetchPlayersFromSupabase().then(dbPlayers => {
       if (Array.isArray(dbPlayers) && dbPlayers.length > 0) {
@@ -659,7 +645,7 @@ export default function App() {
           (prev || []).forEach(m => {
             if (m?.title || m?.id) map.set(m.id || m.title, m);
           });
-          dbMatches.filter(isSadokanFinishedMatch).forEach(m => {
+          (dbMatches || []).filter(m => Boolean(m && (m.team1?.name || m.teams?.[0]?.name))).forEach(m => {
             const key = m.id || m.title;
             if (key) {
               const existing = map.get(key);
@@ -727,7 +713,7 @@ export default function App() {
 
         // Restore activeMatch — but if it's already completed (phase='result'),
         // convert to finishedMatch and clear activeMatch so home shows it in Finished tab
-        if (saved?.activeMatch?.matchTitle && Array.isArray(saved.activeMatch.innings) && isSadokanMatchSnapshot(saved.activeMatch)) {
+        if (saved?.activeMatch?.matchTitle && Array.isArray(saved.activeMatch.innings)) {
           const restoredMatch = saved.activeMatch;
 
           if (restoredMatch.phase === 'result' || restoredMatch.resultText) {
@@ -2861,7 +2847,7 @@ export default function App() {
                         { icon: 'swap-horizontal-outline', label: 'Toss', value: activeMatch.tossResult || `${publicTossWinner} chose to ${publicTossDecision}`, emphasis: true },
                         activeMatch.venue ? { icon: 'location-outline', label: 'Venue', value: activeMatch.venue } : null,
                         { icon: 'person-outline', label: 'Umpire', value: activeMatch.umpireName || DEFAULT_UMPIRE_NAME },
-                        { icon: 'partly-sunny-outline', label: 'Conditions', value: `${weatherData.temp} C, ${weatherData.condition}` }
+                        { icon: 'partly-sunny-outline', label: 'Conditions', value: activeMatch.conditions || '28°C, Clear Sky' }
                       ]}
                       teamOneName={publicTeamOneName}
                       teamTwoName={publicTeamTwoName}
@@ -3454,7 +3440,7 @@ export default function App() {
                       { icon: 'swap-horizontal-outline', label: 'Toss', value: f.tossResult || (f.tossWinner ? `${f.tossWinner} won the toss and elected to ${(f.tossDecision || 'bat').toUpperCase()}` : `${f.team1?.name || 'Team 1'} won the toss and elected to BAT`), emphasis: true },
                       { icon: 'location-outline', label: 'Venue', value: (f.venue && f.venue !== 'Venue not added') ? f.venue : 'Local Ground' },
                       { icon: 'person-outline', label: 'Umpire', value: f.umpireName || 'Cric Scorer' },
-                      { icon: 'partly-sunny-outline', label: 'Conditions', value: f.conditions || (weatherData ? `${weatherData.temp} C, ${weatherData.condition}` : '27 C, Humid & Overcast') },
+                      { icon: 'partly-sunny-outline', label: 'Conditions', value: f.conditions || '28°C, Clear Sky' },
                       { icon: 'checkmark-done-outline', label: 'Result', value: f.winner || f.resultText, emphasis: true, accent: true }
                     ]}
                     teamOneName={f.team1?.name || 'Team 1'}
@@ -4150,7 +4136,7 @@ export default function App() {
   const visibleFinishedMatches = (searchNeedle
     ? finishedMatches.filter(match => getSearchBlob(match).includes(searchNeedle))
     : finishedMatches)
-    .filter(isSadokanFinishedMatch)
+    .filter(m => Boolean(m && (m.team1?.name || m.teams?.[0]?.name)))
     .sort((a, b) => {
       const timeA = new Date(a.completedAt || a.dateText || 0).getTime();
       const timeB = new Date(b.completedAt || b.dateText || 0).getTime();
@@ -4158,7 +4144,7 @@ export default function App() {
     });
   const recentFinishedMatches = visibleFinishedMatches.slice(0, 3);
   const localPlayerNames = (localPlayersList || []).map(p => p && p.name).filter(Boolean);
-  const setupPlayerNames = getCleanPlayerNames([...SADOKAN_PLAYER_POOL, ...localPlayerNames, ...team1Roster, ...team2Roster, ...playerPool]);
+  const setupPlayerNames = getCleanPlayerNames([...localPlayerNames, ...team1Roster, ...team2Roster, ...playerPool]);
   const getSetupPlayerProfile = (playerName) => {
     if (!playerName) return null;
     const cleanName = String(playerName).trim().toLowerCase();
