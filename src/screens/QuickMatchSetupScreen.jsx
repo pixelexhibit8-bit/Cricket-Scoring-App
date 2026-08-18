@@ -21,6 +21,7 @@ import { PRESET_TEAM_LOGOS, getTeamLogoSource } from '../utils/teamUtils.js';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { MatchTabBar } from '../components/MatchTabBar.jsx';
 import { OpeningPlayersSelector } from '../components/OpeningPlayersSelector.jsx';
+import { InteractiveCoin } from '../components/InteractiveCoin.jsx';
 import { TeamLogoPickerModal } from '../components/modals/TeamLogoPickerModal.jsx';
 import { AddPlayerModal } from '../components/modals/AddPlayerModal.jsx';
 import { SquadSelectorModal } from '../components/modals/SquadSelectorModal.jsx';
@@ -74,9 +75,9 @@ export function QuickMatchSetupScreen({
   const [venueName, setVenueName] = useState(initialSetup?.venueName || '');
   const [scorerPin, setScorerPin] = useState(initialSetup?.scorerPin || '');
 
-  // Toss State
-  const [tossWinner, setTossWinner] = useState(initialSetup?.team1Name || 'Team A');
-  const [tossDecision, setTossDecision] = useState('BAT');
+  // Toss State (Null initially until user selects)
+  const [tossWinner, setTossWinner] = useState(initialSetup?.tossWinner || null);
+  const [tossDecision, setTossDecision] = useState(initialSetup?.tossDecision || null);
 
   // Auto-generate 6-digit PIN if empty
   useEffect(() => {
@@ -106,7 +107,8 @@ export function QuickMatchSetupScreen({
       if (initialSetup.scorerPin) setScorerPin(initialSetup.scorerPin);
       if (initialSetup.ballType) setBallType(initialSetup.ballType);
       if (initialSetup.pitchType) setPitchType(initialSetup.pitchType);
-      if (initialSetup.team1Name) setTossWinner(initialSetup.team1Name);
+      if (initialSetup.tossWinner) setTossWinner(initialSetup.tossWinner);
+      if (initialSetup.tossDecision) setTossDecision(initialSetup.tossDecision);
     }
   }, [initialSetup]);
 
@@ -447,8 +449,8 @@ export function QuickMatchSetupScreen({
         pitchType,
         umpireName: umpireName || 'Cric Scorer',
         venueName: venueName ? venueName.trim() : '',
-        scheduledAt: matchSchedule.isoString,
-        matchDate: matchSchedule.label,
+        startedAt: new Date().toISOString(),
+        matchDate: 'Today',
         tossWinner: tossWinner || finalTeam1,
         tossDecision: tossDecision || 'BAT',
         striker: step3Striker,
@@ -461,7 +463,9 @@ export function QuickMatchSetupScreen({
 
   const activeT1 = team1Name.trim() || 'CricScorer Eleven';
   const activeT2 = team2Name.trim() || 'CricScorer Strikers';
-  const battingTeamName = tossDecision === 'BAT' ? tossWinner : (tossWinner === activeT1 ? activeT2 : activeT1);
+  const battingTeamName = (tossWinner && tossDecision)
+    ? (tossDecision === 'BAT' ? tossWinner : (tossWinner === activeT1 ? activeT2 : activeT1))
+    : activeT1;
   const bowlingTeamName = battingTeamName === activeT1 ? activeT2 : activeT1;
   const bRoster = battingTeamName === activeT1 ? team1Roster : team2Roster;
   const blRoster = bowlingTeamName === activeT1 ? team1Roster : team2Roster;
@@ -608,7 +612,7 @@ export function QuickMatchSetupScreen({
           {/* Persistent Step 1 Header */}
           {renderWizardHeader(1)}
 
-          <ScrollView ref={step1ScrollRef} style={{ flex: 1, backgroundColor: '#F8FAFC' }} contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 280 }} keyboardShouldPersistTaps="handled">
+          <ScrollView ref={step1ScrollRef} style={{ flex: 1, backgroundColor: '#F8FAFC' }} contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
             {/* CARD 1: ULTRA-CLEAN PLAYING TEAMS & LOGOS MATCHUP */}
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 14 }}>
               <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFont, textAlign: 'center' }}>
@@ -985,14 +989,15 @@ export function QuickMatchSetupScreen({
                 </View>
               </View>
             </View>
+          </ScrollView>
 
-            {/* NEXT: COIN TOSS BUTTON */}
+          {/* STICKY FOOTER BAR */}
+          <View style={styles.footerBar}>
             <TouchableOpacity
               style={[
                 styles.primaryBtn,
                 {
-                  backgroundColor: (team1Name.trim() && team2Name.trim() && totalOvers) ? '#0284C7' : '#94A3B8',
-                  marginTop: 6
+                  backgroundColor: (team1Name.trim() && team2Name.trim() && totalOvers) ? '#0284C7' : '#94A3B8'
                 }
               ]}
               disabled={!team1Name.trim() || !team2Name.trim() || !totalOvers}
@@ -1001,7 +1006,7 @@ export function QuickMatchSetupScreen({
               <Text style={styles.btnText}>NEXT: COIN TOSS</Text>
               <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
             </TouchableOpacity>
-          </ScrollView>
+          </View>
 
           {/* 10-PRESET TEAM LOGO PICKER MODAL */}
           <TeamLogoPickerModal
@@ -1123,14 +1128,16 @@ export function QuickMatchSetupScreen({
     );
   }
 
-  // STEP 2: COIN TOSS
+  // STEP 2: ULTRA-CLEAN COIN TOSS
   if (wizardStep === 2) {
+    const isTossReady = !!(tossWinner && tossDecision);
+
     return (
       <View style={styles.container}>
         {/* Persistent Step 2 Header */}
         {renderWizardHeader(2)}
 
-        <ScrollView style={{ flex: 1, backgroundColor: '#F8FAFC' }} contentContainerStyle={{ padding: 16, gap: 16 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1, backgroundColor: '#F8FAFC' }} contentContainerStyle={{ padding: 16, gap: 16, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#E2E8F0', gap: 14 }}>
             <Text style={{ fontSize: 11, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
               WHO WON THE TOSS?
@@ -1148,31 +1155,33 @@ export function QuickMatchSetupScreen({
                     activeOpacity={0.8}
                     style={{
                       flex: 1,
-                      backgroundColor: active ? '#F0F9FF' : '#FFFFFF',
-                      borderColor: active ? '#0284C7' : '#E2E8F0',
-                      borderWidth: active ? 1.5 : 1,
+                      backgroundColor: active ? '#F0FDF4' : '#FFFFFF',
+                      borderColor: active ? '#16A34A' : '#E2E8F0',
+                      borderWidth: 2,
                       borderRadius: 14,
-                      padding: 14,
+                      padding: 16,
                       alignItems: 'center',
                       gap: 8
                     }}
                   >
-                    <TeamIdentityMark team={{ name: teamObj.name, logoKey: teamObj.logoKey }} size={44} />
-                    <Text style={{ color: active ? '#0284C7' : '#0F172A', fontSize: 13.5, fontFamily: systemFontMedium }} numberOfLines={1}>
+                    <TeamIdentityMark team={{ name: teamObj.name, logoKey: teamObj.logoKey }} size={48} />
+                    <Text style={{ color: active ? '#16A34A' : '#0F172A', fontSize: 14, fontFamily: systemFontBold }} numberOfLines={1}>
                       {teamObj.name}
                     </Text>
                     {active ? (
-                      <View style={{ backgroundColor: '#0284C7', width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
+                      <View style={{ backgroundColor: '#16A34A', width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="checkmark" size={13} color="#FFFFFF" />
                       </View>
-                    ) : null}
+                    ) : (
+                      <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: '#CBD5E1' }} />
+                    )}
                   </TouchableOpacity>
                 );
               })}
             </View>
 
             <Text style={{ fontSize: 11, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 6 }}>
-              THEY ELECTED TO?
+              ELECTED TO?
             </Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               {[
@@ -1191,15 +1200,15 @@ export function QuickMatchSetupScreen({
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 8,
-                      paddingVertical: 12,
+                      paddingVertical: 14,
                       borderRadius: 12,
-                      backgroundColor: active ? '#0284C7' : '#FFFFFF',
-                      borderColor: active ? '#0284C7' : '#E2E8F0',
-                      borderWidth: 1
+                      backgroundColor: active ? '#16A34A' : '#FFFFFF',
+                      borderColor: active ? '#16A34A' : '#E2E8F0',
+                      borderWidth: 2
                     }}
                   >
-                    <MaterialCommunityIcons name={choice.icon} size={18} color={active ? '#FFFFFF' : '#64748B'} />
-                    <Text style={{ color: active ? '#FFFFFF' : '#0F172A', fontSize: 13, fontFamily: systemFontMedium }}>
+                    <MaterialCommunityIcons name={choice.icon} size={20} color={active ? '#FFFFFF' : '#64748B'} />
+                    <Text style={{ color: active ? '#FFFFFF' : '#0F172A', fontSize: 13.5, fontFamily: systemFontBold }}>
                       {choice.label}
                     </Text>
                   </TouchableOpacity>
@@ -1207,97 +1216,34 @@ export function QuickMatchSetupScreen({
               })}
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F0F9FF', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BAE6FD', marginTop: 4 }}>
-              <Ionicons name="megaphone-outline" size={18} color="#0284C7" />
-              <Text style={{ fontSize: 12.5, color: '#0369A1', flex: 1, fontFamily: systemFontMedium }}>
-                {tossWinner} won the toss and elected to {tossDecision.toLowerCase()} first.
-              </Text>
-            </View>
+            {/* ONLY SHOW SUMMARY BANNER ONCE BOTH TOSS WINNER AND DECISION ARE SELECTED */}
+            {isTossReady ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F0FDF4', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BBF7D0', marginTop: 4 }}>
+                <Ionicons name="megaphone-outline" size={18} color="#16A34A" />
+                <Text style={{ fontSize: 12.5, color: '#15803D', flex: 1, fontFamily: systemFontMedium }}>
+                  {tossWinner} won the toss and elected to {tossDecision.toLowerCase()} first.
+                </Text>
+              </View>
+            ) : null}
           </View>
 
-          {/* CARD 2: INFERRED INNINGS 1 LINEUP CARD */}
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 12 }}>
-            <Text style={{ fontSize: 11, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-              1ST INNINGS MATCH LINEUP
-            </Text>
-
-            <View style={{ gap: 8 }}>
-              {/* Batting Team Row */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F0FDF4', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BBF7D0' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <TeamIdentityMark team={{ name: battingTeamName, logoKey: battingTeamName === activeT1 ? team1LogoKey : team2LogoKey }} size={32} />
-                  <View>
-                    <Text style={{ color: '#0F172A', fontSize: 13.5, fontFamily: systemFontBold }}>
-                      {battingTeamName}
-                    </Text>
-                    <Text style={{ color: '#16A34A', fontSize: 11, fontFamily: systemFontMedium, marginTop: 1 }}>
-                      🏏 Batting 1st ({bRoster.length} Players)
-                    </Text>
-                  </View>
-                </View>
-                <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                  <Text style={{ color: '#15803D', fontSize: 10.5, fontFamily: systemFontBold }}>BATTING</Text>
-                </View>
-              </View>
-
-              {/* Bowling Team Row */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <TeamIdentityMark team={{ name: bowlingTeamName, logoKey: bowlingTeamName === activeT1 ? team1LogoKey : team2LogoKey }} size={32} />
-                  <View>
-                    <Text style={{ color: '#0F172A', fontSize: 13.5, fontFamily: systemFontBold }}>
-                      {bowlingTeamName}
-                    </Text>
-                    <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium, marginTop: 1 }}>
-                      ⚾ Bowling 1st ({blRoster.length} Players)
-                    </Text>
-                  </View>
-                </View>
-                <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                  <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFontBold }}>BOWLING</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* CARD 3: MATCH CONFIGURATION SUMMARY */}
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }}>
-            <Text style={{ fontSize: 11, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-              MATCH CONFIGURATION
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <View style={{ flex: 1, minWidth: '45%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', gap: 2 }}>
-                <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFont }}>Overs</Text>
-                <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontBold }}>{totalOvers} Overs Match</Text>
-              </View>
-              <View style={{ flex: 1, minWidth: '45%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', gap: 2 }}>
-                <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFont }}>Ball Type</Text>
-                <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontBold }}>{ballType} Ball</Text>
-              </View>
-              <View style={{ flex: 1, minWidth: '45%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', gap: 2 }}>
-                <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFont }}>Venue</Text>
-                <Text style={{ color: '#0F172A', fontSize: 12.5, fontFamily: systemFontMedium }} numberOfLines={1}>{venueName || 'Local Ground'}</Text>
-              </View>
-              <View style={{ flex: 1, minWidth: '45%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', gap: 2 }}>
-                <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFont }}>Umpire</Text>
-                <Text style={{ color: '#0F172A', fontSize: 12.5, fontFamily: systemFontMedium }} numberOfLines={1}>{umpireName || 'Official'}</Text>
-              </View>
-            </View>
+          {/* 3D INTERACTIVE GOLD CRICKET COIN (PERFECTLY CENTERED IN REMAINING SPACE) */}
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 190 }}>
+            <InteractiveCoin />
           </View>
         </ScrollView>
 
-        <View style={[styles.footerBar, { flexDirection: 'row', gap: 10 }]}>
+        {/* STICKY FOOTER BAR */}
+        <View style={styles.footerBar}>
           <TouchableOpacity
-            style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}
-            onPress={() => setWizardStep(1)}
-          >
-            <Ionicons name="arrow-back" size={20} color="#0F172A" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.primaryBtn, { flex: 1, backgroundColor: '#0284C7', borderRadius: 10 }]}
+            style={[
+              styles.primaryBtn,
+              { backgroundColor: isTossReady ? '#0284C7' : '#94A3B8' }
+            ]}
+            disabled={!isTossReady}
             onPress={() => setWizardStep(3)}
           >
-            <Text style={styles.btnText}>CONTINUE TO OPENERS</Text>
+            <Text style={styles.btnText}>NEXT: SELECT OPENERS</Text>
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -1333,9 +1279,20 @@ export function QuickMatchSetupScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  headerBar: { backgroundColor: '#FFFFFF', height: 52, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-  footerBar: { padding: 14, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' },
-  primaryBtn: { height: 48, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  headerBar: { backgroundColor: '#FFFFFF', height: 50, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  footerBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4
+  },
+  primaryBtn: { height: 48, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnText: { fontSize: 13, color: '#FFFFFF', fontFamily: systemFontBold },
   cardBox: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#CBD5E1', gap: 10 },
   cardTitle: { fontSize: 12, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont },

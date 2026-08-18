@@ -180,22 +180,14 @@ export function OpeningPlayersSelector({
       </ScrollView>
 
       {/* BOTTOM ACTION FOOTER */}
-      <View style={[styles.footerBar, { flexDirection: 'row', gap: 10 }]}>
-        {onBack ? (
-          <TouchableOpacity
-            style={{ flex: 0.3, height: 48, borderRadius: 8, backgroundColor: '#475569', alignItems: 'center', justifyContent: 'center' }}
-            onPress={onBack}
-          >
-            <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        ) : null}
+      <View style={styles.footerBar}>
         <TouchableOpacity
           disabled={!isReady}
-          style={[styles.primaryBtn, { flex: 1, backgroundColor: isReady ? '#0284C7' : '#94A3B8' }]}
+          style={[styles.primaryBtn, { backgroundColor: isReady ? '#0284C7' : '#94A3B8' }]}
           onPress={onStart}
         >
           <MaterialCommunityIcons name="cricket" size={18} color="#FFFFFF" />
-          <Text style={styles.btnText}>{ctaText}</Text>
+          <Text style={styles.btnText}>{ctaText || 'START MATCH'}</Text>
         </TouchableOpacity>
       </View>
     </View>
