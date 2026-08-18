@@ -106,13 +106,8 @@ export const MatchListScoreCard = ({
           borderRadius: 16,
           padding: 16,
           borderWidth: 1,
-          borderColor: '#F1F5F9',
-          gap: 12,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.03,
-          shadowRadius: 4,
-          elevation: 1
+          borderColor: '#E2E8F0',
+          gap: 12
         }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

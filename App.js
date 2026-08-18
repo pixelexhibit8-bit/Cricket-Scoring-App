@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity,
-  Image, StatusBar, TextInput, Modal, Alert, useWindowDimensions,
-  Animated, RefreshControl, BackHandler, LogBox, Keyboard
+  StatusBar, TextInput, Modal, Alert, useWindowDimensions,
+  Animated, RefreshControl, BackHandler, LogBox
 } from 'react-native';
 
 LogBox.ignoreLogs([
@@ -25,13 +25,9 @@ import { PreInningsScorecard } from './src/components/PreInningsScorecard';
 import { OpeningPlayersSelector } from './src/components/OpeningPlayersSelector';
 import { WormGraph } from './src/components/WormGraph';
 import { ManhattanGraph } from './src/components/ManhattanGraph';
-import { AuthScreen } from './src/components/AuthScreen';
 import { MyProfileScreen } from './src/screens/MyProfileScreen.jsx';
 import { HomeScreen } from './src/screens/HomeScreen.jsx';
-import { AboutAppScreen } from './src/components/AboutAppScreen.jsx';
 import { PlayerAvatar } from './src/components/PlayerAvatar.jsx';
-import { LinearGradient } from 'expo-linear-gradient';
-import { AppBottomNav } from './src/components/navigation/AppBottomNav.jsx';
 import { TournamentScreen } from './src/components/TournamentScreen.jsx';
 import { ScorerPinModal } from './src/components/modals/ScorerPinModal.jsx';
 import { MatchCompleteModal } from './src/components/modals/MatchCompleteModal.jsx';
@@ -40,19 +36,16 @@ import { ExtrasModal } from './src/components/modals/ExtrasModal.jsx';
 import { WicketPendingModal } from './src/components/modals/WicketPendingModal.jsx';
 import { RunOutModal } from './src/components/modals/RunOutModal.jsx';
 import { SquadEditModal } from './src/components/modals/SquadEditModal.jsx';
-import { MatchSelectionScreen } from './src/components/MatchSelectionScreen.jsx';
 import { QuickMatchSetupScreen } from './src/screens/QuickMatchSetupScreen.jsx';
 import { fetchLocalPlayers } from './src/services/localPlayerService.js';
 import { syncPlayersToPhotoRegistry } from './src/services/playerPhotoStore.js';
-import { TeamPickerModal } from './src/components/TeamPickerModal.jsx';
 import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
 import { AppSplashScreen } from './src/components/common/AppSplashScreen.jsx';
 import { useFonts } from 'expo-font';
-import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, syncPlayerToSupabase, fetchLiveMatchFromSupabase, subscribeToSupabaseLiveMatches, fetchMatchByAccessCode } from './src/services/matchService.js';
+import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, fetchLiveMatchFromSupabase, subscribeToSupabaseLiveMatches, fetchMatchByAccessCode } from './src/services/matchService.js';
 import { getCurrentUser } from './src/services/authService.js';
-import { generateUUID } from './src/services/supabaseClient.js';
 import { AppButton } from './src/components/common/AppButton.jsx';
-import { systemFont, systemFontMedium, systemFontBold, typeScale, fontWeights, publicType, themeColors, theme, commonStyles } from './src/theme.js';
+import { systemFont, systemFontMedium, systemFontBold, typeScale, fontWeights, publicType, theme } from './src/theme.js';
 
 Text.defaultProps = Text.defaultProps || {};
 Text.defaultProps.style = [{ fontFamily: systemFont }, Text.defaultProps.style];
@@ -77,27 +70,13 @@ import {
   MATCH_SYNC_URL,
   STORAGE_KEY,
   MAX_MATCH_OVERS,
-  SADOKAN_A_PLAYERS,
-  SADOKAN_B_PLAYERS,
-  SADOKAN_TEAM_NAMES,
   SADOKAN_PLAYER_POOL,
-  getTokenNumber,
-  isWideToken,
-  isNoBallToken,
-  isPenaltyToken,
-  isByeToken,
-  isLegByeToken,
   isWicketToken,
-  isLegalToken,
-  getTokenTeamRuns,
   getTokenBowlerRuns,
   sumDeliveryTokens,
   countWicketTokens,
   countLegalTokens,
   getCurrentOverNumber,
-  getBallTokenVisual,
-  renderBallTokenChip,
-  renderEmptyBallSlot,
   renderBallTimeline,
   renderCompactOverTimeline,
   getDisplayOverHistory,
@@ -113,26 +92,19 @@ import {
   TOP_BATTERS,
   TOP_BOWLERS,
   TOP_ALLROUNDERS,
-  isValidMatchSnapshot,
   isSadokanMatchSnapshot,
-  isValidFinishedMatch,
   isSadokanFinishedMatch,
   makeInning,
   formatOvers,
-  parseOversToBalls,
   makeBowlingFigure,
   normalizeBowlingFigure,
   getInningBowlingRows,
   getBowlerFigureFromInning,
   formatOrdinal,
   formatMatchDateTime,
-  formatMatchDateLabel,
   buildFinishedMatch,
-  parseFinishedScoreText,
   getScorePartsFromText,
-  escapeRegExp,
   getFinishedResultCardText,
-  buildFinishedSnapshotInning,
   buildFinishedLiveSnapshot
 } from './src/utils/cricketUtils.js';
 
@@ -557,9 +529,8 @@ export default function App() {
 
   // Navigation
   const [currentScreen, setCurrentScreen] = useState('home');
-  const [bottomNavTab, setBottomNavTab] = useState('matches'); // 'matches' | 'about'
+  const [bottomNavTab, setBottomNavTab] = useState('home'); // 'home' | 'matches' | 'rankings' | 'profile'
   const [matchesSubTab, setMatchesSubTab] = useState('home'); // 'home' | 'live' | 'finished' | 'playerStats'
-  const [mainTab, setMainTab] = useState('live');
   const [publicLiveTab, setPublicLiveTab] = useState('live');
   const [showTopTitleHeader, setShowTopTitleHeader] = useState(true); // 'live' | 'info' | 'scorecard' | 'overs' | 'graphs'
   const [publicTabLayouts, setPublicTabLayouts] = useState({});
@@ -599,40 +570,6 @@ export default function App() {
   const playingXiPagerRef = useRef(null);
   const playingXiPagerScrollX = useRef(new Animated.Value(0)).current;
 
-  // Home Matches Sub-Tabs Swiper
-  const homeTabs = [
-    { id: 'live', label: 'Live', icon: 'radio-outline' },
-    { id: 'finished', label: 'Finished', icon: 'trophy-outline' },
-    { id: 'playerStats', label: 'Rankings', icon: 'stats-chart-outline' }
-  ];
-  const homePagerRef = useRef(null);
-  const activeHomeTabIndex = Math.max(0, homeTabs.findIndex(t => t.id === matchesSubTab));
-  const homePagerScrollX = useRef(new Animated.Value(activeHomeTabIndex * screenWidth)).current;
-  const homeTabWidth = screenWidth / 3;
-  const homeIndicatorTranslateX = homePagerScrollX.interpolate({
-    inputRange: [0, screenWidth, screenWidth * 2],
-    outputRange: [0, homeTabWidth, homeTabWidth * 2],
-    extrapolate: 'clamp'
-  });
-
-  const onHomeTabPress = (tabId, index) => {
-    setMatchesSubTab(tabId);
-    homePagerRef.current?.scrollTo({ x: index * screenWidth, animated: true });
-  };
-
-  const handleHomePagerEnd = (e) => {
-    const offset = e.nativeEvent.contentOffset.x;
-    const index = Math.round(offset / screenWidth);
-    if (homeTabs[index] && matchesSubTab !== homeTabs[index].id) {
-      setMatchesSubTab(homeTabs[index].id);
-    }
-  };
-
-  useEffect(() => {
-    const targetOffset = activeHomeTabIndex * screenWidth;
-    homePagerRef.current?.scrollTo({ x: targetOffset, animated: true });
-  }, [matchesSubTab]);
-
   // ── Match setup wizard ──
   const [wizardStep, setWizardStep] = useState(1);
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState(null);
@@ -653,9 +590,6 @@ export default function App() {
   const [tossWinner, setTossWinner] = useState('');
   const [tossDecision, setTossDecision] = useState('BAT');
   const [newPlayerNameInput, setNewPlayerNameInput] = useState('');
-  const [playerSelectorVisible, setPlayerSelectorVisible] = useState(false);
-  const [teamPickerVisible, setTeamPickerVisible] = useState(false);
-  const [targetPickerSlot, setTargetPickerSlot] = useState('team1');
   const [savedTeamsList, setSavedTeamsList] = useState([]);
 
   // â”€â”€ Active match (multi-inning) â”€â”€
@@ -693,7 +627,6 @@ export default function App() {
 
   // Edit squad modal
   const [isEditSquadModalOpen, setIsEditSquadModalOpen] = useState(false);
-  const [midMatchNewPlayer, setMidMatchNewPlayer] = useState('');
 
   // Undo & Redo History Stack, Info Squad Dropdown, and Poll Vote
   const [matchHistoryStack, setMatchHistoryStack] = useState([]);
@@ -703,83 +636,15 @@ export default function App() {
   const [playingXiTeamTab, setPlayingXiTeamTab] = useState(1);
   const [playingXiTabLayouts, setPlayingXiTabLayouts] = useState({});
   const [pollVote, setPollVote] = useState(null);
-  const [liveSyncState, setLiveSyncState] = useState('current');
 
   const hasRemoteSyncRef = useRef(false);
   const publicAnnouncementFingerprintRef = useRef('');
 
-  // Weather Intelligence & Pitch Analytics
-  const [selectedWeatherVenue, setSelectedWeatherVenue] = useState('Sadokan Ground');
-  const [weatherData, setWeatherData] = useState({
+  // Match Conditions
+  const weatherData = {
     temp: 31,
-    feelsLike: 33,
-    condition: 'Sunny & Clear Skies',
-    humidity: 42,
-    wind: 14,
-    windDir: 'SW',
-    rainRisk: 5,
-    uvIndex: 'High (7.2)',
-    dewFactor: 'Moderate Dew Expected (Innings 2)',
-    pitchImpact: 'Dry Surface - Batting Friendly & Good for Spin',
-    swingIndex: 'Moderate Swing (Clear Skies)',
-    dlsRisk: 'Very Low Risk (0%)',
-    visibility: '10 km',
-    aqi: '68 Good',
-    hourly: [
-      { time: '14:00', temp: 31, icon: 'sunny-outline', rain: 0 },
-      { time: '15:00', temp: 32, icon: 'sunny-outline', rain: 0 },
-      { time: '16:00', temp: 31, icon: 'partly-sunny-outline', rain: 5 },
-      { time: '17:00', temp: 29, icon: 'partly-sunny-outline', rain: 10 },
-      { time: '18:00', temp: 27, icon: 'cloudy-night-outline', rain: 15 },
-      { time: '19:00', temp: 26, icon: 'cloudy-night-outline', rain: 10 }
-    ]
-  });
-
-  useEffect(() => {
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=26.9124&longitude=75.7873&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,precipitation_probability,weather_code&forecast_days=1')
-      .then(r => r.json())
-      .then(d => {
-        if (d?.current) {
-          const temp = Math.round(d.current.temperature_2m || 31);
-          const humidity = Math.round(d.current.relative_humidity_2m || 42);
-          const wind = Math.round(d.current.wind_speed_10m || 14);
-          const rainProb = Math.max(0, ...(d.hourly?.precipitation_probability?.slice(0, 6) || [0]));
-
-          let condition = 'Sunny & Clear';
-          if (rainProb > 40) condition = 'Passing Showers Likely';
-          else if (humidity > 70) condition = 'Humid & Overcast';
-          else if (temp > 35) condition = 'Hot & Dry';
-
-          let pitchImpact = humidity > 65 ? 'Damp Pitch - Pacer Assistance' : 'Dry Surface - Batting & Spin Friendly';
-          let dewFactor = humidity > 60 ? 'Heavy Dew in 2nd Innings (Bowl First)' : 'Low Dew Impact';
-          let swingIndex = humidity > 65 ? 'High Swing Index (Seam Support)' : 'Moderate Swing';
-          let dlsRisk = rainProb > 30 ? `Moderate Risk (${rainProb}% Rain)` : 'Low DLS Interruption Risk';
-
-          const hourlyForecast = (d.hourly?.temperature_2m || []).slice(0, 6).map((t, idx) => ({
-            time: `${14 + idx}:00`,
-            temp: Math.round(t),
-            icon: (d.hourly?.precipitation_probability?.[idx] || 0) > 30 ? 'rainy-outline' : (14 + idx >= 18 ? 'cloudy-night-outline' : 'sunny-outline'),
-            rain: d.hourly?.precipitation_probability?.[idx] || 0
-          }));
-
-          setWeatherData(p => ({
-            ...p,
-            temp,
-            feelsLike: temp + 2,
-            condition,
-            humidity,
-            wind,
-            rainRisk: rainProb,
-            pitchImpact,
-            dewFactor,
-            swingIndex,
-            dlsRisk,
-            hourly: hourlyForecast.length > 0 ? hourlyForecast : p.hourly
-          }));
-        }
-      })
-      .catch(() => { });
-  }, []);
+    condition: 'Sunny & Clear'
+  };
   useEffect(() => {
     fetchPlayersFromSupabase().then(dbPlayers => {
       if (Array.isArray(dbPlayers) && dbPlayers.length > 0) {
@@ -1052,16 +917,6 @@ export default function App() {
     return roster.filter(name => name !== curInning.bowler?.name);
   };
 
-  const hasMatchStartedScoring = (match) => {
-    if (!match) return false;
-    if (match.phase === 'result' || match.resultText) return true;
-    const inn1 = match.innings?.[0];
-    const inn2 = match.innings?.[1];
-    const hasBalls1 = (inn1?.totalLegalBalls || 0) > 0 || (inn1?.currentOverBalls || []).length > 0;
-    const hasBalls2 = (inn2?.totalLegalBalls || 0) > 0 || (inn2?.currentOverBalls || []).length > 0;
-    return hasBalls1 || hasBalls2;
-  };
-
   // ⚡ 1. Scorer Broadcast: Auto-sync activeMatch to Supabase on match creation & ball updates
   useEffect(() => {
     if (activeMatch && currentScreen === 'scorerWizard') {
@@ -1194,13 +1049,6 @@ export default function App() {
     setCurrentScreen('scorerWizard');
   };
 
-  const handleCreateNewMatch = () => {
-    setRematchSetup(null);
-    setActiveMatch(null);
-  };
-
-  // Max wickets = roster size - 1 (last man can't bat alone)
-  const maxWickets = () => getBattingRoster().length - 1;
 
   // â”€â”€ HANDLERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -1262,130 +1110,11 @@ export default function App() {
     setCurrentScreen('scorerWizard');
   };
 
-  const handleOpenTeamPicker = (slot) => {
-    setTargetPickerSlot(slot);
-    setTeamPickerVisible(true);
-  };
-
-  const handleSelectTeamFromPicker = (teamObj, slot) => {
-    if (slot === 'team1') {
-      setTeam1Name(teamObj.name);
-    } else {
-      setTeam2Name(teamObj.name);
-    }
-    setTeamPickerVisible(false);
-  };
-
-  const handleCreateTeamFromPicker = (teamObj, slot) => {
-    if (slot === 'team1') {
-      setTeam1Name(teamObj.name);
-    } else {
-      setTeam2Name(teamObj.name);
-    }
-    setSavedTeamsList(prev => [teamObj, ...prev]);
-    setTeamPickerVisible(false);
-  };
-
-  const handleMoveToTeam = (name, targetTeam) => {
-    const cleanName = String(name || '').trim();
-    if (!cleanName) return;
-
-    setPlayerPool(current => current.filter(player => player !== cleanName));
-    setTeam1Roster(current => current.filter(player => player !== cleanName));
-    setTeam2Roster(current => current.filter(player => player !== cleanName));
-
-    if (targetTeam === 'team1') {
-      setTeam1Roster(current => getCleanPlayerNames([...current, cleanName]));
-    } else if (targetTeam === 'team2') {
-      setTeam2Roster(current => getCleanPlayerNames([...current, cleanName]));
-    } else {
-      setPlayerPool(current => getCleanPlayerNames([cleanName, ...current]));
-    }
-    clearOpeningSelections();
-  };
-
-  const handleAddNewPlayer = () => {
-    const name = newPlayerNameInput.trim();
-    if (!name) return;
-    const playerExists = [...playerPool, ...team1Roster, ...team2Roster]
-      .some(player => player.toLowerCase() === name.toLowerCase());
-    if (!playerExists) {
-      setPlayerPool(current => getCleanPlayerNames([name, ...current]));
-    }
-    setNewPlayerNameInput('');
-    clearOpeningSelections();
-  };
-
   // Step 3: Start Inning 1
   const [step3Striker, setStep3Striker] = useState('');
   const [step3NonStriker, setStep3NonStriker] = useState('');
   const [step3Bowler, setStep3Bowler] = useState('');
 
-  const clearOpeningSelections = () => {
-    setStep3Striker('');
-    setStep3NonStriker('');
-    setStep3Bowler('');
-  };
-
-  const handleRemoveSetupPlayer = (slot, playerName) => {
-    if (slot === 'team1') {
-      setTeam1Roster(current => current.filter(name => name !== playerName));
-    } else {
-      setTeam2Roster(current => current.filter(name => name !== playerName));
-    }
-    setPlayerPool(current => getCleanPlayerNames([playerName, ...current]));
-    clearOpeningSelections();
-  };
-
-  const validateSetupStepOne = () => {
-    const cleanTeam1 = team1Name.trim() || 'Team A';
-    const cleanTeam2 = team2Name.trim() || 'Team B';
-    const overs = normalizeOversInput(totalOvers);
-
-    if (cleanTeam1.toLowerCase() === cleanTeam2.toLowerCase()) {
-      Alert.alert('Match Setup', 'Team names must be different.');
-      return false;
-    }
-    if (!overs) {
-      Alert.alert('Match Setup', `Overs must be a whole number from 1 to ${MAX_MATCH_OVERS}.`);
-      return false;
-    }
-    if (team1Roster.length < 2) {
-      const defaultSquad1 = ['Batter 1', 'Batter 2', 'Batter 3', 'Batter 4', 'AllRounder 1', 'AllRounder 2', 'Keeper', 'Bowler 1', 'Bowler 2', 'Bowler 3', 'Bowler 4'];
-      setTeam1Roster(defaultSquad1);
-    }
-    if (team2Roster.length < 2) {
-      const defaultSquad2 = ['Batter 1', 'Batter 2', 'Batter 3', 'Batter 4', 'AllRounder 1', 'AllRounder 2', 'Keeper', 'Bowler 1', 'Bowler 2', 'Bowler 3', 'Bowler 4'];
-      setTeam2Roster(defaultSquad2);
-    }
-    if (hasDuplicateNames(team1Roster) || hasDuplicateNames(team2Roster)) {
-      Alert.alert('Match Setup', 'Duplicate players found inside a squad.');
-      return false;
-    }
-    const pinVal = (scorerPin || '').trim();
-    if (pinVal.length !== 6) {
-      Alert.alert('Compulsory 6-Digit Scorer PIN', 'Please set a mandatory 6-digit Scorer PIN (e.g. 123456) for this match. Multi-scorers will use this PIN to access live scoring.');
-      return false;
-    }
-    const overlap = team1Roster
-      .map(name => name.trim().toLowerCase())
-      .filter(name => team2Roster.map(player => player.trim().toLowerCase()).includes(name));
-    if (overlap.length > 0) {
-      Alert.alert('Match Setup', 'A player cannot be in both teams.');
-      return false;
-    }
-
-    setTeam1Name(cleanTeam1);
-    setTeam2Name(cleanTeam2);
-    setTotalOvers(String(overs));
-    setTossWinner(current => [cleanTeam1, cleanTeam2].includes(current) ? current : cleanTeam1);
-    return true;
-  };
-
-  const handleSetupStepOneNext = () => {
-    if (!validateSetupStepOne()) return;
-    setWizardStep(2);
-  };
 
   const handleStartQuickMatch = (config) => {
     const {
@@ -1496,85 +1225,6 @@ export default function App() {
     }
   };
 
-  const handleStartMatch = () => {
-    if (!validateSetupStepOne()) return;
-    const overs = normalizeOversInput(totalOvers);
-    if (!step3Striker || !step3NonStriker || !step3Bowler) {
-      Alert.alert('Opening Players', 'Select striker, non-striker, and opening bowler.');
-      return;
-    }
-    if (step3Striker === step3NonStriker) {
-      Alert.alert('Opening Players', 'Striker and non-striker must be different players.');
-      return;
-    }
-
-    const cleanTeam1 = team1Name.trim();
-    const cleanTeam2 = team2Name.trim();
-    let bat1 = cleanTeam1, bowl1 = cleanTeam2;
-    if ((tossWinner === cleanTeam1 && tossDecision === 'BOWL') || (tossWinner === cleanTeam2 && tossDecision === 'BAT')) {
-      bat1 = cleanTeam2; bowl1 = cleanTeam1;
-    }
-    const battingRoster = bat1 === cleanTeam1 ? team1Roster : team2Roster;
-    const bowlingRoster = bowl1 === cleanTeam1 ? team1Roster : team2Roster;
-    if (!battingRoster.includes(step3Striker) || !battingRoster.includes(step3NonStriker)) {
-      Alert.alert('Opening Players', 'Opening batters must belong to the batting team.');
-      return;
-    }
-    if (!bowlingRoster.includes(step3Bowler)) {
-      Alert.alert('Opening Players', 'Opening bowler must belong to the bowling team.');
-      return;
-    }
-    const selectedTeam1Meta = fixedSetupTeams[0];
-    const selectedTeam2Meta = fixedSetupTeams[1];
-    const inn1 = makeInning(bat1, bowl1);
-    inn1.striker = { name: step3Striker, runs: 0, balls: 0, fours: 0, sixes: 0, dismissal: 'Not out', isOut: false };
-    inn1.nonStriker = { name: step3NonStriker || '', runs: 0, balls: 0, fours: 0, sixes: 0, dismissal: 'Not out', isOut: false };
-    inn1.row1Name = step3Striker;
-    inn1.bowler = { name: step3Bowler, runs: 0, wickets: 0, overs: '0.0' };
-    inn1.bowlingStats = { [step3Bowler]: makeBowlingFigure({ name: step3Bowler }) };
-    inn1.allBatters = [inn1.striker, inn1.nonStriker].filter(player => player.name).map(player => ({ ...player, dismissal: 'Not out', isOut: false }));
-
-    const generate6DigitPin = () => Math.floor(100000 + Math.random() * 900000).toString();
-    const defaultPin = generate6DigitPin();
-    const activePin = (scorerPin || '').trim().length === 6 ? (scorerPin || '').trim() : defaultPin;
-
-    const matchUUID = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-
-    const newMatchObj = {
-      id: matchUUID,
-      supabaseId: matchUUID,
-      matchTitle: `${cleanTeam1} vs ${cleanTeam2}`,
-      scorerPin: activePin,
-      umpireName: umpireName.trim() || DEFAULT_UMPIRE_NAME,
-      venue: venueName.trim(),
-      startedAt: new Date().toISOString(),
-      tossResult: `${tossWinner || cleanTeam1} won the toss and elected to ${tossDecision}`,
-      tossWinner: tossWinner || cleanTeam1,
-      tossDecision,
-      maxOvers: overs,
-      teams: [
-        { id: selectedTeam1Meta.id, name: cleanTeam1, code: selectedTeam1Meta.code || makeTeamCode(cleanTeam1), logoKey: selectedTeam1Meta.logoKey },
-        { id: selectedTeam2Meta.id, name: cleanTeam2, code: selectedTeam2Meta.code || makeTeamCode(cleanTeam2), logoKey: selectedTeam2Meta.logoKey }
-      ],
-      playingXI: {
-        [cleanTeam1]: [...team1Roster],
-        [cleanTeam2]: [...team2Roster]
-      },
-      inn1BattingTeam: bat1,
-      inn1BowlingTeam: bowl1,
-      inning: 1,
-      innings: [inn1],
-      phase: 'playing',
-      target: null,
-      resultText: '',
-    };
-
-    setActiveMatch(newMatchObj);
-    syncMatchToSupabase(newMatchObj).catch(() => { });
-  };
 
   // Inning end check
   const checkInningEnd = (inn, maxOv, maxWk) => {
@@ -2165,23 +1815,6 @@ export default function App() {
     try { Speech.speak('Last ball undone', { language: 'en-IN' }); } catch (e) { }
   };
 
-  const handleUndoAndResume = () => {
-    if (matchHistoryStack && matchHistoryStack.length > 0) {
-      const previousState = matchHistoryStack[matchHistoryStack.length - 1];
-      setMatchHistoryStack(prev => prev.slice(0, -1));
-      setActiveMatch({
-        ...previousState,
-        phase: 'playing'
-      });
-    } else if (activeMatch) {
-      setActiveMatch(prev => ({
-        ...prev,
-        phase: 'playing'
-      }));
-    }
-    setCurrentScreen('scorerWizard');
-    try { Speech.speak('Match resumed. Scoring active.', { language: 'en-IN' }); } catch (e) { }
-  };
 
   // â© Full Working REDO Ball
   const handleRedo = () => {
@@ -4391,80 +4024,7 @@ export default function App() {
     );
   };
 
-  const renderResult = () => {
-    const finishedMatch = selectedMatch?.id === `finished-${activeMatch.startedAt || activeMatch.matchTitle}`
-      ? selectedMatch
-      : buildFinishedMatch(activeMatch, {
-        [team1Name]: team1Roster,
-        [team2Name]: team2Roster
-      });
-    const openFinishedScorecard = () => {
-      setSelectedMatch(finishedMatch);
-      setFinishedTab('summary');
-      setFinishedInningIndex(0);
-      setCurrentScreen('finishedView');
-    };
-    const returnHome = () => {
-      setSelectedMatch(finishedMatch);
-      setActiveMatch(null);
-      setCurrentScreen('home');
-      setBottomNavTab('home');
-      setWizardStep(1);
-    };
-    return (
-      <ScrollView style={{ flex: 1, backgroundColor: '#F8FAFC' }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-        <MatchResultHero
-          teamOne={finishedMatch.team1}
-          teamTwo={finishedMatch.team2}
-          winnerTeamName={finishedMatch.winnerTeamName}
-          resultText={finishedMatch.winner}
-        />
 
-        <View style={{ marginTop: 12, flexDirection: 'row', backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
-          {[
-            ['TARGET', activeMatch.target || '-'],
-            ['OVERS', activeMatch.maxOvers],
-            ['INNINGS', activeMatch.innings.length]
-          ].map(([label, value], index) => (
-            <View key={label} style={{ flex: 1, alignItems: 'center', paddingVertical: 13, borderLeftWidth: index > 0 ? 1 : 0, borderLeftColor: '#E2E8F0' }}>
-              <Text selectable style={{ color: '#0F172A', fontSize: 14, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{value}</Text>
-              <Text style={{ color: '#94A3B8', fontSize: 9, fontWeight: fontWeights.bold, marginTop: 3, fontFamily: systemFont }}>{label}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={{ paddingHorizontal: 14, paddingTop: 16, gap: 10 }}>
-          <AppButton
-            title="PLAY REMATCH (SAME TEAMS)"
-            icon="cached"
-            variant="primary"
-            onPress={() => handleRematch(finishedMatch)}
-          />
-          <AppButton
-            title="UNDO LAST WICKET & RESUME"
-            icon="arrow-undo-outline"
-            iconType="ionicons"
-            variant="warning"
-            onPress={handleUndoAndResume}
-          />
-          <AppButton
-            title="VIEW FINAL SCORECARD"
-            icon="stats-chart-outline"
-            iconType="ionicons"
-            variant="outline"
-            onPress={openFinishedScorecard}
-          />
-          <AppButton
-            title="BACK TO HOME"
-            icon="home-outline"
-            iconType="ionicons"
-            variant="secondary"
-            onPress={returnHome}
-          />
-        </View>
-      </ScrollView>
-    );
-  };
 
   const playingXiFinishedMatch = currentScreen === 'finishedView' ? (selectedMatch || finishedMatches[0]) : null;
   const activePlayingXiTeams = activeMatch?.teams?.length >= 2 && activeMatch?.playingXI
@@ -4632,84 +4192,8 @@ export default function App() {
     return <PlayerAvatar name={playerName} photoUrl={photoUri} size={size} />;
   };
 
-  const renderSetupTeamSlot = (slot) => {
-    const isTeamOne = slot === 'team1';
-    const name = isTeamOne ? team1Name : team2Name;
-    const roster = isTeamOne ? team1Roster : team2Roster;
-    const accent = isTeamOne ? '#0284C7' : '#E11D48';
-    const softBg = isTeamOne ? '#F0F9FF' : '#FFF1F2';
-    const logoKey = isTeamOne ? 'default-team-1' : 'default-team-2';
 
-    return (
-      <View style={{ flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1', overflow: 'hidden' }}>
-        <View style={{ minHeight: 62, padding: 10, backgroundColor: softBg, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-          <TeamIdentityMark team={{ name, code: makeTeamCode(name), logoKey }} size={36} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: accent, fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{isTeamOne ? 'TEAM A' : 'TEAM B'}</Text>
-            <Text {...nameFitProps} style={{ color: '#0F172A', fontSize: 14, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }}>{name}</Text>
-            <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }}>{roster.length} players selected</Text>
-          </View>
-        </View>
 
-        <View style={{ paddingHorizontal: 8 }}>
-          {roster.map(playerName => (
-            <View key={`${slot}-${playerName}`} style={{ minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, borderBottomWidth: 1, borderBottomColor: '#EEF2F6' }}>
-              {renderSetupPlayerPhoto(playerName, 22)}
-              <Text {...nameFitProps} style={{ flex: 1, minWidth: 0, color: '#0F172A', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{playerName}</Text>
-              <TouchableOpacity onPress={() => handleRemoveSetupPlayer(slot, playerName)} style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="close-circle" size={16} color="#EF4444" />
-              </TouchableOpacity>
-            </View>
-          ))}
-          {roster.length === 0 ? (
-            <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: fontWeights.bold, textAlign: 'center', paddingVertical: 14, fontFamily: systemFont }}>No players selected</Text>
-          ) : null}
-        </View>
-      </View>
-    );
-  };
-
-  const renderPlayerSelectorRow = (playerName) => {
-    const inTeamA = team1Roster.includes(playerName);
-    const inTeamB = team2Roster.includes(playerName);
-    const isAssigned = inTeamA || inTeamB;
-
-    return (
-      <View key={`selector-${playerName}`} style={{ minHeight: 92, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          {renderSetupPlayerPhoto(playerName, 38)}
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text selectable {...nameFitProps} style={{ color: '#0F172A', fontSize: 15, lineHeight: 20, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{playerName}</Text>
-            <Text {...nameFitProps} style={{ color: inTeamA ? '#0284C7' : inTeamB ? '#E11D48' : '#64748B', fontSize: 10, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }}>
-              {inTeamA ? team1Name : inTeamB ? team2Name : 'Available'}
-            </Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 9, paddingLeft: 48 }}>
-          <TouchableOpacity
-            onPress={() => handleMoveToTeam(playerName, 'team1')}
-            style={{ flex: 1, minHeight: 34, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: inTeamA ? '#0284C7' : '#F0F9FF', borderWidth: 1, borderColor: inTeamA ? '#0284C7' : '#BAE6FD' }}
-          >
-            <Text style={{ color: inTeamA ? '#FFFFFF' : '#0284C7', fontSize: 11, fontWeight: fontWeights.bold, fontFamily: systemFont }}>A</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleMoveToTeam(playerName, 'team2')}
-            style={{ flex: 1, minHeight: 34, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: inTeamB ? '#E11D48' : '#FFF1F2', borderWidth: 1, borderColor: inTeamB ? '#E11D48' : '#FECDD3' }}
-          >
-            <Text style={{ color: inTeamB ? '#FFFFFF' : '#E11D48', fontSize: 11, fontWeight: fontWeights.bold, fontFamily: systemFont }}>B</Text>
-          </TouchableOpacity>
-          {isAssigned ? (
-            <TouchableOpacity
-              onPress={() => handleMoveToTeam(playerName, 'pool')}
-              style={{ width: 42, height: 34, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }}
-            >
-              <Ionicons name="close" size={16} color="#64748B" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
-    );
-  };
 
   const isDarkMatchScreen = currentScreen === 'scorerWizard' || currentScreen === 'finishedView' || currentScreen === 'liveView';
   const shellBackgroundColor = isDarkMatchScreen ? '#071B2C' : '#FFFFFF';
@@ -4879,23 +4363,7 @@ export default function App() {
               </View>
               <TournamentScreen finishedMatches={finishedMatches} activeMatch={activeMatch} />
             </View>
-          ) : currentScreen === 'about' ? (
-            <AboutAppScreen onBack={() => setCurrentScreen('home')} />
-          ) : currentScreen === 'auth' ? (
-            <AuthScreen onBack={() => setCurrentScreen('home')} />
-          ) : currentScreen === 'matchSelection' ? (
-            <MatchSelectionScreen
-              onSelectIndividual={() => {
-                handleStartNewMatchSetup();
-                setIsScorerUnlocked(true);
-                setWizardStep(1);
-                setCurrentScreen('scorerWizard');
-              }}
-              onSelectTournament={() => {
-                setCurrentScreen('tournament');
-              }}
-              onCancel={() => setCurrentScreen('home')}
-            />
+
           ) : (
             /* ——— HOME DASHBOARD (POWERED BY HOMESCREEN COMPONENT) ——— */
             <HomeScreen
@@ -4911,10 +4379,8 @@ export default function App() {
               refreshing={refreshing}
               handlePullToRefresh={handlePullToRefresh}
               setupPlayerNames={setupPlayerNames}
-              searchNeedle={searchNeedle}
               setSelectedPlayerName={setSelectedPlayerName}
               setCurrentScreen={setCurrentScreen}
-              renderSetupPlayerPhoto={renderSetupPlayerPhoto}
               activeMatchVisible={activeMatchVisible}
               renderActiveMatchListCard={renderActiveMatchListCard}
               recentFinishedMatches={recentFinishedMatches}
@@ -4930,83 +4396,12 @@ export default function App() {
               MASTER_PLAYERS_DB={MASTER_PLAYERS_DB}
               getSetupPlayerProfile={getSetupPlayerProfile}
               setSelectedPlayerProfile={setSelectedPlayerProfile}
-              onOpenPlayerProfile={handleOpenPlayerProfile}
-              styles={styles}
-              isScorerUnlocked={isScorerUnlocked}
               onJoinMatchByCode={handleJoinMatchByCode}
             />
           )}
 
         </SafeAreaView>
 
-        <Modal
-          visible={playerSelectorVisible}
-          animationType="slide"
-          presentationStyle="fullScreen"
-          onRequestClose={() => setPlayerSelectorVisible(false)}
-        >
-          <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-            <View style={{ minHeight: 58, paddingHorizontal: 14, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <TouchableOpacity onPress={() => setPlayerSelectorVisible(false)} style={{ minWidth: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="arrow-back" size={22} color="#0F172A" />
-              </TouchableOpacity>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: '#0F172A', fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, fontFamily: systemFont }} numberOfLines={1}>Select Players</Text>
-                <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
-                  {team1Roster.length} in A | {team2Roster.length} in B | {playerPool.length} available
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setPlayerSelectorVisible(false)}
-                style={{ minHeight: 36, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: fontWeights.bold, fontFamily: systemFont }}>DONE</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-              <View style={{ flexDirection: 'row', paddingHorizontal: 14, paddingTop: 12, gap: 8 }}>
-                {[
-                  { id: 'team1', label: team1Name || 'Team A', value: team1Roster.length, color: '#0284C7', bg: '#F0F9FF' },
-                  { id: 'team2', label: team2Name || 'Team B', value: team2Roster.length, color: '#E11D48', bg: '#FFF1F2' },
-                  { id: 'pool', label: 'Available', value: playerPool.length, color: '#475569', bg: '#F8FAFC' }
-                ].map(item => (
-                  <View key={item.id} style={{ flex: 1, minHeight: 48, borderRadius: 6, backgroundColor: item.bg, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 }}>
-                    <Text style={{ color: item.color, fontSize: 18, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{item.value}</Text>
-                    <Text style={{ color: '#64748B', fontSize: 9, fontWeight: fontWeights.bold, marginTop: 1, fontFamily: systemFont }} numberOfLines={1}>{item.label}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={{ padding: 14 }}>
-                <Text style={styles.inputLabel}>Add Player</Text>
-                <View style={styles.addPlayerRow}>
-                  <TextInput
-                    style={styles.addPlayerInput}
-                    placeholder="Type player name..."
-                    placeholderTextColor="#94A3B8"
-                    value={newPlayerNameInput}
-                    onChangeText={setNewPlayerNameInput}
-                    maxLength={36}
-                  />
-                  <TouchableOpacity style={[styles.addPlayerBtn, { backgroundColor: '#0F172A', width: 70, flexDirection: 'row', gap: 4 }]} onPress={handleAddNewPlayer}>
-                    <Ionicons name="add-circle-outline" size={14} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: fontWeights.bold, fontFamily: systemFont }}>ADD</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: 24 }}
-              showsVerticalScrollIndicator={true}
-              keyboardShouldPersistTaps="handled"
-            >
-              {setupPlayerNames.map(renderPlayerSelectorRow)}
-            </ScrollView>
-          </SafeAreaView>
-        </Modal>
 
         <ExtrasModal
           visible={extrasSheetVisible}
@@ -5320,92 +4715,9 @@ export default function App() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.hero.bg, fontFamily: systemFont },
   safe: { flex: 1, backgroundColor: theme.hero.bg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: theme.hero.bg, borderBottomWidth: 1, borderBottomColor: theme.hero.border },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  logoImg: { width: 30, height: 30, borderRadius: 8 },
-  logoText: { fontSize: 18, color: '#FFFFFF', fontFamily: systemFontBold },
-  logoAccent: { color: '#38BDF8' },
-  startBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primary, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 },
-  startBtnText: { fontSize: 11, color: '#FFFFFF', fontFamily: systemFontBold },
-  searchContainer: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 8, backgroundColor: theme.hero.bg, borderBottomWidth: 1, borderBottomColor: theme.hero.border },
-  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', height: 44 },
-  searchInput: { flex: 1, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#0F172A', fontFamily: systemFontMedium },
-  tabsRow: { flexDirection: 'row', backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.border, justifyContent: 'space-around' },
-  tabBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 10, paddingHorizontal: 8 },
-  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: theme.colors.primary },
-  tabText: { fontSize: 11, color: theme.colors.textMuted, fontFamily: systemFontMedium },
-  tabTextActive: { color: theme.colors.primary, fontFamily: systemFontBold },
-  tabContent: { padding: 12, gap: 10 },
-  sectionLabel: { fontSize: 10, color: theme.colors.textMuted, letterSpacing: 0.8, marginBottom: 6, fontFamily: systemFontBold },
-  matchCard: { backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: theme.colors.border },
-  matchCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  matchCardTitle: { fontSize: 11, color: theme.colors.textMuted, flex: 1, fontFamily: systemFontMedium },
-  liveDot: { backgroundColor: theme.colors.warningLight, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 },
-  liveDotText: { fontSize: 10, color: theme.colors.warning, fontFamily: systemFontBold },
-  matchScore: { fontSize: typeScale.score, color: theme.colors.textPrimary, fontFamily: systemFontBold },
-  matchOvers: { fontSize: 14, color: theme.colors.textMuted, fontFamily: systemFontMedium },
-  idleCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 22, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border, gap: 8 },
-  idleIconBg: { width: 54, height: 54, borderRadius: 27, backgroundColor: theme.colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
-  idleTitle: { fontSize: 15, color: theme.colors.textPrimary, fontFamily: systemFontBold },
-  idleSub: { fontSize: 11, color: theme.colors.textMuted, textAlign: 'center', fontFamily: systemFontMedium },
-  idleBtn: { backgroundColor: theme.colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginTop: 4 },
-  idleBtnText: { color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold },
-  subFilterRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  subFilterBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: theme.colors.surface, borderRadius: 10, borderWidth: 1, borderColor: theme.colors.borderDark },
-  subFilterActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  subFilterText: { fontSize: 13.5, color: theme.colors.textSecondary, fontFamily: systemFontBold },
-  rankItem: { backgroundColor: theme.colors.surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  rankBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: theme.colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
-  rankBadgeText: { color: theme.colors.primaryDark, fontWeight: fontWeights.bold, fontSize: 11, fontFamily: systemFont },
-  rankName: { fontSize: 13, fontWeight: fontWeights.bold, color: theme.colors.textPrimary, fontFamily: systemFont },
-  rankSub: { fontSize: 10, color: theme.colors.textMuted, fontWeight: fontWeights.semibold, marginTop: 1, fontFamily: systemFont },
-  rankVal: { fontSize: 13, fontWeight: fontWeights.bold, color: theme.colors.primary, fontFamily: systemFont },
   fullPage: { flex: 1, backgroundColor: theme.colors.surface },
   pageHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12, backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   backBtnText: { fontSize: 13, fontWeight: fontWeights.bold, color: theme.colors.textPrimary, fontFamily: systemFont },
-  pageTitle: { fontSize: 13, fontWeight: fontWeights.bold, color: theme.colors.primary, fontFamily: systemFont },
-  formCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: theme.colors.border, gap: 10 },
-  formCardTitle: { fontSize: 15, fontWeight: fontWeights.bold, color: theme.colors.textPrimary, fontFamily: systemFont },
-  inputLabel: { fontSize: 11, fontWeight: fontWeights.bold, color: theme.colors.textSecondary, fontFamily: systemFont },
-  textInput: { backgroundColor: theme.colors.appBackground, borderWidth: 1, borderColor: theme.colors.borderDark, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, fontSize: 13, fontWeight: fontWeights.semibold, color: theme.colors.textPrimary, fontFamily: systemFont },
-  squadBox: { backgroundColor: theme.colors.appBackground, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: theme.colors.border, gap: 8 },
-  squadBoxTitle: { fontSize: 10, fontWeight: fontWeights.bold, color: theme.colors.primary, fontFamily: systemFont },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { backgroundColor: theme.colors.primaryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  chipText: { fontSize: 11, fontWeight: fontWeights.bold, color: theme.colors.primaryDark, fontFamily: systemFont },
-  addPlayerRow: { flexDirection: 'row', gap: 8 },
-  addPlayerInput: { flex: 1, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.borderDark, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, fontSize: 11, fontWeight: fontWeights.semibold, color: theme.colors.textPrimary, fontFamily: systemFont },
-  addPlayerBtn: { backgroundColor: theme.colors.primary, width: 34, height: 34, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  nextBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: theme.colors.primary, paddingVertical: 12, borderRadius: 12 },
-  nextBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: fontWeights.bold, fontFamily: systemFont },
-  tossBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 11, backgroundColor: theme.colors.appBackground, borderRadius: 10, borderWidth: 1, borderColor: theme.colors.borderDark },
-  tossBtnActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  tossBtnText: { fontSize: 12, fontWeight: fontWeights.bold, color: theme.colors.textSecondary, fontFamily: systemFont },
-  tossSummary: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F0F9FF', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#BAE6FD' },
-  tossSummaryText: { fontSize: 12, fontWeight: fontWeights.bold, color: theme.colors.primaryDark, flex: 1, fontFamily: systemFont },
-  playerGridRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  playerSelectCard: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.appBackground, borderRadius: 10, padding: 9, borderWidth: 1.5, borderColor: theme.colors.border },
-  playerSelectCardActive: { backgroundColor: '#F0F9FF', borderColor: theme.colors.primary },
-  playerSelectText: { fontSize: 11, fontWeight: fontWeights.bold, color: theme.colors.textPrimary, fontFamily: systemFont },
-  scoreCard: { backgroundColor: theme.scorer.card, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: theme.scorer.border },
-  scoreCardTitle: { fontSize: 11, fontWeight: fontWeights.semibold, color: theme.scorer.textMuted, fontFamily: systemFont },
-  bigRuns: { fontSize: typeScale.scorerScore, fontWeight: fontWeights.bold, color: theme.scorer.text, fontFamily: systemFont },
-  bigOvers: { fontSize: 16, fontWeight: fontWeights.semibold, color: theme.scorer.textMuted, fontFamily: systemFont },
-  ballCircle: { width: 30, height: 30, borderRadius: 15, backgroundColor: theme.scorer.border, justifyContent: 'center', alignItems: 'center' },
-  ballCircleText: { fontSize: 10, fontWeight: fontWeights.bold, color: theme.scorer.text, fontFamily: systemFont },
-  editSquadBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.scorer.bg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: theme.scorer.border },
-  editSquadBtnText: { color: theme.scorer.accentSky, fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont },
-  playerCard: { backgroundColor: theme.scorer.card, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: theme.scorer.border, gap: 8 },
-  playerRowActive: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: theme.scorer.bg, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.colors.primary },
-  playerActiveName: { fontSize: 13, fontWeight: fontWeights.bold, color: theme.scorer.text, fontFamily: systemFont },
-  playerStatsSub: { fontSize: 10, color: theme.scorer.textMuted, fontWeight: fontWeights.medium, marginTop: 1, fontFamily: systemFont },
-  playerScore: { fontSize: 18, fontWeight: fontWeights.bold, color: theme.scorer.text, fontFamily: systemFont },
-  playerBalls: { fontSize: 12, color: theme.scorer.textMuted, fontFamily: systemFont },
-  keypadLabel: { color: theme.scorer.accentSky, fontSize: 10, fontWeight: fontWeights.bold, letterSpacing: 0.8, fontFamily: systemFont },
-  undoBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.scorer.undoBg, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: theme.scorer.undoBorder },
-  undoBtnText: { color: theme.scorer.undoText, fontWeight: fontWeights.bold, fontSize: 10, fontFamily: systemFont },
-  keypadRow: { flexDirection: 'row', gap: 10 },
-  keyBtn: { flex: 1, backgroundColor: theme.scorer.card, paddingVertical: 20, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: theme.scorer.border },
-  keyBtnText: { color: theme.scorer.text, fontSize: typeScale.keyAction, fontWeight: fontWeights.bold, fontFamily: systemFont },
+  pageTitle: { fontSize: 13, fontWeight: fontWeights.bold, color: theme.colors.primary, fontFamily: systemFont }
 });

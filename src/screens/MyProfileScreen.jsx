@@ -43,7 +43,7 @@ import { registerPlayerPhoto } from '../services/playerPhotoStore.js';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { DobPickerModal } from '../components/modals/DobPickerModal.jsx';
 import { LocationPickerModal } from '../components/modals/LocationPickerModal.jsx';
-import { CricToast } from '../components/CricToast.jsx';
+import { showToast } from '../services/toastService.js';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
 
 export function MyProfileScreen({
@@ -77,11 +77,7 @@ export function MyProfileScreen({
   const [loading, setLoading] = useState(!targetPlayer);
   const [matchesList, setMatchesList] = useState(Array.isArray(finishedMatches) ? finishedMatches : []);
 
-  // Floating Toast State
-  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
-  const showToast = (message, type = 'success') => {
-    setToast({ visible: true, message, type });
-  };
+
 
   const loadMatchesForCareer = async () => {
     try {
@@ -750,12 +746,7 @@ export function MyProfileScreen({
           </View>
         </ScrollView>
 
-        <CricToast
-          visible={toast.visible}
-          message={toast.message}
-          type={toast.type}
-          onDismiss={() => setToast(prev => ({ ...prev, visible: false }))}
-        />
+
       </View>
     );
   }
@@ -1649,13 +1640,7 @@ export function MyProfileScreen({
         </TouchableOpacity>
       </Modal>
 
-      {/* Modern CricFlow Floating Toast */}
-      <CricToast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast(prev => ({ ...prev, visible: false }))}
-      />
+
     </View>
   );
 }

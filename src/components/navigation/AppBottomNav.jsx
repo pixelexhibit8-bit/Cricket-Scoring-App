@@ -12,10 +12,24 @@ export function AppBottomNav({ activeTab, onTabChange }) {
 
   const tabs = [
     {
-      id: 'matches',
+      id: 'home',
       label: 'Home',
       activeIcon: 'home',
       inactiveIcon: 'home-outline',
+      isMCI: false
+    },
+    {
+      id: 'matches',
+      label: 'Matches',
+      activeIcon: 'cricket',
+      inactiveIcon: 'cricket',
+      isMCI: true
+    },
+    {
+      id: 'rankings',
+      label: 'Rankings',
+      activeIcon: 'trophy',
+      inactiveIcon: 'trophy-outline',
       isMCI: false
     },
     {
@@ -24,13 +38,6 @@ export function AppBottomNav({ activeTab, onTabChange }) {
       activeIcon: 'person',
       inactiveIcon: 'person-outline',
       isMCI: false
-    },
-    {
-      id: 'about',
-      label: 'About',
-      activeIcon: 'information-circle',
-      inactiveIcon: 'information-circle-outline',
-      isMCI: false
     }
   ];
 
@@ -38,9 +45,7 @@ export function AppBottomNav({ activeTab, onTabChange }) {
     <View style={[styles.container, { paddingBottom: bottomPadding }]}>
       <View style={styles.navRow}>
         {tabs.map((tab) => {
-          const isActive = activeTab === tab.id 
-            || (tab.id === 'matches' && (activeTab === 'home' || !activeTab))
-            || (tab.id === 'home' && (activeTab === 'matches' || !activeTab));
+          const isActive = activeTab === tab.id || (tab.id === 'home' && !activeTab);
           return (
             <ScalePressable
               key={tab.id}
