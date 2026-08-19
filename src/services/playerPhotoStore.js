@@ -1,7 +1,3 @@
-import { isSupabaseConfigured, supabase } from './supabaseClient.js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const PHOTO_CACHE_KEY = '@cricflow_player_photos_v1';
 const photoRegistry = new Map();
 
 /**

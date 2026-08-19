@@ -4,9 +4,9 @@ import {
   Text,
   Modal,
   ScrollView,
-  TouchableOpacity,
-  SafeAreaView
+  TouchableOpacity
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, fontWeights } from '../../theme.js';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';

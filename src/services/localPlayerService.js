@@ -1,21 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured, generateUUID } from './supabaseClient.js';
-import { MASTER_PLAYERS_DB } from '../../mockData.js';
-import { registerPlayerPhoto, syncPlayersToPhotoRegistry } from './playerPhotoStore.js';
+import { registerPlayerPhoto, syncPlayersToPhotoRegistry, resolveDirectImageUrl } from './playerPhotoStore.js';
 
 const LOCAL_PLAYERS_STORAGE_KEY = '@cricflow_local_players_db_v1';
-
-// Preset avatar collection for local ground players
-export const PRESET_PLAYER_AVATARS = [
-  { id: 'avatar_bat_1', label: 'Batsman', url: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=150&auto=format&fit=crop&q=80' },
-  { id: 'avatar_bowl_1', label: 'Pacer', url: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=150&auto=format&fit=crop&q=80' },
-  { id: 'avatar_all_1', label: 'Captain', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
-  { id: 'avatar_wk_1', label: 'Keeper', url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80' },
-  { id: 'avatar_spin_1', label: 'Spinner', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' }
-];
-
-// Initial pre-seeded local players (Clean slate for real ground players)
-const DEFAULT_LOCAL_PLAYERS = [];
 
 /**
  * Fetch all local players (Combines Supabase local_players table + AsyncStorage fallback with smart deduplication)
@@ -89,31 +76,6 @@ export const fetchLocalPlayers = async () => {
   return cleanCached;
 };
 
-export const resolveDirectImageUrl = async (url) => {
-  if (!url || typeof url !== 'string') return '';
-  const clean = url.trim();
-  if (!clean) return '';
-
-  // Direct image URLs (ending with .jpg, .png, etc.) or i.ibb.co CDN links
-  if (/\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i.test(clean) || clean.includes('i.ibb.co/')) {
-    return clean;
-  }
-
-  // Auto-resolve ImgBB webpage links (e.g. https://ibb.co/Sw9nSftR) to direct raw image URL
-  if (clean.includes('ibb.co/')) {
-    try {
-      const oembedUrl = `${clean.replace(/\/$/, '')}/oembed.json`;
-      const res = await fetch(oembedUrl);
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.url) return json.url;
-      }
-    } catch (e) {}
-  }
-
-  return clean;
-};
-
 /**
  * Add a new local player (Saves to both Supabase local_players table and AsyncStorage)
  */
@@ -159,5 +121,93 @@ export const saveLocalPlayer = async (newPlayer) => {
     console.warn('[LocalPlayerService] AsyncStorage save error:', err);
     registerPlayerPhoto(playerObj.name, playerObj.photoUrl);
     return playerObj;
+  }
+};
+
+/**
+ * Aggregate match scorecard stats into local_players career stats
+ */
+export const aggregateMatchToPlayerStats = async (finishedMatch) => {
+  if (!finishedMatch) return;
+  try {
+    const existingPlayers = await fetchLocalPlayers();
+    const playerMap = new Map();
+    existingPlayers.forEach(p => {
+      if (p?.name) playerMap.set(p.name.trim().toLowerCase(), p);
+    });
+
+    const batters = [
+      ...(finishedMatch.team1?.batting || []),
+      ...(finishedMatch.team2?.batting || [])
+    ];
+
+    const bowlers = [
+      ...(finishedMatch.team1?.bowling || []),
+      ...(finishedMatch.team2?.bowling || [])
+    ];
+
+    const matchParticipants = new Set();
+
+    batters.forEach(b => {
+      if (!b?.name) return;
+      const key = b.name.trim().toLowerCase();
+      matchParticipants.add(key);
+      let p = playerMap.get(key) || { id: generateUUID(), name: b.name.trim(), role: 'Batter' };
+      const currentStats = p.stats || { matches: 0, runs: 0, balls: 0, fours: 0, sixes: 0, highestScore: 0, fifties: 0, hundreds: 0, wickets: 0, overs: 0, runsConceded: 0, maidens: 0 };
+      
+      const runs = Number(b.runs) || 0;
+      const balls = Number(b.balls) || 0;
+      const f4 = Number(b.fours) || 0;
+      const f6 = Number(b.sixes) || 0;
+
+      p.stats = {
+        ...currentStats,
+        runs: (currentStats.runs || 0) + runs,
+        balls: (currentStats.balls || 0) + balls,
+        fours: (currentStats.fours || 0) + f4,
+        sixes: (currentStats.sixes || 0) + f6,
+        highestScore: Math.max(currentStats.highestScore || 0, runs),
+        fifties: (currentStats.fifties || 0) + (runs >= 50 && runs < 100 ? 1 : 0),
+        hundreds: (currentStats.hundreds || 0) + (runs >= 100 ? 1 : 0),
+      };
+      playerMap.set(key, p);
+    });
+
+    bowlers.forEach(bowl => {
+      if (!bowl?.name) return;
+      const key = bowl.name.trim().toLowerCase();
+      matchParticipants.add(key);
+      let p = playerMap.get(key) || { id: generateUUID(), name: bowl.name.trim(), role: 'Bowler' };
+      const currentStats = p.stats || { matches: 0, runs: 0, balls: 0, fours: 0, sixes: 0, highestScore: 0, fifties: 0, hundreds: 0, wickets: 0, overs: 0, runsConceded: 0, maidens: 0 };
+
+      const ov = parseFloat(bowl.overs) || 0;
+      const wk = Number(bowl.wickets) || 0;
+      const rc = Number(bowl.runs) || 0;
+      const md = Number(bowl.maidens) || 0;
+
+      p.stats = {
+        ...currentStats,
+        overs: Number(((currentStats.overs || 0) + ov).toFixed(1)),
+        wickets: (currentStats.wickets || 0) + wk,
+        runsConceded: (currentStats.runsConceded || 0) + rc,
+        maidens: (currentStats.maidens || 0) + md,
+      };
+      playerMap.set(key, p);
+    });
+
+    matchParticipants.forEach(key => {
+      const p = playerMap.get(key);
+      if (p) {
+        p.stats = {
+          ...p.stats,
+          matches: (p.stats?.matches || 0) + 1
+        };
+      }
+    });
+
+    const updatedList = Array.from(playerMap.values());
+    await AsyncStorage.setItem(LOCAL_PLAYERS_STORAGE_KEY, JSON.stringify(updatedList));
+  } catch (err) {
+    console.warn('[LocalPlayerService] Error aggregating player stats:', err);
   }
 };
