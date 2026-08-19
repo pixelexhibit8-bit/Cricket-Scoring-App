@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
   ActivityIndicator,
   Linking,
   AppState,
-  RefreshControl
+  RefreshControl,
+  Animated,
+  useWindowDimensions
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -77,28 +79,31 @@ export function MyProfileScreen({
   } : null);
   const [loading, setLoading] = useState(!targetPlayer);
   const [matchesList, setMatchesList] = useState(Array.isArray(finishedMatches) ? finishedMatches : []);
-
-
+  const [profileTab, setProfileTab] = useState('overview');
 
   const loadMatchesForCareer = async () => {
     try {
       let combined = Array.isArray(finishedMatches) ? [...finishedMatches] : [];
       if (supabase) {
-        const { data: dbMatches } = await supabase
-          .from('matches')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (Array.isArray(dbMatches) && dbMatches.length > 0) {
-          dbMatches.forEach(m => {
-            const matchId = m.id;
-            const matchTitle = m.match_title;
-            const idx = combined.findIndex(c => (c.id && c.id === matchId) || (c.title && c.title === matchTitle) || (c.matchTitle && c.matchTitle === matchTitle));
-            if (idx >= 0) {
-              combined[idx] = m;
-            } else {
-              combined.unshift(m);
-            }
-          });
+        try {
+          const { data: dbMatches } = await supabase
+            .from('finished_matches')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (Array.isArray(dbMatches) && dbMatches.length > 0) {
+            dbMatches.forEach(m => {
+              const matchId = m.id;
+              const matchTitle = m.match_title || m.title;
+              const idx = combined.findIndex(c => (c.id && c.id === matchId) || (c.title && c.title === matchTitle) || (c.matchTitle && c.matchTitle === matchTitle));
+              if (idx >= 0) {
+                combined[idx] = m;
+              } else {
+                combined.unshift(m);
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('finished_matches fetch fallback:', e);
         }
       }
       const raw = await AsyncStorage.getItem('cricflow.mobile.match-state.v2');
@@ -138,6 +143,70 @@ export function MyProfileScreen({
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   const [optionsMenuVisible, setOptionsMenuVisible] = useState(false);
+
+  // Layout & Animated Tabs Hooks (Must be top level before any early return)
+  const { width: screenWidth } = useWindowDimensions();
+  const playerName = targetPlayerName || profile?.name || currentUser?.name || 'Local Player';
+  const stats = calculatePlayerCareerStats(playerName, matchesList.length > 0 ? matchesList : finishedMatches);
+
+  const profileTabs = useMemo(() => [
+    { id: 'overview', label: 'Overview' },
+    { id: 'batting', label: 'Batting' },
+    { id: 'bowling', label: 'Bowling' },
+    { id: 'matches', label: `Matches (${stats.participatedMatches.length})` },
+    ...(!isPublicView ? [{ id: 'scorer', label: 'Scorer Hub' }] : [])
+  ], [stats.participatedMatches.length, isPublicView]);
+
+  const activeTabIndex = Math.max(0, profileTabs.findIndex(t => t.id === profileTab));
+  const pagerScrollX = useRef(new Animated.Value(activeTabIndex * screenWidth)).current;
+  const pagerRef = useRef(null);
+
+  const [tabLayouts, setTabLayouts] = useState({});
+  const onTabLayout = (id, e) => {
+    const { x, width } = e.nativeEvent.layout;
+    setTabLayouts(prev => {
+      const cur = prev[id];
+      if (cur && Math.abs(cur.x - x) < 0.5 && Math.abs(cur.width - width) < 0.5) return prev;
+      return { ...prev, [id]: { x, width } };
+    });
+  };
+
+  const animatedUnderlineX = pagerScrollX.interpolate({
+    inputRange: profileTabs.map((_, i) => i * screenWidth),
+    outputRange: profileTabs.map((t, index) => tabLayouts[t.id]?.x != null ? tabLayouts[t.id].x : (index * 85 + 16)),
+    extrapolate: 'clamp'
+  });
+
+  const animatedUnderlineWidth = pagerScrollX.interpolate({
+    inputRange: profileTabs.map((_, i) => i * screenWidth),
+    outputRange: profileTabs.map(t => tabLayouts[t.id]?.width != null ? tabLayouts[t.id].width : 60),
+    extrapolate: 'clamp'
+  });
+
+  const isDraggingPager = useRef(false);
+
+  const onTabPress = (tabId, index) => {
+    setProfileTab(tabId);
+    isDraggingPager.current = true;
+    pagerRef.current?.scrollTo({ x: index * screenWidth, animated: true });
+    setTimeout(() => { isDraggingPager.current = false; }, 300);
+  };
+
+  const handlePagerEnd = (e) => {
+    const offset = e.nativeEvent.contentOffset.x;
+    const index = Math.round(offset / screenWidth);
+    if (profileTabs[index] && profileTab !== profileTabs[index].id) {
+      setProfileTab(profileTabs[index].id);
+    }
+  };
+
+  useEffect(() => {
+    if (!isDraggingPager.current) {
+      const targetOffset = activeTabIndex * screenWidth;
+      pagerRef.current?.scrollTo({ x: targetOffset, animated: false });
+      pagerScrollX.setValue(targetOffset);
+    }
+  }, [profileTab, screenWidth]);
 
   // Quick Google Sign-In Input
   const [quickPlayerName, setQuickPlayerName] = useState('');
@@ -752,10 +821,6 @@ export function MyProfileScreen({
     );
   }
 
-  // ─── 2. PLAYER PROFILE VIEW (SELF OR PUBLIC) ───
-  const playerName = targetPlayerName || profile?.name || currentUser?.name || 'Local Player';
-  const stats = calculatePlayerCareerStats(playerName, matchesList.length > 0 ? matchesList : finishedMatches);
-
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
       {onBack ? (
@@ -767,23 +832,9 @@ export function MyProfileScreen({
         </View>
       ) : null}
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.profileContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            colors={['#0284C7']}
-            tintColor="#0284C7"
-          />
-        }
-      >
       {/* HERO PROFILE CARD */}
-      <View style={styles.profileHeaderCard}>
+      <View style={[styles.profileHeaderCard, { marginHorizontal: 14, marginTop: 12, marginBottom: 8 }]}>
         <View style={styles.profileAvatarRow}>
-          {/* Clean Avatar (Tap to View Full Photo) */}
           <TouchableOpacity
             onPress={() => setPhotoModalVisible(true)}
             style={styles.avatarWrapper}
@@ -808,7 +859,6 @@ export function MyProfileScreen({
                 <Ionicons name="checkmark-circle" size={17} color="#0284C7" />
               </View>
 
-              {/* 3-DOTS INDUSTRIAL ACTION MENU (Only for profile owner) */}
               {!isPublicView ? (
                 <TouchableOpacity
                   onPress={() => setOptionsMenuVisible(true)}
@@ -825,7 +875,6 @@ export function MyProfileScreen({
               {profile?.role || 'All-Rounder'} • {profile?.city || 'Local Ground'}
             </Text>
 
-            {/* Batting & Bowling Styles (Sleek Horizontal Badges) */}
             <View style={styles.styleBadgesRow}>
               <View style={styles.styleBadgeItem}>
                 <MaterialCommunityIcons name="cricket" size={12} color="#0284C7" />
@@ -840,247 +889,377 @@ export function MyProfileScreen({
         </View>
       </View>
 
-      {/* GROUND MATCH SCORING & CO-SCORER HUB (Only for profile owner) */}
-      {!isPublicView && (
-        <View style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: 16,
-          padding: 16,
-          borderWidth: 1,
-          borderColor: '#E2E8F0',
-          gap: 12
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <MaterialCommunityIcons name="scoreboard-outline" size={18} color="#0284C7" />
-              <Text style={{ fontSize: 11, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFontBold }}>
-                GROUND MATCH SCORING
-              </Text>
-            </View>
-            <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#BAE6FD' }}>
-              <Text style={{ fontSize: 10, color: '#0284C7', fontFamily: systemFontBold }}>Verified Scorer</Text>
-            </View>
-          </View>
+      {/* ─── CREX / RANKINGS STYLE CLEAN TEXT-ONLY UNDERLINE TABS BAR ─── */}
+      <View style={styles.tabsBarWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsScrollContent}
+        >
+          {profileTabs.map((t, idx) => {
+            const active = profileTab === t.id;
+            return (
+              <TouchableOpacity
+                key={t.id}
+                onLayout={(e) => onTabLayout(t.id, e)}
+                onPress={() => onTabPress(t.id, idx)}
+                activeOpacity={0.7}
+                style={styles.tabButton}
+              >
+                <Text style={[
+                  styles.tabButtonText,
+                  active && styles.tabButtonTextActive
+                ]}>
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
 
-          {/* Primary Action: Start Quick Match */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => {
-              if (onStartQuickMatch) onStartQuickMatch();
-            }}
-            style={{
-              backgroundColor: '#0284C7',
-              borderRadius: 12,
-              height: 44,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8
-            }}
+          {/* Smooth Finger-Tracking Animated Underline Indicator */}
+          <Animated.View
+            style={[
+              styles.animatedUnderline,
+              {
+                left: animatedUnderlineX,
+                width: animatedUnderlineWidth
+              }
+            ]}
+          />
+        </ScrollView>
+      </View>
+
+      {/* ─── HORIZONTAL SWIPEABLE PAGER ─── */}
+      <Animated.ScrollView
+        ref={pagerRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        overScrollMode="never"
+        bounces={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: pagerScrollX } } }],
+          { useNativeDriver: false }
+        )}
+        onMomentumScrollEnd={handlePagerEnd}
+        style={{ flex: 1 }}
+      >
+        {/* 1. OVERVIEW PAGE */}
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView
+            style={styles.pageScrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
           >
-            <MaterialCommunityIcons name="cricket" size={18} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>
-              START NEW QUICK MATCH
-            </Text>
-          </TouchableOpacity>
+            <View style={{ gap: 14 }}>
+              <View style={styles.summaryGrid}>
+                <View style={styles.summaryCard}>
+                  <MaterialCommunityIcons name="scoreboard-outline" size={48} color="#0F172A" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.06 }} />
+                  <Text style={styles.summaryVal}>{stats.matchesPlayed}</Text>
+                  <Text style={styles.summaryLbl}>Matches</Text>
+                </View>
 
-          {/* Secondary Co-Scorer Actions */}
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setJoinModalVisible(true)}
-              style={{
-                flex: 1,
-                backgroundColor: '#F8FAFC',
-                borderRadius: 10,
-                paddingVertical: 9,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 6,
-                borderWidth: 1,
-                borderColor: '#E2E8F0'
-              }}
-            >
-              <Ionicons name="key-outline" size={14} color="#0284C7" />
-              <Text style={{ color: '#334155', fontSize: 11.5, fontFamily: systemFontMedium }}>Enter Match Code</Text>
-            </TouchableOpacity>
+                <View style={styles.summaryCard}>
+                  <MaterialCommunityIcons name="cricket" size={48} color="#0284C7" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.08 }} />
+                  <Text style={[styles.summaryVal, { color: '#0284C7' }]}>{stats.totalRuns}</Text>
+                  <Text style={styles.summaryLbl}>Total Runs</Text>
+                </View>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setShareModalVisible(true)}
-              style={{
-                flex: 1,
-                backgroundColor: '#F8FAFC',
-                borderRadius: 10,
-                paddingVertical: 9,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 6,
-                borderWidth: 1,
-                borderColor: '#E2E8F0'
-              }}
-            >
-              <Ionicons name="share-social-outline" size={14} color="#0284C7" />
-              <Text style={{ color: '#334155', fontSize: 11.5, fontFamily: systemFontMedium }}>Share Access</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+                <View style={styles.summaryCard}>
+                  <Ionicons name="trophy-outline" size={44} color="#059669" style={{ position: 'absolute', right: -6, bottom: -6, opacity: 0.08 }} />
+                  <Text style={[styles.summaryVal, { color: '#059669' }]}>{stats.highestScore}</Text>
+                  <Text style={styles.summaryLbl}>High Score</Text>
+                </View>
 
-      {/* QUICK CAREER OVERVIEW (4 TILES) */}
-      <Text style={styles.sectionHeader}>CAREER SUMMARY</Text>
-      <View style={styles.summaryGrid}>
-        {/* Matches */}
-        <View style={styles.summaryCard}>
-          <MaterialCommunityIcons name="scoreboard-outline" size={48} color="#0F172A" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.06 }} />
-          <Text style={styles.summaryVal}>{stats.matchesPlayed}</Text>
-          <Text style={styles.summaryLbl}>Matches</Text>
-        </View>
-
-        {/* Total Runs */}
-        <View style={styles.summaryCard}>
-          <MaterialCommunityIcons name="cricket" size={48} color="#0284C7" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.08 }} />
-          <Text style={[styles.summaryVal, { color: '#0284C7' }]}>{stats.totalRuns}</Text>
-          <Text style={styles.summaryLbl}>Total Runs</Text>
-        </View>
-
-        {/* High Score */}
-        <View style={styles.summaryCard}>
-          <Ionicons name="trophy-outline" size={44} color="#059669" style={{ position: 'absolute', right: -6, bottom: -6, opacity: 0.08 }} />
-          <Text style={[styles.summaryVal, { color: '#059669' }]}>{stats.highestScore}</Text>
-          <Text style={styles.summaryLbl}>High Score</Text>
-        </View>
-
-        {/* Wickets */}
-        <View style={styles.summaryCard}>
-          <MaterialCommunityIcons name="baseball" size={48} color="#7C3AED" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.08 }} />
-          <Text style={[styles.summaryVal, { color: '#7C3AED' }]}>{stats.wickets}</Text>
-          <Text style={styles.summaryLbl}>Wickets</Text>
-        </View>
-      </View>
-
-      {/* DETAILED BATTING RECORD */}
-      <View style={styles.statsCard}>
-        {/* Subtle Batsman Background Watermark Graphic */}
-        <MaterialCommunityIcons
-          name="cricket"
-          size={135}
-          color="#0284C7"
-          style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.05, transform: [{ rotate: '-12deg' }] }}
-        />
-        <View style={styles.statsCardHeader}>
-          <MaterialCommunityIcons name="cricket" size={18} color="#0284C7" />
-          <Text style={styles.statsCardTitle}>Batting Performance</Text>
-        </View>
-        <View style={styles.statRowGrid}>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.inningsBatted}</Text>
-            <Text style={styles.statColLbl}>Innings</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.strikeRate}</Text>
-            <Text style={styles.statColLbl}>Strike Rate</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.battingAvg}</Text>
-            <Text style={styles.statColLbl}>Average</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.fours}</Text>
-            <Text style={styles.statColLbl}>Fours (4s)</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.sixes}</Text>
-            <Text style={styles.statColLbl}>Sixes (6s)</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.fifties}</Text>
-            <Text style={styles.statColLbl}>50s</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* DETAILED BOWLING RECORD */}
-      <View style={styles.statsCard}>
-        {/* Subtle Bowler Background Watermark Graphic */}
-        <MaterialCommunityIcons
-          name="baseball"
-          size={135}
-          color="#7C3AED"
-          style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.05, transform: [{ rotate: '12deg' }] }}
-        />
-        <View style={styles.statsCardHeader}>
-          <MaterialCommunityIcons name="baseball" size={18} color="#7C3AED" />
-          <Text style={styles.statsCardTitle}>Bowling Performance</Text>
-        </View>
-        <View style={styles.statRowGrid}>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.oversBowled}</Text>
-            <Text style={styles.statColLbl}>Overs</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.wickets}</Text>
-            <Text style={styles.statColLbl}>Wickets</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.economy}</Text>
-            <Text style={styles.statColLbl}>Economy</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.maidens}</Text>
-            <Text style={styles.statColLbl}>Maidens</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.bestBowling}</Text>
-            <Text style={styles.statColLbl}>Best Bowling</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.runsConceded}</Text>
-            <Text style={styles.statColLbl}>Runs Given</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* MY MATCHES HISTORY */}
-      <Text style={styles.sectionHeader}>MATCHES PLAYED ({stats.participatedMatches.length})</Text>
-      {stats.participatedMatches.length === 0 ? (
-        <View style={styles.emptyMatchesCard}>
-          <Ionicons name="trophy-outline" size={28} color="#94A3B8" />
-          <Text style={styles.emptyTitle}>No Matches Recorded Yet</Text>
-          <Text style={styles.emptySub}>
-            When you play in a match on CricScorer, your individual batting and bowling cards will appear here.
-          </Text>
-        </View>
-      ) : (
-        stats.participatedMatches.map((m, idx) => {
-          const matchTitle = m.match_title || m.matchTitle || m.title || (m.team1_name && m.team2_name ? `${m.team1_name} vs ${m.team2_name}` : '') || (m.match_data?.matchTitle || (m.match_data?.team1?.name && m.match_data?.team2?.name ? `${m.match_data.team1.name} vs ${m.match_data.team2.name}` : '')) || (m.team1?.name && m.team2?.name ? `${m.team1.name} vs ${m.team2.name}` : 'Cricket Match');
-          const matchResult = m.result_text || m.resultText || m.match_data?.resultText || m.winner || 'Match Completed';
-          const matchDate = m.dateText || m.dateLabel || (m.created_at ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent Match');
-
-          return (
-            <TouchableOpacity
-              key={`match_history_${m.id || 'item'}_${idx}`}
-              style={styles.matchHistoryItem}
-              onPress={() => {
-                if (onSelectMatch) {
-                  const fullMatch = m.match_data ? { ...m.match_data, id: m.id, title: matchTitle, matchTitle, resultText: matchResult, dateText: matchDate } : m;
-                  onSelectMatch(fullMatch);
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.matchTitle}>{matchTitle}</Text>
-                <Text style={styles.matchDate}>{matchDate}</Text>
-                <Text style={styles.matchResultText} numberOfLines={1}>{matchResult}</Text>
+                <View style={styles.summaryCard}>
+                  <MaterialCommunityIcons name="baseball" size={48} color="#7C3AED" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.08 }} />
+                  <Text style={[styles.summaryVal, { color: '#7C3AED' }]}>{stats.wickets}</Text>
+                  <Text style={styles.summaryLbl}>Wickets</Text>
+                </View>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#0284C7" />
-            </TouchableOpacity>
-          );
-        })
-      )}
+
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <MaterialCommunityIcons name="cricket" size={16} color="#0284C7" />
+                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>Batting</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Average</Text>
+                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>{stats.battingAvg}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Strike Rate</Text>
+                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0284C7' }}>{stats.strikeRate}</Text>
+                  </View>
+                </View>
+
+                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <MaterialCommunityIcons name="baseball" size={16} color="#7C3AED" />
+                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>Bowling</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Economy</Text>
+                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>{stats.economy}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Best</Text>
+                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#7C3AED' }}>{stats.bestBowling || '-'}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* 2. BATTING PAGE */}
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView
+            style={styles.pageScrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
+          >
+            <View style={styles.statsCard}>
+              <MaterialCommunityIcons
+                name="cricket"
+                size={135}
+                color="#0284C7"
+                style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.05, transform: [{ rotate: '-12deg' }] }}
+              />
+              <View style={styles.statsCardHeader}>
+                <MaterialCommunityIcons name="cricket" size={18} color="#0284C7" />
+                <Text style={styles.statsCardTitle}>Batting Performance</Text>
+              </View>
+              <View style={styles.statRowGrid}>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.inningsBatted}</Text>
+                  <Text style={styles.statColLbl}>Innings</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.strikeRate}</Text>
+                  <Text style={styles.statColLbl}>Strike Rate</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.battingAvg}</Text>
+                  <Text style={styles.statColLbl}>Average</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.fours}</Text>
+                  <Text style={styles.statColLbl}>Fours (4s)</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.sixes}</Text>
+                  <Text style={styles.statColLbl}>Sixes (6s)</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.fifties}</Text>
+                  <Text style={styles.statColLbl}>50s</Text>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* 3. BOWLING PAGE */}
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView
+            style={styles.pageScrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
+          >
+            <View style={styles.statsCard}>
+              <MaterialCommunityIcons
+                name="baseball"
+                size={135}
+                color="#7C3AED"
+                style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.05, transform: [{ rotate: '12deg' }] }}
+              />
+              <View style={styles.statsCardHeader}>
+                <MaterialCommunityIcons name="baseball" size={18} color="#7C3AED" />
+                <Text style={styles.statsCardTitle}>Bowling Performance</Text>
+              </View>
+              <View style={styles.statRowGrid}>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.oversBowled}</Text>
+                  <Text style={styles.statColLbl}>Overs</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.wickets}</Text>
+                  <Text style={styles.statColLbl}>Wickets</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.economy}</Text>
+                  <Text style={styles.statColLbl}>Economy</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.maidens}</Text>
+                  <Text style={styles.statColLbl}>Maidens</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.bestBowling}</Text>
+                  <Text style={styles.statColLbl}>Best Bowling</Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text style={styles.statColVal}>{stats.runsConceded}</Text>
+                  <Text style={styles.statColLbl}>Runs Given</Text>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* 4. MATCHES PAGE */}
+        <View style={{ width: screenWidth, flex: 1 }}>
+          <ScrollView
+            style={styles.pageScrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
+          >
+            <View style={{ gap: 10 }}>
+              {stats.participatedMatches.length === 0 ? (
+                <View style={styles.emptyMatchesCard}>
+                  <Ionicons name="trophy-outline" size={28} color="#94A3B8" />
+                  <Text style={styles.emptyTitle}>No Matches Recorded Yet</Text>
+                  <Text style={styles.emptySub}>
+                    When you play in a match on CricFlow, your individual batting and bowling cards will appear here.
+                  </Text>
+                </View>
+              ) : (
+                stats.participatedMatches.map((m, idx) => {
+                  const matchTitle = m.match_title || m.matchTitle || m.title || (m.team1_name && m.team2_name ? `${m.team1_name} vs ${m.team2_name}` : '') || (m.match_data?.matchTitle || (m.match_data?.team1?.name && m.match_data?.team2?.name ? `${m.match_data.team1.name} vs ${m.match_data.team2.name}` : '')) || (m.team1?.name && m.team2?.name ? `${m.team1.name} vs ${m.team2.name}` : 'Cricket Match');
+                  const matchResult = m.result_text || m.resultText || m.match_data?.resultText || m.winner || 'Match Completed';
+                  const matchDate = m.dateText || m.dateLabel || (m.created_at ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent Match');
+
+                  return (
+                    <TouchableOpacity
+                      key={`match_history_${m.id || 'item'}_${idx}`}
+                      style={styles.matchHistoryItem}
+                      onPress={() => {
+                        if (onSelectMatch) {
+                          const fullMatch = m.match_data ? { ...m.match_data, id: m.id, title: matchTitle, matchTitle, resultText: matchResult, dateText: matchDate } : m;
+                          onSelectMatch(fullMatch);
+                        }
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.matchTitle}>{matchTitle}</Text>
+                        <Text style={styles.matchDate}>{matchDate}</Text>
+                        <Text style={styles.matchResultText} numberOfLines={1}>{matchResult}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="#0284C7" />
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* 5. SCORER HUB PAGE (OWNER ONLY) */}
+        {!isPublicView && (
+          <View style={{ width: screenWidth, flex: 1 }}>
+            <ScrollView
+              style={styles.pageScrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
+            >
+              <View style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 16,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 12
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <MaterialCommunityIcons name="scoreboard-outline" size={18} color="#0284C7" />
+                    <Text style={{ fontSize: 11, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFontBold }}>
+                      GROUND MATCH SCORING
+                    </Text>
+                  </View>
+                  <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#BAE6FD' }}>
+                    <Text style={{ fontSize: 10, color: '#0284C7', fontFamily: systemFontBold }}>Verified Scorer</Text>
+                  </View>
+                </View>
+
+                {/* Primary Action: Start Quick Match */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (onStartQuickMatch) onStartQuickMatch();
+                  }}
+                  style={{
+                    backgroundColor: '#0284C7',
+                    borderRadius: 12,
+                    height: 44,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8
+                  }}
+                >
+                  <MaterialCommunityIcons name="cricket" size={18} color="#FFFFFF" />
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>
+                    START NEW QUICK MATCH
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Secondary Co-Scorer Actions */}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setJoinModalVisible(true)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 10,
+                      paddingVertical: 9,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                      gap: 6,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0'
+                    }}
+                  >
+                    <Ionicons name="key-outline" size={14} color="#0284C7" />
+                    <Text style={{ color: '#334155', fontSize: 11.5, fontFamily: systemFontMedium }}>Enter Match Code</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setShareModalVisible(true)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 10,
+                      paddingVertical: 9,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                      gap: 6,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0'
+                    }}
+                  >
+                    <Ionicons name="share-social-outline" size={14} color="#0284C7" />
+                    <Text style={{ color: '#334155', fontSize: 11.5, fontFamily: systemFontMedium }}>Share Access</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        )}
+      </Animated.ScrollView>
 
       {/* EDIT PROFILE MODAL */}
       <Modal visible={isEditing} animationType="slide" transparent onRequestClose={() => setIsEditing(false)}>
@@ -1235,7 +1414,6 @@ export function MyProfileScreen({
           </View>
         </View>
       </Modal>
-      </ScrollView>
 
       {/* Location Hierarchy Picker Modal */}
       <LocationPickerModal
@@ -1870,6 +2048,49 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: systemFontMedium,
     color: '#0284C7'
+  },
+
+  // Tabs Bar & Pager Styles (CREX / Rankings Style)
+  tabsBarWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    position: 'relative'
+  },
+  tabsScrollContent: {
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    gap: 20
+  },
+  tabButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  tabButtonText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontFamily: systemFontMedium,
+    letterSpacing: -0.1
+  },
+  tabButtonTextActive: {
+    color: '#0284C7',
+    fontFamily: systemFontBold
+  },
+  animatedUnderline: {
+    position: 'absolute',
+    bottom: 0,
+    height: 2.5,
+    backgroundColor: '#0284C7',
+    borderRadius: 2
+  },
+  pageScrollView: {
+    flex: 1
+  },
+  scrollContent: {
+    padding: 14,
+    paddingBottom: 28
   },
 
   // 3-Dots Action Menu Bottom Sheet Styles
