@@ -44,7 +44,6 @@ import { ScorerConsoleScreen } from './src/screens/ScorerConsoleScreen.jsx';
 import { InningBreakScreen } from './src/screens/InningBreakScreen.jsx';
 import { PublicLiveViewScreen } from './src/screens/PublicLiveViewScreen.jsx';
 import { FinishedMatchViewScreen } from './src/screens/FinishedMatchViewScreen.jsx';
-import { AppNavigator } from './src/navigation/AppNavigator.jsx';
 import { capitalizeWords } from './src/utils/textUtils.js';
 import { fetchLocalPlayers, saveLocalPlayer } from './src/services/localPlayerService.js';
 import { syncPlayersToPhotoRegistry } from './src/services/playerPhotoStore.js';
@@ -2149,9 +2148,105 @@ export default function App() {
     if (nextTeamId !== playingXiTeamTab) setPlayingXiTeamTab(nextTeamId);
   };
 
+  const renderLiveView = () => (
+    <PublicLiveViewScreen
+      activeMatch={activeMatch}
+      publicLiveTab={publicLiveTab}
+      setPublicLiveTab={setPublicLiveTab}
+      liveViewReturnScreen={liveViewReturnScreen}
+      setCurrentScreen={setCurrentScreen}
+      handleOpenPlayerProfile={handleOpenPlayerProfile}
+      refreshing={refreshing}
+      handlePullToRefresh={handlePullToRefresh}
+      setPlayingXiTeamTab={setPlayingXiTeamTab}
+      setPlayingXiVisible={setPlayingXiVisible}
+      playingXiPagerScrollX={playingXiPagerScrollX}
+    />
+  );
+
+  // FULL SCREEN FINISHED MATCH SCORECARD VIEW (MATCHING LIVE VIEW LAYOUT EXACTLY)
   // FULL SCREEN FINISHED MATCH SCORECARD VIEW (MATCHING CREX EXACT SCREENSHOT 2)
   const [finishedTab, setFinishedTab] = useState('summary');
   const [finishedInningIndex, setFinishedInningIndex] = useState(0);
+
+  const renderFinishedView = () => {
+    const f = (selectedMatch?.id ? selectedMatch : null) || (activeMatch && (activeMatch.phase === 'result' || activeMatch.resultText) ? buildFinishedMatch(activeMatch) : null) || selectedMatch || finishedMatches[0];
+    return (
+      <FinishedMatchViewScreen
+        match={f}
+        finishedTab={finishedTab}
+        setFinishedTab={setFinishedTab}
+        finishedInningIndex={finishedInningIndex}
+        setFinishedInningIndex={setFinishedInningIndex}
+        publicTabLayouts={publicTabLayouts}
+        setPublicTabLayouts={setPublicTabLayouts}
+        publicTabsRef={publicTabsRef}
+        publicPagerScrollX={publicPagerScrollX}
+        setCurrentScreen={setCurrentScreen}
+        handleOpenPlayerProfile={handleOpenPlayerProfile}
+        handleRematch={handleRematch}
+        refreshing={refreshing}
+        handlePullToRefresh={handlePullToRefresh}
+      />
+    );
+  };
+
+  const renderScorerConsole = () => {
+    const innIdx = (activeMatch?.inning || 1) - 1;
+    const inn = activeMatch?.innings?.[innIdx] || activeMatch?.innings?.[0];
+    if (!inn?.battingTeam || !inn?.bowlingTeam) {
+      return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F8FAFC' }}>
+          <Ionicons name="alert-circle-outline" size={32} color="#0284C7" />
+          <Text style={{ color: '#0F172A', fontSize: 16, fontWeight: fontWeights.bold, marginTop: 10, textAlign: 'center', fontFamily: systemFont }}>
+            No Active Match Selected
+          </Text>
+          <Text style={{ color: '#64748B', fontSize: 12, fontWeight: fontWeights.semibold, marginTop: 6, textAlign: 'center', fontFamily: systemFont }}>
+            Start a new match setup or unlock an existing match to score.
+          </Text>
+          <TouchableOpacity
+            onPress={handleStartNewMatchSetup}
+            style={{ minHeight: 42, marginTop: 16, paddingHorizontal: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0284C7' }}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: fontWeights.bold, fontFamily: systemFont }}>+ START NEW MATCH</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <ScorerConsoleScreen
+        activeMatch={activeMatch}
+        getBattingRoster={getBattingRoster}
+        getBowlingRoster={getBowlingRoster}
+        handleRecordBall={handleRecordBall}
+        handleWicketPress={handleWicketPress}
+        handleUndo={handleUndo}
+        handleRedo={handleRedo}
+        handleSwapStrike={handleSwapStrike}
+        handleRetireBatsman={handleRetireBatsman}
+        handleOpenPlayerProfile={handleOpenPlayerProfile}
+        setExtrasSheetVisible={setExtrasSheetVisible}
+        setIsEditSquadModalOpen={setIsEditSquadModalOpen}
+        setNextBowlerName={setNextBowlerName}
+        setBowlerChangePending={setBowlerChangePending}
+      />
+    );
+  };
+
+  const renderInningBreak = () => (
+    <InningBreakScreen
+      activeMatch={activeMatch}
+      getRosterForTeam={getRosterForTeam}
+      inn2Striker={inn2Striker}
+      inn2NonStriker={inn2NonStriker}
+      inn2Bowler={inn2Bowler}
+      handleSelectInning2Opener={handleSelectInning2Opener}
+      setInn2Bowler={setInn2Bowler}
+      renderSetupPlayerPhoto={renderSetupPlayerPhoto}
+      handleStartInning2={handleStartInning2}
+    />
+  );
 
 
 
@@ -2370,79 +2465,90 @@ export default function App() {
         <StatusBar barStyle={isDarkMatchScreen ? 'light-content' : 'dark-content'} backgroundColor={shellBackgroundColor} />
         <SafeAreaView style={[styles.safe, { backgroundColor: shellBackgroundColor }]} edges={['top', 'left', 'right']}>
 
-          <AppNavigator
-            currentScreen={currentScreen}
-            setCurrentScreen={setCurrentScreen}
-            activeMatch={activeMatch}
-            publicLiveTab={publicLiveTab}
-            setPublicLiveTab={setPublicLiveTab}
-            liveViewReturnScreen={liveViewReturnScreen}
-            onJoinMatchByCode={handleJoinMatchByCode}
-            setPlayingXiTeamTab={setPlayingXiTeamTab}
-            setPlayingXiVisible={setPlayingXiVisible}
-            selectedMatch={selectedMatch}
-            finishedMatches={finishedMatches}
-            finishedArchive={finishedArchive}
-            setSelectedMatch={setSelectedMatch}
-            finishedTab={finishedTab}
-            setFinishedTab={setFinishedTab}
-            finishedInningIndex={finishedInningIndex}
-            setFinishedInningIndex={setFinishedInningIndex}
-            selectedPlayerProfile={selectedPlayerProfile}
-            setSelectedPlayerProfile={setSelectedPlayerProfile}
-            savedTeamsList={savedTeamsList}
-            rematchSetup={rematchSetup}
-            setRematchSetup={setRematchSetup}
-            handleStartQuickMatch={handleStartQuickMatch}
-            handleRematch={handleRematch}
-            getBattingRoster={getBattingRoster}
-            getBowlingRoster={getBowlingRoster}
-            handleRecordBall={handleRecordBall}
-            handleWicketPress={handleWicketPress}
-            handleUndo={handleUndo}
-            handleRedo={handleRedo}
-            handleSwapStrike={handleSwapStrike}
-            handleRetireBatsman={handleRetireBatsman}
-            handleOpenPlayerProfile={handleOpenPlayerProfile}
-            setExtrasSheetVisible={setExtrasSheetVisible}
-            setIsEditSquadModalOpen={setIsEditSquadModalOpen}
-            setNextBowlerName={setNextBowlerName}
-            setBowlerChangePending={setBowlerChangePending}
-            handleStartNewMatchSetup={handleStartNewMatchSetup}
-            getRosterForTeam={getRosterForTeam}
-            inn2Striker={inn2Striker}
-            inn2NonStriker={inn2NonStriker}
-            inn2Bowler={inn2Bowler}
-            handleSelectInning2Opener={handleSelectInning2Opener}
-            setInn2Bowler={setInn2Bowler}
-            renderSetupPlayerPhoto={renderSetupPlayerPhoto}
-            handleStartInning2={handleStartInning2}
-            refreshing={refreshing}
-            handlePullToRefresh={handlePullToRefresh}
-            openScorerScreen={openScorerScreen}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            bottomNavTab={bottomNavTab}
-            setBottomNavTab={setBottomNavTab}
-            matchesSubTab={matchesSubTab}
-            setMatchesSubTab={setMatchesSubTab}
-            statsCategory={statsCategory}
-            setStatsCategory={setStatsCategory}
-            setupPlayerNames={setupPlayerNames}
-            setSelectedPlayerName={setSelectedPlayerName}
-            activeMatchVisible={activeMatchVisible}
-            visibleLiveMatches={visibleLiveMatches}
-            renderActiveMatchListCard={renderActiveMatchListCard}
-            recentFinishedMatches={recentFinishedMatches}
-            renderFinishedMatchListCard={renderFinishedMatchListCard}
-            visibleFinishedMatches={visibleFinishedMatches}
-            TOP_BATTERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBatters}
-            TOP_BOWLERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBowlers}
-            TOP_ALLROUNDERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topAllRounders}
-            localPlayersList={localPlayersList}
-            MASTER_PLAYERS_DB={MASTER_PLAYERS_DB}
-            getSetupPlayerProfile={getSetupPlayerProfile}
-          />
+          {/* PUBLIC LIVE & FINISHED SCORECARDS */}
+          {currentScreen === 'liveView' ? (
+            renderLiveView()
+          ) : currentScreen === 'finishedView' ? (
+            renderFinishedView()
+          ) : currentScreen === 'playerProfile' ? (
+            <MyProfileScreen
+              targetPlayer={selectedPlayerProfile}
+              onBack={() => setCurrentScreen('home')}
+              finishedMatches={finishedArchive}
+              onSelectMatch={(m) => {
+                setSelectedMatch(m);
+                setCurrentScreen('finishedView');
+              }}
+            />
+          ) : currentScreen === 'scorerWizard' ? (
+            <View style={styles.fullPage}>
+              {activeMatch ? (
+                activeMatch.phase === 'result' ? renderFinishedView()
+                  : activeMatch.phase === 'inningBreak' ? renderInningBreak()
+                    : renderScorerConsole()
+              ) : (
+                <QuickMatchSetupScreen
+                  savedTeamsList={savedTeamsList}
+                  initialSetup={rematchSetup}
+                  onStartMatch={(setupData) => {
+                    setRematchSetup(null);
+                    handleStartQuickMatch(setupData);
+                  }}
+                  onCancel={() => {
+                    setRematchSetup(null);
+                    setCurrentScreen('home');
+                  }}
+                />
+              )}
+            </View>
+
+          ) : currentScreen === 'tournament' ? (
+            <View style={{ flex: 1 }}>
+              <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
+                <TouchableOpacity onPress={() => setCurrentScreen('home')} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontFamily: systemFontBold }}>Tournaments & Leagues</Text>
+                </TouchableOpacity>
+              </View>
+              <TournamentScreen finishedMatches={finishedMatches} activeMatch={activeMatch} />
+            </View>
+
+          ) : (
+            /* ——— HOME DASHBOARD (POWERED BY HOMESCREEN COMPONENT) ——— */
+            <HomeScreen
+              openScorerScreen={openScorerScreen}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              bottomNavTab={bottomNavTab}
+              setBottomNavTab={setBottomNavTab}
+              matchesSubTab={matchesSubTab}
+              setMatchesSubTab={setMatchesSubTab}
+              statsCategory={statsCategory}
+              setStatsCategory={setStatsCategory}
+              refreshing={refreshing}
+              handlePullToRefresh={handlePullToRefresh}
+              setupPlayerNames={setupPlayerNames}
+              setSelectedPlayerName={setSelectedPlayerName}
+              setCurrentScreen={setCurrentScreen}
+              activeMatchVisible={activeMatchVisible}
+              visibleLiveMatches={visibleLiveMatches}
+              renderActiveMatchListCard={renderActiveMatchListCard}
+              recentFinishedMatches={recentFinishedMatches}
+              renderFinishedMatchListCard={renderFinishedMatchListCard}
+              visibleFinishedMatches={visibleFinishedMatches}
+              finishedArchive={finishedArchive}
+              setSelectedMatch={setSelectedMatch}
+              activeMatch={activeMatch}
+              TOP_BATTERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBatters}
+              TOP_BOWLERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBowlers}
+              TOP_ALLROUNDERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topAllRounders}
+              localPlayersList={localPlayersList}
+              MASTER_PLAYERS_DB={MASTER_PLAYERS_DB}
+              getSetupPlayerProfile={getSetupPlayerProfile}
+              setSelectedPlayerProfile={setSelectedPlayerProfile}
+              onJoinMatchByCode={handleJoinMatchByCode}
+            />
+          )}
 
         </SafeAreaView>
 

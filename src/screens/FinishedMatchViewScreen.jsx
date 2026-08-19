@@ -145,6 +145,10 @@ export function FinishedMatchViewScreen({
   setFinishedTab,
   finishedInningIndex = 0,
   setFinishedInningIndex,
+  publicTabLayouts = {},
+  setPublicTabLayouts,
+  publicTabsRef,
+  publicPagerScrollX,
   setCurrentScreen,
   handleOpenPlayerProfile,
   handleRematch,
@@ -152,12 +156,7 @@ export function FinishedMatchViewScreen({
   handlePullToRefresh
 }) {
   const { width: screenWidth } = useWindowDimensions();
-  const [publicTabLayouts, setPublicTabLayouts] = React.useState({});
-  const publicTabsRef = useRef(null);
   const finishedSwipeRef = useRef(null);
-  const publicPagerScrollX = useRef(new Animated.Value(
-    FINISHED_MATCH_TABS.findIndex(tab => tab.id === finishedTab) * screenWidth
-  )).current;
 
   if (!match) {
     return (
