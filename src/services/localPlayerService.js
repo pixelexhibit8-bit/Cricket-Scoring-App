@@ -125,6 +125,49 @@ export const saveLocalPlayer = async (newPlayer) => {
 };
 
 /**
+ * Convert cricket overs (e.g. 1.4 or '1.4' or 2) into total legal balls.
+ */
+export const oversToLegalBalls = (oversVal) => {
+  if (oversVal == null || oversVal === '') return 0;
+  const str = String(oversVal).trim();
+  if (!str) return 0;
+  if (!str.includes('.')) {
+    const full = parseInt(str, 10);
+    return isNaN(full) ? 0 : full * 6;
+  }
+  const parts = str.split('.');
+  const wholeOvers = parseInt(parts[0], 10) || 0;
+  const balls = parseInt(parts[1], 10) || 0;
+  return (wholeOvers * 6) + balls;
+};
+
+/**
+ * Convert total legal balls into cricket overs number (e.g. 13 balls -> 2.1).
+ */
+export const legalBallsToOvers = (totalBalls) => {
+  const balls = Math.max(0, parseInt(totalBalls, 10) || 0);
+  const wholeOvers = Math.floor(balls / 6);
+  const remainderBalls = balls % 6;
+  return Number(`${wholeOvers}.${remainderBalls}`);
+};
+
+/**
+ * Add two cricket overs values accurately using legal ball arithmetic.
+ * e.g. addCricketOvers(1.4, 0.3) -> 2.1
+ *      addCricketOvers(2.5, 0.2) -> 3.1
+ *      addCricketOvers(0.2, 0.4) -> 1.0 (1)
+ *      addCricketOvers(1.0, 0.5) -> 1.5
+ */
+export const addCricketOvers = (currentOvers, newOvers) => {
+  const currentBalls = oversToLegalBalls(currentOvers);
+  const addedBalls = oversToLegalBalls(newOvers);
+  const totalBalls = currentBalls + addedBalls;
+  const whole = Math.floor(totalBalls / 6);
+  const rem = totalBalls % 6;
+  return Number(`${whole}.${rem}`);
+};
+
+/**
  * Aggregate match scorecard stats into local_players career stats
  */
 export const aggregateMatchToPlayerStats = async (finishedMatch) => {
@@ -180,14 +223,13 @@ export const aggregateMatchToPlayerStats = async (finishedMatch) => {
       let p = playerMap.get(key) || { id: generateUUID(), name: bowl.name.trim(), role: 'Bowler' };
       const currentStats = p.stats || { matches: 0, runs: 0, balls: 0, fours: 0, sixes: 0, highestScore: 0, fifties: 0, hundreds: 0, wickets: 0, overs: 0, runsConceded: 0, maidens: 0 };
 
-      const ov = parseFloat(bowl.overs) || 0;
       const wk = Number(bowl.wickets) || 0;
       const rc = Number(bowl.runs) || 0;
       const md = Number(bowl.maidens) || 0;
 
       p.stats = {
         ...currentStats,
-        overs: Number(((currentStats.overs || 0) + ov).toFixed(1)),
+        overs: addCricketOvers(currentStats.overs, bowl.overs),
         wickets: (currentStats.wickets || 0) + wk,
         runsConceded: (currentStats.runsConceded || 0) + rc,
         maidens: (currentStats.maidens || 0) + md,

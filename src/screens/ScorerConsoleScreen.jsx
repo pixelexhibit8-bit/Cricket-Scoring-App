@@ -48,15 +48,10 @@ export function ScorerConsoleScreen({
   const batRoster = getBattingRoster ? getBattingRoster() : [];
   const bowlRoster = getBowlingRoster ? getBowlingRoster() : [];
 
-  if (!inn.striker && batRoster[0]) {
-    inn.striker = { name: batRoster[0], runs: 0, balls: 0, fours: 0, sixes: 0, dismissal: 'Not out', isOut: false };
-  }
-  if (!inn.nonStriker && batRoster[1]) {
-    inn.nonStriker = { name: batRoster[1], runs: 0, balls: 0, fours: 0, sixes: 0, dismissal: 'Not out', isOut: false };
-  }
-  if (!inn.bowler && bowlRoster[0]) {
-    inn.bowler = { name: bowlRoster[0], runs: 0, wickets: 0, overs: '0.0' };
-  }
+  // Display-only fallbacks — never mutate the state object directly
+  const displayStriker = inn.striker || (batRoster[0] ? { name: batRoster[0], runs: 0, balls: 0, fours: 0, sixes: 0, dismissal: 'Not out', isOut: false } : null);
+  const displayNonStriker = inn.nonStriker || (batRoster[1] ? { name: batRoster[1], runs: 0, balls: 0, fours: 0, sixes: 0, dismissal: 'Not out', isOut: false } : null);
+  const displayBowler = inn.bowler || (bowlRoster[0] ? { name: bowlRoster[0], runs: 0, wickets: 0, overs: '0.0' } : null);
 
   const inn2 = activeMatch.inning === 2;
   const reqRuns = inn2 && activeMatch.target ? activeMatch.target - inn.battingTeam.runs : null;
@@ -99,7 +94,7 @@ export function ScorerConsoleScreen({
 
         {/* Clean Inning & Batting Info Line */}
         <Text style={{ color: '#9FC4D7', fontSize: isSmallScreen ? 11 : 12, fontFamily: systemFontMedium }}>
-          Inning {activeMatch.inning}st • {inn.battingTeam.name} Batting
+          Inning {activeMatch.inning === 1 ? '1st' : '2nd'} • {inn.battingTeam.name} Batting
         </Text>
       </View>
 
@@ -144,8 +139,8 @@ export function ScorerConsoleScreen({
 
         {/* CARD 1: SEPARATE BATTING PAIR CARD */}
         {(() => {
-          const s = inn.striker || { name: 'Striker', runs: 0, balls: 0 };
-          const ns = inn.nonStriker || { name: 'Non-Striker', runs: 0, balls: 0 };
+          const s = displayStriker || { name: 'Striker', runs: 0, balls: 0 };
+          const ns = displayNonStriker || { name: 'Non-Striker', runs: 0, balls: 0 };
           const pinnedRow1 = inn.row1Name || s.name;
           const row1Batter = (pinnedRow1 === ns?.name) ? ns : s;
           const row2Batter = (row1Batter?.name === s?.name) ? ns : s;
@@ -249,23 +244,23 @@ export function ScorerConsoleScreen({
         })()}
 
         {/* CARD 2: SEPARATE CURRENT BOWLER CARD (SYMMETRICAL TO BATSMAN ROW) */}
-        {inn.bowler && (
+        {displayBowler && (
           <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' }}>
             <View style={{ minHeight: isSmallScreen ? 46 : 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 6 : 8, backgroundColor: '#FFFFFF' }}>
               <TouchableOpacity
-                onPress={() => handleOpenPlayerProfile && handleOpenPlayerProfile(inn.bowler.name)}
+                onPress={() => handleOpenPlayerProfile && handleOpenPlayerProfile(displayBowler.name)}
                 activeOpacity={0.7}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
               >
-                <PlayerAvatar name={inn.bowler.name} photoUrl={inn.bowler.photoUrl || inn.bowler.photo_url} size={isSmallScreen ? 28 : 32} />
+                <PlayerAvatar name={displayBowler.name} photoUrl={displayBowler.photoUrl || displayBowler.photo_url} size={isSmallScreen ? 28 : 32} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Text style={{ fontSize: isSmallScreen ? 12.5 : 13.5, color: '#0F172A', fontFamily: systemFontBold }} numberOfLines={1}>
-                      {inn.bowler.name}
+                      {displayBowler.name}
                     </Text>
                     <MaterialCommunityIcons name="baseball" size={14} color="#0284C7" />
                     <TouchableOpacity
-                      onPress={() => { setNextBowlerName(inn.bowler.name); setBowlerChangePending(true); }}
+                      onPress={() => { setNextBowlerName(displayBowler.name); setBowlerChangePending(true); }}
                       style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#BAE6FD' }}
                     >
                       <Text style={{ color: '#0284C7', fontSize: 9, fontFamily: systemFontBold }}>Change</Text>
@@ -279,7 +274,7 @@ export function ScorerConsoleScreen({
 
               {/* Right: Big Overs (e.g. 1.2 Ov) just like batsman runs */}
               <Text style={{ fontSize: isSmallScreen ? 15 : 16, color: '#0F172A', fontFamily: systemFontBold }}>
-                {inn.bowler.overs || '0.0'}<Text style={{ fontSize: 11.5, color: '#64748B', fontFamily: systemFont }}> Ov</Text>
+                {displayBowler.overs || '0.0'}<Text style={{ fontSize: 11.5, color: '#64748B', fontFamily: systemFont }}> Ov</Text>
               </Text>
             </View>
           </View>

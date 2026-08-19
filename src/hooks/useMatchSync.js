@@ -60,6 +60,10 @@ export function useMatchSync({
   }, []);
 
   // 2. Realtime WebSocket Subscription (zero delay push)
+  // Use a ref so the callback always reads the latest screen without re-subscribing
+  const currentScreenRef = useRef(currentScreen);
+  useEffect(() => { currentScreenRef.current = currentScreen; }, [currentScreen]);
+
   useEffect(() => {
     const onLiveUpdate = (matchData, eventType, fullRow) => {
       if (!matchData || (!matchData.matchTitle && !matchData.title)) return;
@@ -91,8 +95,8 @@ export function useMatchSync({
         }).catch(() => { });
       }
 
-      // Update activeMatch if viewing
-      if (currentScreen !== 'scorerWizard') {
+      // Update activeMatch if viewing (read latest screen from ref)
+      if (currentScreenRef.current !== 'scorerWizard') {
         setActiveMatch(prev => {
           if (!prev) return matchData;
           if ((prev.id && prev.id === matchId) || (prev.supabaseId && prev.supabaseId === matchId)) {
@@ -115,7 +119,7 @@ export function useMatchSync({
     return () => {
       unsubscribe();
     };
-  }, [currentScreen]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 3. Local Storage restore & sync
   useEffect(() => {

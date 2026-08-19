@@ -1,6 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+
 import { HomeScreen } from '../screens/HomeScreen.jsx';
 import { ScorerConsoleScreen } from '../screens/ScorerConsoleScreen.jsx';
 import { InningBreakScreen } from '../screens/InningBreakScreen.jsx';
@@ -8,6 +11,8 @@ import { PublicLiveViewScreen } from '../screens/PublicLiveViewScreen.jsx';
 import { FinishedMatchViewScreen } from '../screens/FinishedMatchViewScreen.jsx';
 import { MyProfileScreen } from '../screens/MyProfileScreen.jsx';
 import { QuickMatchSetupScreen } from '../screens/QuickMatchSetupScreen.jsx';
+import { MatchesScreen } from '../screens/MatchesScreen.jsx';
+import { RankingsScreen } from '../screens/RankingsScreen.jsx';
 
 // Modals
 import { ExtrasModal } from '../components/modals/ExtrasModal.jsx';
@@ -22,143 +27,65 @@ import { ScorerPinModal } from '../components/modals/ScorerPinModal.jsx';
 import { MatchCompleteModal } from '../components/modals/MatchCompleteModal.jsx';
 
 import { buildFinishedMatch } from '../utils/cricketUtils.js';
-import { systemFont, fontWeights } from '../theme.js';
+import { systemFont, systemFontBold, fontWeights } from '../theme.js';
+import { useMatch } from '../context/MatchContext.jsx';
+import { navigationRef, ROUTE_SCREEN_MAP } from './navigationService.js';
 
-export function AppNavigator({
-  currentScreen,
-  setCurrentScreen,
+const Stack = createNativeStackNavigator();
 
-  // Match states & handlers
-  activeMatch,
-  setActiveMatch,
-  selectedMatch,
-  setSelectedMatch,
-  finishedArchive = [],
-  finishedMatches = [],
-  visibleLiveMatches = [],
-  recentFinishedMatches = [],
-  visibleFinishedMatches = [],
-  activeMatchVisible = false,
+// ── Module-Level Stable Screen Route Components (Prevent Unnecessary Unmount/Remount) ──
 
-  // Actions
-  openScorerScreen,
-  handleStartNewMatchSetup,
-  handleStartQuickMatch,
-  handleRematch,
-  rematchSetup,
-  setRematchSetup,
-  handleJoinMatchByCode,
+function HomeScreenRoute() {
+  const matchCtx = useMatch();
+  return (
+    <HomeScreen
+      openScorerScreen={matchCtx.openScorerScreen}
+      searchQuery={matchCtx.searchQuery}
+      setSearchQuery={matchCtx.setSearchQuery}
+      bottomNavTab={matchCtx.bottomNavTab}
+      setBottomNavTab={matchCtx.setBottomNavTab}
+      matchesSubTab={matchCtx.matchesSubTab}
+      setMatchesSubTab={matchCtx.setMatchesSubTab}
+      statsCategory={matchCtx.statsCategory}
+      setStatsCategory={matchCtx.setStatsCategory}
+      refreshing={matchCtx.refreshing}
+      handlePullToRefresh={matchCtx.handlePullToRefresh}
+      setupPlayerNames={matchCtx.setupPlayerNames}
+      setSelectedPlayerName={matchCtx.setSelectedPlayerName}
+      setCurrentScreen={matchCtx.setCurrentScreen}
+      activeMatchVisible={matchCtx.activeMatchVisible}
+      visibleLiveMatches={matchCtx.visibleLiveMatches}
+      recentFinishedMatches={matchCtx.recentFinishedMatches}
+      visibleFinishedMatches={matchCtx.visibleFinishedMatches}
+      finishedArchive={matchCtx.finishedArchive}
+      setSelectedMatch={matchCtx.setSelectedMatch}
+      activeMatch={matchCtx.activeMatch}
+      setActiveMatch={matchCtx.setActiveMatch}
+      TOP_BATTERS={matchCtx.TOP_BATTERS}
+      TOP_BOWLERS={matchCtx.TOP_BOWLERS}
+      TOP_ALLROUNDERS={matchCtx.TOP_ALLROUNDERS}
+      localPlayersList={matchCtx.localPlayersList}
+      MASTER_PLAYERS_DB={matchCtx.MASTER_PLAYERS_DB}
+      getSetupPlayerProfile={matchCtx.getSetupPlayerProfile}
+      setSelectedPlayerProfile={matchCtx.setSelectedPlayerProfile}
+      onJoinMatchByCode={matchCtx.handleJoinMatchByCode}
+    />
+  );
+}
 
-  // Home Navigation
-  searchQuery,
-  setSearchQuery,
-  bottomNavTab,
-  setBottomNavTab,
-  matchesSubTab,
-  setMatchesSubTab,
-  statsCategory,
-  setStatsCategory,
-  refreshing,
-  handlePullToRefresh,
-  setupPlayerNames,
-  setSelectedPlayerName,
+function PublicLiveViewScreenRoute() {
+  const {
+    activeMatch,
+    publicLiveTab,
+    setPublicLiveTab,
+    liveViewReturnScreen,
+    setCurrentScreen,
+    setSelectedPlayerProfile,
+    refreshing,
+    handlePullToRefresh,
+    setPlayingXiVisible
+  } = useMatch();
 
-  // Profile & Players
-  selectedPlayerProfile,
-  setSelectedPlayerProfile,
-  localPlayersList = [],
-  MASTER_PLAYERS_DB = [],
-  getSetupPlayerProfile,
-  renderSetupPlayerPhoto,
-  savedTeamsList = [],
-
-  // Leaderboard
-  TOP_BATTERS = [],
-  TOP_BOWLERS = [],
-  TOP_ALLROUNDERS = [],
-
-  // Live Screen props
-  publicLiveTab,
-  setPublicLiveTab,
-  liveViewReturnScreen,
-  playingXiVisible,
-  setPlayingXiVisible,
-
-  // Scorer Console & Modals props
-  curInning,
-  getBattingRoster,
-  getBowlingRoster,
-  getRosterForTeam,
-  getAvailableBatsmen,
-  getAvailableBowlers,
-  handleRecordBall,
-  handleWicketPress,
-  cancelWicketEntry,
-  handleSelectWicketType,
-  handleSelectDismissalFielder,
-  handleConfirmRunOut,
-  selectNewBatsman,
-  handleNewBatsman,
-  newBatsmanName,
-  setNewBatsmanName,
-  handleNewBowler,
-  nextBowlerName,
-  setNextBowlerName,
-  handleUndo,
-  handleRedo,
-  handleSwapStrike,
-  handleRetireBatsman,
-
-  // Modal States
-  extrasSheetVisible,
-  setExtrasSheetVisible,
-  wicketPending,
-  setWicketPending,
-  wicketEntryPending,
-  pendingFielderDismissal,
-  setPendingFielderDismissal,
-  runOutPending,
-  runOutDismissed,
-  setRunOutDismissed,
-  runOutEnd,
-  setRunOutEnd,
-  runOutRuns,
-  setRunOutRuns,
-  bowlerChangePending,
-  setBowlerChangePending,
-
-  // Squad edit mid match
-  isEditSquadModalOpen,
-  setIsEditSquadModalOpen,
-  isAddPlayerModalOpen,
-  setIsAddPlayerModalOpen,
-  isAddingPlayer,
-  handleMidMatchMoveToTeam,
-  handleMidMatchCreatePlayer,
-  newPlayerRoleInput,
-  setNewPlayerRoleInput,
-  newPlayerPhoneInput,
-  setNewPlayerPhoneInput,
-  selectedLocalImageUri,
-  setSelectedLocalImageUri,
-  allMidMatchPlayersPool = [],
-
-  // Scorer Pin & Match Complete
-  scorerPinModalVisible,
-  setScorerPinModalVisible,
-  handleScorerPinSuccess,
-  setIsScorerUnlocked,
-  matchCompleteModalVisible,
-  setMatchCompleteModalVisible,
-
-  // Inning Break props
-  inn2Striker,
-  inn2NonStriker,
-  inn2Bowler,
-  handleSelectInning2Opener,
-  setInn2Bowler,
-  handleStartInning2
-}) {
   const handleOpenPlayerProfile = (profile) => {
     if (setSelectedPlayerProfile) {
       setSelectedPlayerProfile(profile);
@@ -168,196 +95,416 @@ export function AppNavigator({
     }
   };
 
-  const renderActiveScreen = () => {
-    // 1. PUBLIC LIVE SCORECARD VIEW
-    if (currentScreen === 'liveView') {
-      return (
-        <PublicLiveViewScreen
-          activeMatch={activeMatch}
-          publicLiveTab={publicLiveTab}
-          setPublicLiveTab={setPublicLiveTab}
-          liveViewReturnScreen={liveViewReturnScreen}
-          setCurrentScreen={setCurrentScreen}
-          handleOpenPlayerProfile={handleOpenPlayerProfile}
-          refreshing={refreshing}
-          handlePullToRefresh={handlePullToRefresh}
-          setPlayingXiVisible={setPlayingXiVisible}
-        />
-      );
+  return (
+    <PublicLiveViewScreen
+      activeMatch={activeMatch}
+      publicLiveTab={publicLiveTab}
+      setPublicLiveTab={setPublicLiveTab}
+      liveViewReturnScreen={liveViewReturnScreen}
+      setCurrentScreen={setCurrentScreen}
+      handleOpenPlayerProfile={handleOpenPlayerProfile}
+      refreshing={refreshing}
+      handlePullToRefresh={handlePullToRefresh}
+      setPlayingXiVisible={setPlayingXiVisible}
+    />
+  );
+}
+
+function FinishedMatchViewScreenRoute() {
+  const {
+    selectedMatch,
+    activeMatch,
+    finishedMatches = [],
+    setCurrentScreen,
+    setSelectedPlayerProfile,
+    handleRematch,
+    refreshing,
+    handlePullToRefresh,
+    setPlayingXiVisible
+  } = useMatch();
+
+  const handleOpenPlayerProfile = (profile) => {
+    if (setSelectedPlayerProfile) {
+      setSelectedPlayerProfile(profile);
     }
-
-    // 2. FINISHED MATCH VIEW
-    if (currentScreen === 'finishedView') {
-      const finishedMatchSnapshot =
-        (selectedMatch?.id ? selectedMatch : null) ||
-        (activeMatch && (activeMatch.phase === 'result' || activeMatch.resultText)
-          ? buildFinishedMatch(activeMatch)
-          : null) ||
-        selectedMatch ||
-        finishedMatches[0];
-
-      return (
-        <FinishedMatchViewScreen
-          match={finishedMatchSnapshot}
-          setCurrentScreen={setCurrentScreen}
-          handleOpenPlayerProfile={handleOpenPlayerProfile}
-          handleRematch={handleRematch}
-          refreshing={refreshing}
-          handlePullToRefresh={handlePullToRefresh}
-        />
-      );
+    if (setCurrentScreen) {
+      setCurrentScreen('playerProfile');
     }
+  };
 
-    // 3. PLAYER PROFILE SCREEN
-    if (currentScreen === 'playerProfile') {
-      return (
-        <MyProfileScreen
-          targetPlayer={selectedPlayerProfile}
-          onBack={() => setCurrentScreen('home')}
-          finishedMatches={finishedArchive}
-          onSelectMatch={(m) => {
-            if (setSelectedMatch) setSelectedMatch(m);
-            if (setCurrentScreen) setCurrentScreen('finishedView');
+  const finishedMatchSnapshot =
+    (selectedMatch?.id ? selectedMatch : null) ||
+    (activeMatch && (activeMatch.phase === 'result' || activeMatch.resultText)
+      ? buildFinishedMatch(activeMatch)
+      : null) ||
+    selectedMatch ||
+    finishedMatches[0];
+
+  return (
+    <FinishedMatchViewScreen
+      match={finishedMatchSnapshot}
+      setCurrentScreen={setCurrentScreen}
+      handleOpenPlayerProfile={handleOpenPlayerProfile}
+      handleRematch={handleRematch}
+      refreshing={refreshing}
+      handlePullToRefresh={handlePullToRefresh}
+      setPlayingXiVisible={setPlayingXiVisible}
+    />
+  );
+}
+
+function PlayerProfileScreenRoute() {
+  const {
+    selectedPlayerProfile,
+    setCurrentScreen,
+    finishedArchive = [],
+    setSelectedMatch
+  } = useMatch();
+
+  return (
+    <MyProfileScreen
+      targetPlayer={selectedPlayerProfile}
+      onBack={() => setCurrentScreen('home')}
+      finishedMatches={finishedArchive}
+      onSelectMatch={(m) => {
+        if (setSelectedMatch) setSelectedMatch(m);
+        if (setCurrentScreen) setCurrentScreen('finishedView');
+      }}
+    />
+  );
+}
+
+function QuickMatchSetupScreenRoute() {
+  const {
+    savedTeamsList = [],
+    rematchSetup,
+    setRematchSetup,
+    handleStartQuickMatch,
+    setCurrentScreen
+  } = useMatch();
+
+  return (
+    <View style={styles.fullPage}>
+      <QuickMatchSetupScreen
+        savedTeamsList={savedTeamsList}
+        initialSetup={rematchSetup}
+        onStartMatch={(setupData) => {
+          if (setRematchSetup) setRematchSetup(null);
+          if (handleStartQuickMatch) handleStartQuickMatch(setupData);
+        }}
+        onCancel={() => {
+          if (setRematchSetup) setRematchSetup(null);
+          if (setCurrentScreen) setCurrentScreen('home');
+        }}
+      />
+    </View>
+  );
+}
+
+function ScorerConsoleScreenRoute() {
+  const {
+    activeMatch,
+    savedTeamsList = [],
+    rematchSetup,
+    setRematchSetup,
+    handleStartQuickMatch,
+    setCurrentScreen,
+    setSelectedPlayerProfile,
+    handleRematch,
+    refreshing,
+    handlePullToRefresh,
+    getRosterForTeam,
+    inn2Striker,
+    inn2NonStriker,
+    inn2Bowler,
+    handleSelectInning2Opener,
+    setInn2Bowler,
+    renderSetupPlayerPhoto,
+    handleStartInning2,
+    handleStartNewMatchSetup,
+    getBattingRoster,
+    getBowlingRoster,
+    handleRecordBall,
+    handleWicketPress,
+    handleUndo,
+    handleRedo,
+    handleSwapStrike,
+    handleRetireBatsman,
+    setExtrasSheetVisible,
+    setIsEditSquadModalOpen,
+    setNextBowlerName,
+    setBowlerChangePending,
+    setPlayingXiVisible
+  } = useMatch();
+
+  const handleOpenPlayerProfile = (profile) => {
+    if (setSelectedPlayerProfile) {
+      setSelectedPlayerProfile(profile);
+    }
+    if (setCurrentScreen) {
+      setCurrentScreen('playerProfile');
+    }
+  };
+
+  if (!activeMatch) {
+    return (
+      <View style={styles.fullPage}>
+        <QuickMatchSetupScreen
+          savedTeamsList={savedTeamsList}
+          initialSetup={rematchSetup}
+          onStartMatch={(setupData) => {
+            if (setRematchSetup) setRematchSetup(null);
+            if (handleStartQuickMatch) handleStartQuickMatch(setupData);
+          }}
+          onCancel={() => {
+            if (setRematchSetup) setRematchSetup(null);
+            if (setCurrentScreen) setCurrentScreen('home');
           }}
         />
-      );
-    }
+      </View>
+    );
+  }
 
-    // 4. SCORER WIZARD & CONSOLE FLOW
-    if (currentScreen === 'scorerWizard') {
-      if (!activeMatch) {
-        return (
-          <View style={styles.fullPage}>
-            <QuickMatchSetupScreen
-              savedTeamsList={savedTeamsList}
-              initialSetup={rematchSetup}
-              onStartMatch={(setupData) => {
-                if (setRematchSetup) setRematchSetup(null);
-                if (handleStartQuickMatch) handleStartQuickMatch(setupData);
-              }}
-              onCancel={() => {
-                if (setRematchSetup) setRematchSetup(null);
-                if (setCurrentScreen) setCurrentScreen('home');
-              }}
-            />
-          </View>
-        );
-      }
-
-      if (activeMatch.phase === 'result') {
-        const finishedSnapshot = buildFinishedMatch(activeMatch);
-        return (
-          <FinishedMatchViewScreen
-            match={finishedSnapshot}
-            setCurrentScreen={setCurrentScreen}
-            handleOpenPlayerProfile={handleOpenPlayerProfile}
-            handleRematch={handleRematch}
-            refreshing={refreshing}
-            handlePullToRefresh={handlePullToRefresh}
-          />
-        );
-      }
-
-      if (activeMatch.phase === 'inningBreak') {
-        return (
-          <InningBreakScreen
-            activeMatch={activeMatch}
-            getRosterForTeam={getRosterForTeam}
-            inn2Striker={inn2Striker}
-            inn2NonStriker={inn2NonStriker}
-            inn2Bowler={inn2Bowler}
-            handleSelectInning2Opener={handleSelectInning2Opener}
-            setInn2Bowler={setInn2Bowler}
-            renderSetupPlayerPhoto={renderSetupPlayerPhoto}
-            handleStartInning2={handleStartInning2}
-          />
-        );
-      }
-
-      // Default Scorer Live Console
-      const innIdx = (activeMatch?.inning || 1) - 1;
-      const inn = activeMatch?.innings?.[innIdx] || activeMatch?.innings?.[0];
-      if (!inn?.battingTeam || !inn?.bowlingTeam) {
-        return (
-          <View style={styles.emptyStateContainer}>
-            <Ionicons name="alert-circle-outline" size={32} color="#0284C7" />
-            <Text style={styles.emptyStateTitle}>No Active Match Selected</Text>
-            <Text style={styles.emptyStateSubtitle}>
-              Start a new match setup or unlock an existing match to score.
-            </Text>
-            <TouchableOpacity
-              onPress={handleStartNewMatchSetup}
-              style={styles.emptyStateBtn}
-            >
-              <Text style={styles.emptyStateBtnText}>+ START NEW MATCH</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      }
-
-      return (
-        <ScorerConsoleScreen
-          activeMatch={activeMatch}
-          getBattingRoster={getBattingRoster}
-          getBowlingRoster={getBowlingRoster}
-          handleRecordBall={handleRecordBall}
-          handleWicketPress={handleWicketPress}
-          handleUndo={handleUndo}
-          handleRedo={handleRedo}
-          handleSwapStrike={handleSwapStrike}
-          handleRetireBatsman={handleRetireBatsman}
-          handleOpenPlayerProfile={handleOpenPlayerProfile}
-          setExtrasSheetVisible={setExtrasSheetVisible}
-          setIsEditSquadModalOpen={setIsEditSquadModalOpen}
-          setNextBowlerName={setNextBowlerName}
-          setBowlerChangePending={setBowlerChangePending}
-        />
-      );
-    }
-
-    // 5. DEFAULT HOME DASHBOARD SCREEN
+  if (activeMatch.phase === 'result') {
+    const finishedSnapshot = buildFinishedMatch(activeMatch);
     return (
-      <HomeScreen
-        openScorerScreen={openScorerScreen}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        bottomNavTab={bottomNavTab}
-        setBottomNavTab={setBottomNavTab}
-        matchesSubTab={matchesSubTab}
-        setMatchesSubTab={setMatchesSubTab}
-        statsCategory={statsCategory}
-        setStatsCategory={setStatsCategory}
+      <FinishedMatchViewScreen
+        match={finishedSnapshot}
+        setCurrentScreen={setCurrentScreen}
+        handleOpenPlayerProfile={handleOpenPlayerProfile}
+        handleRematch={handleRematch}
         refreshing={refreshing}
         handlePullToRefresh={handlePullToRefresh}
-        setupPlayerNames={setupPlayerNames}
-        setSelectedPlayerName={setSelectedPlayerName}
-        setCurrentScreen={setCurrentScreen}
-        activeMatchVisible={activeMatchVisible}
-        visibleLiveMatches={visibleLiveMatches}
-        recentFinishedMatches={recentFinishedMatches}
-        visibleFinishedMatches={visibleFinishedMatches}
-        finishedArchive={finishedArchive}
-        setSelectedMatch={setSelectedMatch}
-        activeMatch={activeMatch}
-        setActiveMatch={setActiveMatch}
-        TOP_BATTERS={TOP_BATTERS}
-        TOP_BOWLERS={TOP_BOWLERS}
-        TOP_ALLROUNDERS={TOP_ALLROUNDERS}
-        localPlayersList={localPlayersList}
-        MASTER_PLAYERS_DB={MASTER_PLAYERS_DB}
-        getSetupPlayerProfile={getSetupPlayerProfile}
-        setSelectedPlayerProfile={setSelectedPlayerProfile}
-        onJoinMatchByCode={handleJoinMatchByCode}
+        setPlayingXiVisible={setPlayingXiVisible}
       />
     );
-  };
+  }
+
+  if (activeMatch.phase === 'inningBreak') {
+    return (
+      <InningBreakScreen
+        activeMatch={activeMatch}
+        getRosterForTeam={getRosterForTeam}
+        inn2Striker={inn2Striker}
+        inn2NonStriker={inn2NonStriker}
+        inn2Bowler={inn2Bowler}
+        handleSelectInning2Opener={handleSelectInning2Opener}
+        setInn2Bowler={setInn2Bowler}
+        renderSetupPlayerPhoto={renderSetupPlayerPhoto}
+        handleStartInning2={handleStartInning2}
+      />
+    );
+  }
+
+  const innIdx = (activeMatch?.inning || 1) - 1;
+  const inn = activeMatch?.innings?.[innIdx] || activeMatch?.innings?.[0];
+  if (!inn?.battingTeam || !inn?.bowlingTeam) {
+    return (
+      <View style={styles.emptyStateContainer}>
+        <Ionicons name="alert-circle-outline" size={32} color="#0284C7" />
+        <Text style={styles.emptyStateTitle}>No Active Match Selected</Text>
+        <Text style={styles.emptyStateSubtitle}>
+          Start a new match setup or unlock an existing match to score.
+        </Text>
+        <TouchableOpacity
+          onPress={handleStartNewMatchSetup}
+          style={styles.emptyStateBtn}
+        >
+          <Text style={styles.emptyStateBtnText}>+ START NEW MATCH</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <ScorerConsoleScreen
+      activeMatch={activeMatch}
+      getBattingRoster={getBattingRoster}
+      getBowlingRoster={getBowlingRoster}
+      handleRecordBall={handleRecordBall}
+      handleWicketPress={handleWicketPress}
+      handleUndo={handleUndo}
+      handleRedo={handleRedo}
+      handleSwapStrike={handleSwapStrike}
+      handleRetireBatsman={handleRetireBatsman}
+      handleOpenPlayerProfile={handleOpenPlayerProfile}
+      setExtrasSheetVisible={setExtrasSheetVisible}
+      setIsEditSquadModalOpen={setIsEditSquadModalOpen}
+      setNextBowlerName={setNextBowlerName}
+      setBowlerChangePending={setBowlerChangePending}
+    />
+  );
+}
+
+function InningBreakScreenRoute() {
+  const {
+    activeMatch,
+    getRosterForTeam,
+    inn2Striker,
+    inn2NonStriker,
+    inn2Bowler,
+    handleSelectInning2Opener,
+    setInn2Bowler,
+    renderSetupPlayerPhoto,
+    handleStartInning2
+  } = useMatch();
+
+  return (
+    <InningBreakScreen
+      activeMatch={activeMatch}
+      getRosterForTeam={getRosterForTeam}
+      inn2Striker={inn2Striker}
+      inn2NonStriker={inn2NonStriker}
+      inn2Bowler={inn2Bowler}
+      handleSelectInning2Opener={handleSelectInning2Opener}
+      setInn2Bowler={setInn2Bowler}
+      renderSetupPlayerPhoto={renderSetupPlayerPhoto}
+      handleStartInning2={handleStartInning2}
+    />
+  );
+}
+
+function MatchesScreenRoute() {
+  const matchCtx = useMatch();
+  return (
+    <MatchesScreen
+      {...matchCtx}
+      onSelectMatch={(m) => {
+        if (matchCtx.setSelectedMatch) matchCtx.setSelectedMatch(m);
+        if (matchCtx.setCurrentScreen) matchCtx.setCurrentScreen('finishedView');
+      }}
+    />
+  );
+}
+
+function RankingsScreenRoute() {
+  const {
+    TOP_BATTERS = [],
+    TOP_BOWLERS = [],
+    TOP_ALLROUNDERS = [],
+    setSelectedPlayerProfile,
+    setCurrentScreen,
+    refreshing,
+    handlePullToRefresh
+  } = useMatch();
+
+  return (
+    <RankingsScreen
+      topBatters={TOP_BATTERS}
+      topBowlers={TOP_BOWLERS}
+      topAllRounders={TOP_ALLROUNDERS}
+      onSelectPlayer={(playerName, meta) => {
+        if (setSelectedPlayerProfile) setSelectedPlayerProfile({ name: playerName, ...meta });
+        if (setCurrentScreen) setCurrentScreen('playerProfile');
+      }}
+      refreshing={refreshing}
+      onRefresh={handlePullToRefresh}
+    />
+  );
+}
+
+// ── Main App Router & Navigator ──
+
+export function AppNavigator(props) {
+  const matchCtx = useMatch();
+  const merged = { ...(matchCtx || {}), ...props };
+
+  const {
+    activeMatch,
+    selectedMatch,
+    setSelectedMatch,
+    setCurrentScreen,
+    setBottomNavTab,
+    setMatchesSubTab,
+    handleStartNewMatchSetup,
+    handleRematch,
+    playingXiVisible,
+    setPlayingXiVisible,
+    curInning,
+    getBowlingRoster,
+    getAvailableBatsmen,
+    getAvailableBowlers,
+    handleRecordBall,
+    cancelWicketEntry,
+    handleSelectWicketType,
+    handleSelectDismissalFielder,
+    handleConfirmRunOut,
+    selectNewBatsman,
+    newBatsmanName,
+    setNewBatsmanName,
+    handleNewBowler,
+    nextBowlerName,
+    setNextBowlerName,
+    extrasSheetVisible,
+    setExtrasSheetVisible,
+    wicketPending,
+    setWicketPending,
+    wicketEntryPending,
+    pendingFielderDismissal,
+    setPendingFielderDismissal,
+    runOutPending,
+    runOutDismissed,
+    setRunOutDismissed,
+    runOutEnd,
+    setRunOutEnd,
+    runOutRuns,
+    setRunOutRuns,
+    bowlerChangePending,
+    setBowlerChangePending,
+    isEditSquadModalOpen,
+    setIsEditSquadModalOpen,
+    isAddPlayerModalOpen,
+    setIsAddPlayerModalOpen,
+    isAddingPlayer,
+    handleMidMatchMoveToTeam,
+    handleMidMatchCreatePlayer,
+    newPlayerRoleInput,
+    setNewPlayerRoleInput,
+    newPlayerPhoneInput,
+    setNewPlayerPhoneInput,
+    selectedLocalImageUri,
+    setSelectedLocalImageUri,
+    allMidMatchPlayersPool = [],
+    scorerPinModalVisible,
+    setScorerPinModalVisible,
+    handleScorerPinSuccess,
+    matchCompleteModalVisible,
+    setMatchCompleteModalVisible
+  } = merged;
 
   return (
     <View style={styles.rootContainer}>
-      {/* 1. ACTIVE MAIN SCREEN */}
-      {renderActiveScreen()}
+      {/* 1. REACT NAVIGATION NATIVE STACK CONTAINER */}
+      <NavigationContainer
+        ref={navigationRef}
+        onStateChange={() => {
+          const currentRoute = navigationRef.getCurrentRoute();
+          if (currentRoute?.name && ROUTE_SCREEN_MAP[currentRoute.name]) {
+            // Keep currentScreen in sync
+          }
+        }}
+      >
+        <Stack.Navigator
+          initialRouteName="Home"
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: '#071B2C' }
+          }}
+        >
+          <Stack.Screen name="Home" component={HomeScreenRoute} />
+          <Stack.Screen name="QuickMatchSetup" component={QuickMatchSetupScreenRoute} />
+          <Stack.Screen name="ScorerConsole" component={ScorerConsoleScreenRoute} />
+          <Stack.Screen name="PublicLiveView" component={PublicLiveViewScreenRoute} />
+          <Stack.Screen name="FinishedMatchView" component={FinishedMatchViewScreenRoute} />
+          <Stack.Screen name="PlayerProfile" component={PlayerProfileScreenRoute} />
+          <Stack.Screen name="InningBreak" component={InningBreakScreenRoute} />
+          <Stack.Screen name="Matches" component={MatchesScreenRoute} />
+          <Stack.Screen name="Rankings" component={RankingsScreenRoute} />
+        </Stack.Navigator>
+      </NavigationContainer>
 
-      {/* 2. SHARED CRICKET MODAL OVERLAYS */}
+      {/* 2. SHARED CRICKET MODAL OVERLAYS (Root Level) */}
       <ExtrasModal
         visible={Boolean(extrasSheetVisible)}
         onClose={() => setExtrasSheetVisible(false)}
@@ -393,89 +540,82 @@ export function AppNavigator({
         setRunOutEnd={setRunOutEnd}
         runOutRuns={runOutRuns}
         setRunOutRuns={setRunOutRuns}
-        handleConfirmRunOut={handleConfirmRunOut}
+        onConfirmRunOut={handleConfirmRunOut}
       />
 
       <WicketPendingModal
         visible={Boolean(wicketPending)}
         onClose={() => setWicketPending(false)}
         curInning={curInning}
-        getAvailableBatsmen={getAvailableBatsmen}
-        selectNewBatsman={selectNewBatsman}
+        availableBatsmen={getAvailableBatsmen ? getAvailableBatsmen() : []}
         newBatsmanName={newBatsmanName}
         setNewBatsmanName={setNewBatsmanName}
-        handleNewBatsman={handleNewBatsman}
+        onSelectBatsman={selectNewBatsman}
+        onAddPlayerMidMatch={() => setIsAddPlayerModalOpen(true)}
       />
 
       <BowlerChangeModal
         visible={Boolean(bowlerChangePending)}
         onClose={() => setBowlerChangePending(false)}
-        activeMatch={activeMatch}
-        setActiveMatch={setActiveMatch}
         curInning={curInning}
-        getAvailableBowlers={getAvailableBowlers}
+        availableBowlers={getAvailableBowlers ? getAvailableBowlers() : []}
         nextBowlerName={nextBowlerName}
         setNextBowlerName={setNextBowlerName}
-        handleNewBowler={handleNewBowler}
+        onSelectBowler={handleNewBowler}
+        onAddPlayerMidMatch={() => setIsAddPlayerModalOpen(true)}
       />
 
       <SquadSelectorModal
         visible={Boolean(isEditSquadModalOpen)}
         onClose={() => setIsEditSquadModalOpen(false)}
-        team1Name={activeMatch?.teams?.[0]?.name || activeMatch?.innings?.[0]?.battingTeam?.name || 'Team 1'}
-        team2Name={activeMatch?.teams?.[1]?.name || activeMatch?.innings?.[0]?.bowlingTeam?.name || 'Team 2'}
-        team1LogoKey={activeMatch?.teams?.[0]?.logoKey || 'csk'}
-        team2LogoKey={activeMatch?.teams?.[1]?.logoKey || 'rcb'}
-        team1Roster={activeMatch?.playingXI?.[activeMatch?.teams?.[0]?.name] || []}
-        team2Roster={activeMatch?.playingXI?.[activeMatch?.teams?.[1]?.name] || []}
+        activeMatch={activeMatch}
+        onMovePlayer={handleMidMatchMoveToTeam}
         allPlayersPool={allMidMatchPlayersPool}
-        localPlayersDb={localPlayersList}
-        onMoveToTeam={handleMidMatchMoveToTeam}
         onOpenAddPlayerModal={() => setIsAddPlayerModalOpen(true)}
-        onOpenSquadPreview={() => { }}
-        onEditPlayerPhoto={() => { }}
       />
 
       <AddPlayerModal
         visible={Boolean(isAddPlayerModalOpen)}
         onClose={() => setIsAddPlayerModalOpen(false)}
-        isAddingPlayer={isAddingPlayer}
+        newPlayerName={newBatsmanName || nextBowlerName}
+        setNewPlayerName={(n) => {
+          if (wicketPending) setNewBatsmanName(n);
+          else if (bowlerChangePending) setNextBowlerName(n);
+        }}
+        newPlayerRole={newPlayerRoleInput}
+        setNewPlayerRole={setNewPlayerRoleInput}
+        newPlayerPhone={newPlayerPhoneInput}
+        setNewPlayerPhone={setNewPlayerPhoneInput}
+        selectedImageUri={selectedLocalImageUri}
+        setSelectedImageUri={setSelectedLocalImageUri}
         onAddPlayer={handleMidMatchCreatePlayer}
-        newPlayerRoleInput={newPlayerRoleInput}
-        setNewPlayerRoleInput={setNewPlayerRoleInput}
-        newPlayerPhoneInput={newPlayerPhoneInput}
-        setNewPlayerPhoneInput={setNewPlayerPhoneInput}
-        selectedLocalImageUri={selectedLocalImageUri}
-        setSelectedLocalImageUri={setSelectedLocalImageUri}
+        isAddingPlayer={isAddingPlayer}
       />
 
       <ScorerPinModal
         visible={Boolean(scorerPinModalVisible)}
-        activeMatch={activeMatch}
         onClose={() => setScorerPinModalVisible(false)}
-        onSuccessContinueMatch={handleScorerPinSuccess}
-        onSuccessRemoteMatch={(remoteMatch) => {
-          if (remoteMatch && setActiveMatch) {
-            setActiveMatch(remoteMatch);
-          }
-          if (setIsScorerUnlocked) setIsScorerUnlocked(true);
-          if (setScorerPinModalVisible) setScorerPinModalVisible(false);
-          if (setCurrentScreen) setCurrentScreen('scorerWizard');
-        }}
-        onSelectStartNewMatch={handleStartNewMatchSetup}
+        onSuccess={handleScorerPinSuccess}
       />
 
       <MatchCompleteModal
         visible={Boolean(matchCompleteModalVisible)}
         match={activeMatch}
         onClose={() => setMatchCompleteModalVisible(false)}
-        onStartRematch={() => {
-          if (setMatchCompleteModalVisible) setMatchCompleteModalVisible(false);
-          if (handleRematch) handleRematch(activeMatch);
-        }}
         onViewScorecard={() => {
-          if (setMatchCompleteModalVisible) setMatchCompleteModalVisible(false);
-          if (setFinishedTab) setFinishedTab('scorecard');
+          setMatchCompleteModalVisible(false);
+          if (setSelectedMatch && activeMatch) setSelectedMatch(buildFinishedMatch(activeMatch));
+          if (setBottomNavTab) setBottomNavTab('matches');
+          if (setMatchesSubTab) setMatchesSubTab('finished');
+          if (setCurrentScreen) setCurrentScreen('finishedView');
+        }}
+        onNewMatch={() => {
+          setMatchCompleteModalVisible(false);
+          if (handleStartNewMatchSetup) handleStartNewMatchSetup();
+        }}
+        onStartRematch={() => {
+          setMatchCompleteModalVisible(false);
+          if (handleRematch) handleRematch();
         }}
       />
     </View>
@@ -484,49 +624,47 @@ export function AppNavigator({
 
 const styles = StyleSheet.create({
   rootContainer: {
-    flex: 1
+    flex: 1,
+    backgroundColor: '#071B2C'
   },
   fullPage: {
     flex: 1,
-    backgroundColor: '#FFFFFF'
+    backgroundColor: '#071B2C'
   },
   emptyStateContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#F8FAFC'
+    padding: 30,
+    backgroundColor: '#071B2C',
+    gap: 12
   },
   emptyStateTitle: {
-    color: '#0F172A',
-    fontSize: 16,
-    fontWeight: fontWeights.bold,
-    marginTop: 10,
-    textAlign: 'center',
-    fontFamily: systemFont
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontFamily: systemFontBold,
+    textAlign: 'center'
   },
   emptyStateSubtitle: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: fontWeights.semibold,
-    marginTop: 6,
+    fontSize: 13,
+    color: '#94A3B8',
+    fontFamily: systemFont,
     textAlign: 'center',
-    fontFamily: systemFont
+    lineHeight: 19
   },
   emptyStateBtn: {
-    minHeight: 42,
-    marginTop: 16,
-    paddingHorizontal: 18,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0284C7'
+    marginTop: 10,
+    backgroundColor: '#0284C7',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10
   },
   emptyStateBtnText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: fontWeights.bold,
-    fontFamily: systemFont
+    fontFamily: systemFontBold,
+    fontSize: 13,
+    letterSpacing: 0.5
   }
 });
+
 export default AppNavigator;

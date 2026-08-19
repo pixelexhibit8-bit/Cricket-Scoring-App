@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from './supabaseClient.js';
+import { supabase, generateUUID } from './supabaseClient.js';
 import { syncPlayerNameToPastMatches } from './matchService.js';
 
 const AUTH_STORAGE_KEY = '@cricscorer_auth_user';
@@ -442,6 +442,7 @@ export async function signOutUser() {
       }
     }
     await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+    await AsyncStorage.removeItem(PROFILE_STORAGE_KEY);
     return true;
   } catch {
     return false;
@@ -529,7 +530,7 @@ export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
   let hundreds = 0;
   let notOuts = 0;
 
-  let oversBowled = 0;
+  let totalBallsBowled = 0;
   let maidens = 0;
   let runsConceded = 0;
   let wickets = 0;
@@ -582,12 +583,14 @@ export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
       const bowl = list.find(b => b && b.name && isPlayerNameMatch(b.name, playerName));
       if (bowl) {
         didParticipate = true;
-        const ov = parseFloat(bowl.overs) || 0;
+        const ovStr = String(bowl.overs || '0');
+        const [fullOvs, partialBalls] = ovStr.includes('.') ? ovStr.split('.').map(Number) : [Number(ovStr) || 0, 0];
+        const matchBallsBowled = (Number(fullOvs) || 0) * 6 + (Number(partialBalls) || 0);
         const md = Number(bowl.maidens) || 0;
         const rc = Number(bowl.runs) || 0;
         const wk = Number(bowl.wickets) || 0;
 
-        oversBowled += ov;
+        totalBallsBowled += matchBallsBowled;
         maidens += md;
         runsConceded += rc;
         wickets += wk;
@@ -648,7 +651,10 @@ export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
   const strikeRate = ballsFaced > 0 ? ((totalRuns / ballsFaced) * 100).toFixed(1) : '0.0';
   const dismissals = inningsBatted - notOuts;
   const battingAvg = dismissals > 0 ? (totalRuns / dismissals).toFixed(1) : (totalRuns > 0 ? `${totalRuns}.0` : '0.0');
-  const economy = oversBowled > 0 ? (runsConceded / oversBowled).toFixed(2) : '0.00';
+  const fullOvers = Math.floor(totalBallsBowled / 6);
+  const remBalls = totalBallsBowled % 6;
+  const oversBowledDisplay = remBalls > 0 ? `${fullOvers}.${remBalls}` : `${fullOvers}.0`;
+  const economy = totalBallsBowled > 0 ? ((runsConceded / totalBallsBowled) * 6).toFixed(2) : '0.00';
   const bestBowling = bestWkts > 0 || bestRuns < 999 ? `${bestWkts}/${bestRuns === 999 ? 0 : bestRuns}` : '-';
 
   return {
@@ -664,7 +670,8 @@ export function calculatePlayerCareerStats(playerName, finishedMatches = []) {
     notOuts,
     strikeRate,
     battingAvg,
-    oversBowled: Number(oversBowled.toFixed(1)),
+    oversBowled: Number(oversBowledDisplay),
+    totalBallsBowled,
     maidens,
     runsConceded,
     wickets,

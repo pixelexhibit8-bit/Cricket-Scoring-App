@@ -22,7 +22,7 @@ export function RunOutModal({
   setRunOutEnd,
   runOutRuns,
   setRunOutRuns,
-  handleConfirmRunOut
+  onConfirmRunOut
 }) {
   if (!visible) return null;
 
@@ -116,7 +116,7 @@ export function RunOutModal({
         <View style={{ paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
           <TouchableOpacity
             disabled={!runOutDismissed || !runOutEnd}
-            onPress={handleConfirmRunOut}
+            onPress={onConfirmRunOut}
             activeOpacity={0.85}
             style={{
               height: 50,

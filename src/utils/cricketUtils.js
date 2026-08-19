@@ -3,6 +3,22 @@ import { View, Text, ScrollView } from 'react-native';
 import * as Speech from 'expo-speech';
 import { systemFont, systemFontBold, fontWeights } from '../theme.js';
 import { MASTER_PLAYERS_DB } from '../../mockData.js';
+import {
+  makeTeamCode,
+  getTeamShortCode,
+  getTeamLogoSource,
+  getScorePartsFromText
+} from './teamUtils.js';
+
+export {
+  makeTeamCode,
+  getTeamShortCode,
+  getTeamLogoSource,
+  getScorePartsFromText
+};
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+export const DEFAULT_UMPIRE_NAME = 'Umpire';
 
 // ── Voice Announcements (Indian Female Voice Engine) ──────────────────────────
 export const speakBall = (runs, extraType, isWicket) => {
@@ -433,19 +449,7 @@ export const getCleanPlayerNames = (names = []) => {
     });
 };
 
-export const makeTeamCode = (name = '') => {
-  const clean = String(name || '').trim();
-  if (!clean) return 'TM';
-  if (clean.length <= 4) return clean.toUpperCase();
-  const words = clean.split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return words.slice(0, 3).map(word => word[0]).join('').toUpperCase();
-  return clean.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'TM';
-};
 
-export const getTeamShortCode = (team, fallbackName = '') => {
-  const savedCode = String(team?.code || '').trim();
-  return savedCode || makeTeamCode(team?.name || fallbackName);
-};
 
 export const hasDuplicateNames = (names = []) => {
   const normalized = names.map(name => String(name || '').trim().toLowerCase()).filter(Boolean);
@@ -713,15 +717,31 @@ export const buildFinishedMatch = (match, rosterByTeam = {}) => {
     || match.dateText
     || null;
 
+  const resolvedPlayingXI = match.playingXI || {
+    [firstTeamName]: rosterByTeam[firstTeamName] || match.team1?.players || (team1.batting || []).map(p => p.name).filter(Boolean) || [],
+    [secondTeamName]: rosterByTeam[secondTeamName] || match.team2?.players || (team2.batting || []).map(p => p.name).filter(Boolean) || []
+  };
+
   return {
     id: match.id || `finished-${Date.now()}`,
-    matchType: match.matchType || `${match.totalOvers || 5} Overs Match`,
+    matchTitle: match.matchTitle || match.title || `${firstTeamName} vs ${secondTeamName}`,
+    title: match.title || match.matchTitle || `${firstTeamName} vs ${secondTeamName}`,
+    matchType: match.matchType || `${match.totalOvers || match.maxOvers || 5} Overs Match`,
     venue: match.venue || 'Sadokan Ground',
+    startedAt: match.startedAt || match.created_at || match.createdAt,
     completedAt: completedDate,
     dateText: formatMatchDateTime(completedDate) || 'Match Finished',
     dateLabel: formatMatchDateLabel(completedDate) || 'Match Finished',
     resultText: match.resultText || 'Match Completed',
     winnerTeamName: match.winnerTeamName || '',
+    tossWinner: match.tossWinner || match.toss_winner,
+    tossDecision: match.tossDecision || match.toss_decision,
+    tossResult: match.tossResult,
+    umpireName: match.umpireName || 'Cric Scorer',
+    conditions: match.conditions || '28°C, Clear Sky',
+    playingXI: resolvedPlayingXI,
+    teams: match.teams || [{ name: firstTeamName }, { name: secondTeamName }],
+    sourceMatch: match,
     team1,
     team2,
     topBatter: allBatters[0] ? `${allBatters[0].name} ${allBatters[0].runs} (${allBatters[0].balls})` : '',
@@ -729,10 +749,7 @@ export const buildFinishedMatch = (match, rosterByTeam = {}) => {
   };
 };
 
-export {
-  getTeamLogoSource,
-  getScorePartsFromText
-} from './teamUtils.js';
+
 
 export const escapeRegExp = (value = '') =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

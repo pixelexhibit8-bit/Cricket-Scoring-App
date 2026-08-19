@@ -1,4 +1,5 @@
 const photoRegistry = new Map();
+const resolvedUrlCache = new Map();
 
 /**
  * Auto-resolve web page image links (ImgBB, Imgur, Google Drive) to direct raw image URLs
@@ -8,8 +9,13 @@ export const resolveDirectImageUrl = async (url) => {
   const clean = url.trim();
   if (!clean) return '';
 
+  if (resolvedUrlCache.has(clean)) {
+    return resolvedUrlCache.get(clean);
+  }
+
   // 1. Direct image link (ends with .jpg, .png, .webp, .gif, .jpeg) or i.ibb.co CDN link
   if (/\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i.test(clean) || clean.includes('i.ibb.co/')) {
+    resolvedUrlCache.set(clean, clean);
     return clean;
   }
 
@@ -20,7 +26,10 @@ export const resolveDirectImageUrl = async (url) => {
       const res = await fetch(oembedUrl);
       if (res.ok) {
         const json = await res.json();
-        if (json && json.url) return json.url;
+        if (json && json.url) {
+          resolvedUrlCache.set(clean, json.url);
+          return json.url;
+        }
       }
     } catch (e) {}
   }
@@ -29,7 +38,9 @@ export const resolveDirectImageUrl = async (url) => {
   if (clean.includes('drive.google.com/file/d/')) {
     const match = clean.match(/\/file\/d\/([^\/]+)/);
     if (match && match[1]) {
-      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      const driveUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      resolvedUrlCache.set(clean, driveUrl);
+      return driveUrl;
     }
   }
 
@@ -48,12 +59,15 @@ export const resolveDirectImageUrl = async (url) => {
           || html.match(/<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i);
 
         if (ogMatch && ogMatch[1]) {
-          return ogMatch[1].trim();
+          const extractedUrl = ogMatch[1].trim();
+          resolvedUrlCache.set(clean, extractedUrl);
+          return extractedUrl;
         }
       }
     } catch (e) {}
   }
 
+  resolvedUrlCache.set(clean, clean);
   return clean;
 };
 

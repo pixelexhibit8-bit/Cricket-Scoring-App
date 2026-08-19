@@ -16,7 +16,7 @@ export function useSquadManagement({ activeMatch, setActiveMatch }) {
   const [selectedLocalImageUri, setSelectedLocalImageUri] = useState(null);
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
 
-  // Poll / load local players
+  // Load local players on mount and refresh periodically (30s to save battery)
   useEffect(() => {
     const loadPlayers = () => {
       fetchLocalPlayers().then(players => {
@@ -27,7 +27,7 @@ export function useSquadManagement({ activeMatch, setActiveMatch }) {
       }).catch(() => { });
     };
     loadPlayers();
-    const intervalId = setInterval(loadPlayers, 3000);
+    const intervalId = setInterval(loadPlayers, 30000);
     return () => clearInterval(intervalId);
   }, []);
 

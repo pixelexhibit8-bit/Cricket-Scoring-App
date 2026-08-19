@@ -510,8 +510,10 @@ export function useCricketScoring({
   }, [handleRecordBall, runOutDismissed, runOutEnd, runOutRuns]);
 
   // Bowler Change
-  const handleNewBowler = useCallback(() => {
-    const name = nextBowlerName.trim();
+  const handleNewBowler = useCallback((overrideName) => {
+    const name = (typeof overrideName === 'string' && overrideName.trim())
+      ? overrideName.trim()
+      : nextBowlerName.trim();
     if (!name) return;
     const bowlingRoster = getBowlingRoster ? getBowlingRoster() : [];
     const battingRoster = getBattingRoster ? getBattingRoster() : [];

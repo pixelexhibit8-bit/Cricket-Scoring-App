@@ -212,9 +212,7 @@ export const fetchFinishedMatchesFromSupabase = async () => {
             { battingTeam: team2Built, allBatters: team2Built.batting, bowlingStats: team2Built.bowling }
           ],
           completedAt: completedDate,
-          sourceMatch,
-          team1: team1Built,
-          team2: team2Built
+          sourceMatch
         };
       })
       .filter(Boolean);

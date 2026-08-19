@@ -11,7 +11,6 @@ export const TeamIdentityMark = ({ team, logoSource, size = 42, isLoser = false,
         {
           width: size,
           height: size,
-          borderRadius: size / 2,
           overflow: 'hidden',
           backgroundColor: 'transparent',
           alignItems: 'center',

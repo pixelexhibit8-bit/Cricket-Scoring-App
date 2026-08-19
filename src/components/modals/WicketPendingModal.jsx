@@ -5,6 +5,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, typeScale } from '../../theme.js';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
 
+import { capitalizeWords } from '../../utils/textUtils.js';
+
 const nameFitProps = {
   numberOfLines: 1,
   ellipsizeMode: 'tail',
@@ -16,15 +18,27 @@ export function WicketPendingModal({
   visible,
   onClose,
   curInning,
-  getAvailableBatsmen,
-  selectNewBatsman,
-  handleNewBatsman,
-  newBatsmanName,
-  setNewBatsmanName
+  availableBatsmen = [],
+  newBatsmanName = '',
+  setNewBatsmanName,
+  onSelectBatsman,
+  onAddPlayerMidMatch
 }) {
   if (!visible) return null;
 
-  const availableBatters = getAvailableBatsmen ? getAvailableBatsmen() : [];
+  const trimmedBatsman = (newBatsmanName || '').trim();
+
+  const handleSelect = (name) => {
+    if (onSelectBatsman) {
+      onSelectBatsman(name);
+    }
+    if (setNewBatsmanName) {
+      setNewBatsmanName('');
+    }
+    if (onClose) {
+      onClose();
+    }
+  };
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -54,17 +68,17 @@ export function WicketPendingModal({
           <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
             <View style={{ minHeight: 42, paddingHorizontal: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>
-                AVAILABLE PLAYERS ({availableBatters.length})
+                AVAILABLE PLAYERS ({availableBatsmen.length})
               </Text>
               <Text style={{ fontSize: 11, color: '#0284C7', fontFamily: systemFontMedium }}>TAP TO SEND IN</Text>
             </View>
 
-            {availableBatters.length === 0 ? (
+            {availableBatsmen.length === 0 ? (
               <View style={{ padding: 24, alignItems: 'center' }}>
                 <Text style={{ color: '#64748B', fontSize: 13, fontFamily: systemFontMedium }}>No available batters left in squad.</Text>
               </View>
             ) : (
-              availableBatters.map((name, idx, arr) => (
+              availableBatsmen.map((name, idx, arr) => (
                 <TouchableOpacity
                   key={name}
                   activeOpacity={0.7}
@@ -79,7 +93,7 @@ export function WicketPendingModal({
                     borderBottomColor: '#F1F5F9',
                     backgroundColor: '#FFFFFF'
                   }}
-                  onPress={() => selectNewBatsman(name)}
+                  onPress={() => handleSelect(name)}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, paddingRight: 10 }}>
                     <PlayerAvatar name={name} size={38} />
@@ -96,8 +110,52 @@ export function WicketPendingModal({
               ))
             )}
           </View>
+
+          {/* Add New Batter On-The-Fly */}
+          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, padding: 14, gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="person-add-outline" size={16} color="#0284C7" />
+              <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>ADD NEW BATTER MID-MATCH</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TextInput
+                style={{
+                  flex: 1,
+                  height: 46,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  paddingHorizontal: 12,
+                  backgroundColor: '#F8FAFC',
+                  fontSize: 13,
+                  color: '#0F172A',
+                  fontFamily: systemFontMedium
+                }}
+                placeholder="Type new batter name..."
+                placeholderTextColor="#94A3B8"
+                value={newBatsmanName || ''}
+                onChangeText={(t) => setNewBatsmanName && setNewBatsmanName(capitalizeWords(t))}
+                autoCapitalize="words"
+              />
+              <TouchableOpacity
+                disabled={!trimmedBatsman}
+                style={{
+                  backgroundColor: trimmedBatsman ? '#0284C7' : '#94A3B8',
+                  paddingHorizontal: 14,
+                  borderRadius: 8,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+                onPress={() => handleSelect(capitalizeWords(trimmedBatsman))}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Add & Select</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </Modal>
   );
 }
+
+export default WicketPendingModal;

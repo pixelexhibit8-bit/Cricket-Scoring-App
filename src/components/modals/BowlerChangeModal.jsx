@@ -17,18 +17,32 @@ const nameFitProps = {
 export function BowlerChangeModal({
   visible,
   onClose,
-  activeMatch,
-  setActiveMatch,
   curInning,
-  getAvailableBowlers,
+  availableBowlers = [],
   nextBowlerName = '',
   setNextBowlerName,
-  handleNewBowler
+  onSelectBowler,
+  onAddPlayerMidMatch
 }) {
   if (!visible) return null;
 
-  const availableBowlers = getAvailableBowlers ? getAvailableBowlers() : [];
   const trimmedBowler = (nextBowlerName || '').trim();
+
+  const handleSelect = (bowlerName) => {
+    if ((curInning?.currentOverBalls || []).length > 0 && !curInning?.isOverComplete) {
+      Alert.alert('Change Bowler', 'Normal bowler change is allowed only after the over is complete.');
+      return;
+    }
+    if (onSelectBowler) {
+      onSelectBowler(bowlerName);
+    }
+    if (setNextBowlerName) {
+      setNextBowlerName('');
+    }
+    if (onClose) {
+      onClose();
+    }
+  };
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -87,33 +101,7 @@ export function BowlerChangeModal({
                       borderBottomColor: '#F1F5F9',
                       backgroundColor: '#FFFFFF'
                     }}
-                    onPress={() => {
-                      if ((curInning?.currentOverBalls || []).length > 0 && !curInning?.isOverComplete) {
-                        Alert.alert('Change Bowler', 'Normal bowler change is allowed only after the over is complete.');
-                        return;
-                      }
-                      setActiveMatch(prev => {
-                        const innings = prev.innings.map(x => ({ ...x }));
-                        const inn = { ...innings[prev.inning - 1] };
-                        if ((inn.currentOverBalls || []).length > 0 && !inn.isOverComplete) {
-                          Alert.alert('Change Bowler', 'Normal bowler change is allowed only after the over is complete.');
-                          return prev;
-                        }
-                        const savedBowlerFigure = getBowlerFigureFromInning(inn, name);
-                        inn.bowlingStats = { ...(inn.bowlingStats || {}), [name]: savedBowlerFigure };
-                        inn.bowler = {
-                          name,
-                          runs: savedBowlerFigure.runs,
-                          wickets: savedBowlerFigure.wickets,
-                          overs: savedBowlerFigure.overs
-                        };
-                        inn.bowlerLegalBalls = savedBowlerFigure.balls;
-                        innings[prev.inning - 1] = inn;
-                        return { ...prev, innings };
-                      });
-                      if (setNextBowlerName) setNextBowlerName('');
-                      onClose();
-                    }}
+                    onPress={() => handleSelect(name)}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, paddingRight: 10 }}>
                       <PlayerAvatar name={name} size={38} />
@@ -167,7 +155,7 @@ export function BowlerChangeModal({
                   justifyContent: 'center',
                   alignItems: 'center'
                 }}
-                onPress={() => handleNewBowler && handleNewBowler(capitalizeWords(trimmedBowler))}
+                onPress={() => handleSelect(capitalizeWords(trimmedBowler))}
               >
                 <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Add & Select</Text>
               </TouchableOpacity>

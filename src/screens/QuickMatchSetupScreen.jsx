@@ -382,7 +382,7 @@ export function QuickMatchSetupScreen({
         paddingVertical: 8,
         flexDirection: 'row',
         alignItems: 'center',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         gap: 10,
         backgroundColor: active ? (accent === '#0284C7' ? '#F0F9FF' : '#FFF1F2') : '#FFFFFF',
         borderBottomWidth: 1,

@@ -149,7 +149,8 @@ export function FinishedMatchViewScreen({
   handleOpenPlayerProfile,
   handleRematch,
   refreshing = false,
-  handlePullToRefresh
+  handlePullToRefresh,
+  setPlayingXiVisible
 }) {
   const { width: screenWidth } = useWindowDimensions();
   const [internalFinishedTab, setInternalFinishedTab] = useState('summary');
@@ -327,22 +328,46 @@ export function FinishedMatchViewScreen({
               }
             >
               {/* TAB 1: INFO */}
-              {pageTabId === 'info' && (
-                <MatchInfoPanel
-                  rows={[
-                    { icon: 'trophy-outline', label: 'Match', value: f.matchTitle || f.title || `${team1Name} vs ${team2Name}` },
-                    { icon: 'calendar-outline', label: 'Date & time', value: formatMatchDateTime(f.startedAt || f.date) },
-                    { icon: 'swap-horizontal-outline', label: 'Toss', value: f.tossResult || `${getTossWinnerName(f)} chose to ${getTossDecisionText(f, 'BAT')}`, emphasis: true },
-                    f.venue ? { icon: 'location-outline', label: 'Venue', value: f.venue } : null,
-                    { icon: 'person-outline', label: 'Umpire', value: f.umpireName || 'Cric Scorer' },
-                    { icon: 'partly-sunny-outline', label: 'Conditions', value: f.conditions || '28°C, Clear Sky' }
-                  ]}
-                  teamOneName={team1Name}
-                  teamTwoName={team2Name}
-                  playerCount={(f.playingXI?.[team1Name]?.length || 0) + (f.playingXI?.[team2Name]?.length || 0)}
-                  onOpenPlayingXi={() => {}}
-                />
-              )}
+              {pageTabId === 'info' && (() => {
+                const getTeamRosterCount = (tName, teamObj) => {
+                  if (f.playingXI && tName) {
+                    if (Array.isArray(f.playingXI[tName]) && f.playingXI[tName].length > 0) return f.playingXI[tName].length;
+                    const matchKey = Object.keys(f.playingXI).find(k => k.trim().toLowerCase() === tName.trim().toLowerCase());
+                    if (matchKey && Array.isArray(f.playingXI[matchKey]) && f.playingXI[matchKey].length > 0) return f.playingXI[matchKey].length;
+                  }
+                  if (f.sourceMatch?.playingXI && tName) {
+                    if (Array.isArray(f.sourceMatch.playingXI[tName]) && f.sourceMatch.playingXI[tName].length > 0) return f.sourceMatch.playingXI[tName].length;
+                    const matchKey = Object.keys(f.sourceMatch.playingXI).find(k => k.trim().toLowerCase() === tName.trim().toLowerCase());
+                    if (matchKey && Array.isArray(f.sourceMatch.playingXI[matchKey]) && f.sourceMatch.playingXI[matchKey].length > 0) return f.sourceMatch.playingXI[matchKey].length;
+                  }
+                  if (Array.isArray(teamObj?.batting) && teamObj.batting.length > 0) {
+                    return teamObj.batting.length;
+                  }
+                  return 0;
+                };
+                const teamOneCount = getTeamRosterCount(team1Name, f.team1);
+                const teamTwoCount = getTeamRosterCount(team2Name, f.team2);
+                const totalPlayerCount = teamOneCount + teamTwoCount;
+
+                return (
+                  <MatchInfoPanel
+                    rows={[
+                      { icon: 'trophy-outline', label: 'Match', value: f.matchTitle || f.title || `${team1Name} vs ${team2Name}` },
+                      { icon: 'calendar-outline', label: 'Date & time', value: formatMatchDateTime(f.startedAt || f.date) },
+                      { icon: 'swap-horizontal-outline', label: 'Toss', value: f.tossResult || `${getTossWinnerName(f)} chose to ${getTossDecisionText(f, 'BAT')}`, emphasis: true },
+                      f.venue ? { icon: 'location-outline', label: 'Venue', value: f.venue } : null,
+                      { icon: 'person-outline', label: 'Umpire', value: f.umpireName || 'Cric Scorer' },
+                      { icon: 'partly-sunny-outline', label: 'Conditions', value: f.conditions || '28°C, Clear Sky' }
+                    ]}
+                    teamOneName={team1Name}
+                    teamTwoName={team2Name}
+                    playerCount={totalPlayerCount}
+                    onOpenPlayingXi={() => {
+                      if (setPlayingXiVisible) setPlayingXiVisible(true);
+                    }}
+                  />
+                );
+              })()}
 
               {/* TAB 2: SUMMARY */}
               {pageTabId === 'summary' && (
