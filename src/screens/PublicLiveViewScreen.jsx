@@ -60,9 +60,7 @@ export function PublicLiveViewScreen({
   handleOpenPlayerProfile,
   refreshing = false,
   handlePullToRefresh,
-  setPlayingXiTeamTab,
-  setPlayingXiVisible,
-  playingXiPagerScrollX
+  setPlayingXiVisible
 }) {
   const { width: screenWidth } = useWindowDimensions();
   const [publicTabLayouts, setPublicTabLayouts] = useState({});
@@ -396,8 +394,6 @@ export function PublicLiveViewScreen({
                   teamTwoName={team2Name}
                   playerCount={publicTeamOneRoster.length + publicTeamTwoRoster.length}
                   onOpenPlayingXi={() => {
-                    if (setPlayingXiTeamTab) setPlayingXiTeamTab(1);
-                    if (playingXiPagerScrollX) playingXiPagerScrollX.setValue(0);
                     if (setPlayingXiVisible) setPlayingXiVisible(true);
                   }}
                 />

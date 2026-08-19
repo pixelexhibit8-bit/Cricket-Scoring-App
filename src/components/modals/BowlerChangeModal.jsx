@@ -21,13 +21,14 @@ export function BowlerChangeModal({
   setActiveMatch,
   curInning,
   getAvailableBowlers,
-  nextBowlerName,
+  nextBowlerName = '',
   setNextBowlerName,
   handleNewBowler
 }) {
   if (!visible) return null;
 
   const availableBowlers = getAvailableBowlers ? getAvailableBowlers() : [];
+  const trimmedBowler = (nextBowlerName || '').trim();
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -110,7 +111,7 @@ export function BowlerChangeModal({
                         innings[prev.inning - 1] = inn;
                         return { ...prev, innings };
                       });
-                      setNextBowlerName('');
+                      if (setNextBowlerName) setNextBowlerName('');
                       onClose();
                     }}
                   >
@@ -153,20 +154,20 @@ export function BowlerChangeModal({
                 }}
                 placeholder="Type new bowler name..."
                 placeholderTextColor="#94A3B8"
-                value={nextBowlerName}
-                onChangeText={(t) => setNextBowlerName(capitalizeWords(t))}
+                value={nextBowlerName || ''}
+                onChangeText={(t) => setNextBowlerName && setNextBowlerName(capitalizeWords(t))}
                 autoCapitalize="words"
               />
               <TouchableOpacity
-                disabled={!nextBowlerName.trim()}
+                disabled={!trimmedBowler}
                 style={{
-                  backgroundColor: nextBowlerName.trim() ? '#E11D48' : '#94A3B8',
+                  backgroundColor: trimmedBowler ? '#E11D48' : '#94A3B8',
                   paddingHorizontal: 14,
                   borderRadius: 8,
                   justifyContent: 'center',
                   alignItems: 'center'
                 }}
-                onPress={() => handleNewBowler && handleNewBowler(capitalizeWords(nextBowlerName.trim()))}
+                onPress={() => handleNewBowler && handleNewBowler(capitalizeWords(trimmedBowler))}
               >
                 <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Add & Select</Text>
               </TouchableOpacity>
@@ -177,3 +178,5 @@ export function BowlerChangeModal({
     </Modal>
   );
 }
+
+export default BowlerChangeModal;

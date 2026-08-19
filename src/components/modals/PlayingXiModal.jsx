@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   Modal,
   ScrollView,
   TouchableOpacity,
-  Animated
+  Animated,
+  Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,19 +23,94 @@ const nameFitProps = {
 export const PlayingXiModal = ({
   visible,
   onClose,
-  playingXiMatchTitle,
-  playingXiTabs = [],
-  playingXiTeamTab = 1,
-  changePlayingXiTeam,
-  capturePlayingXiTabLayout,
-  playingXiTabsMeasured,
-  playingXiIndicatorTranslateX,
-  playingXiIndicatorScaleX,
-  playingXiPagerRef,
-  playingXiPagerScrollX,
-  handlePlayingXiPagerEnd,
-  screenWidth
+  match = null,
+  playingXiMatchTitle: customTitle = '',
+  playingXiTabs: customTabs = null,
+  initialTeamTab = 1
 }) => {
+  const screenWidth = Dimensions.get('window').width;
+  const [playingXiTeamTab, setPlayingXiTeamTab] = useState(initialTeamTab || 1);
+  const [tabLayouts, setTabLayouts] = useState({});
+
+  const pagerRef = useRef(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  // Reset tab when modal opens
+  useEffect(() => {
+    if (visible) {
+      setPlayingXiTeamTab(initialTeamTab || 1);
+      const initialOffset = ((initialTeamTab || 1) - 1) * screenWidth;
+      scrollX.setValue(initialOffset);
+      setTimeout(() => {
+        pagerRef.current?.scrollTo({ x: initialOffset, animated: false });
+      }, 50);
+    }
+  }, [visible, initialTeamTab, screenWidth]);
+
+  // Derive Tabs from match if customTabs not passed
+  const tabs = customTabs || (
+    match?.teams?.length >= 2 && match?.playingXI
+      ? match.teams.slice(0, 2).map((team, index) => ({
+        id: index + 1,
+        name: team.name,
+        roster: match.playingXI[team.name] || []
+      }))
+      : match?.team1 && match?.team2
+        ? [
+          { id: 1, name: match.team1?.name || 'Team 1', roster: (match.team1?.batting || []).map(p => p.name || p).filter(Boolean) },
+          { id: 2, name: match.team2?.name || 'Team 2', roster: (match.team2?.batting || []).map(p => p.name || p).filter(Boolean) }
+        ]
+        : [
+          { id: 1, name: match?.teams?.[0]?.name || 'Team 1', roster: [] },
+          { id: 2, name: match?.teams?.[1]?.name || 'Team 2', roster: [] }
+        ]
+  );
+
+  const matchTitle = customTitle || match?.title || match?.matchTitle || 'Match Playing XI';
+
+  const captureTabLayout = (teamId, event) => {
+    const { x, width } = event.nativeEvent.layout;
+    setTabLayouts(prev => {
+      const cur = prev[teamId];
+      if (cur && Math.abs(cur.x - x) < 0.5 && Math.abs(cur.width - width) < 0.5) return prev;
+      return { ...prev, [teamId]: { x, width } };
+    });
+  };
+
+  const changeTeam = (teamId) => {
+    const nextIndex = teamId - 1;
+    pagerRef.current?.scrollTo({ x: nextIndex * screenWidth, animated: true });
+    setPlayingXiTeamTab(teamId);
+  };
+
+  const handlePagerEnd = (event) => {
+    const nextIndex = Math.max(0, Math.min(tabs.length - 1, Math.round(event.nativeEvent.contentOffset.x / screenWidth)));
+    const nextTeamId = nextIndex + 1;
+    if (nextTeamId !== playingXiTeamTab) {
+      setPlayingXiTeamTab(nextTeamId);
+    }
+  };
+
+  const tabsMeasured = tabs.every(team => tabLayouts[team.id]);
+  const indicatorTranslateX = tabsMeasured
+    ? scrollX.interpolate({
+      inputRange: [0, screenWidth],
+      outputRange: tabs.map(team => {
+        const layout = tabLayouts[team.id];
+        return layout ? layout.x + (layout.width / 2) - 50 : 0;
+      }),
+      extrapolate: 'clamp'
+    })
+    : 0;
+
+  const indicatorScaleX = tabsMeasured
+    ? scrollX.interpolate({
+      inputRange: [0, screenWidth],
+      outputRange: tabs.map(team => (tabLayouts[team.id]?.width || 100) / 100),
+      extrapolate: 'clamp'
+    })
+    : 1;
+
   return (
     <Modal
       visible={visible}
@@ -57,7 +133,7 @@ export const PlayingXiModal = ({
           <View style={{ flex: 1 }}>
             <Text style={{ color: '#0F172A', fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, fontFamily: systemFont }}>PLAYING XI</Text>
             <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
-              {playingXiMatchTitle}
+              {matchTitle}
             </Text>
           </View>
         </View>
@@ -65,13 +141,13 @@ export const PlayingXiModal = ({
         {/* Tab Strip */}
         <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
           <View style={{ position: 'relative', minHeight: 48, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-evenly' }}>
-            {playingXiTabs.map(team => {
+            {tabs.map(team => {
               const active = playingXiTeamTab === team.id;
               return (
                 <TouchableOpacity
                   key={team.id}
-                  onLayout={(event) => capturePlayingXiTabLayout && capturePlayingXiTabLayout(team.id, event)}
-                  onPress={() => changePlayingXiTeam && changePlayingXiTeam(team.id)}
+                  onLayout={(event) => captureTabLayout(team.id, event)}
+                  onPress={() => changeTeam(team.id)}
                   style={{ maxWidth: (screenWidth - 48) / 2, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
                   <MaterialCommunityIcons name="account-group" size={17} color={active ? '#0284C7' : '#94A3B8'} />
@@ -81,12 +157,12 @@ export const PlayingXiModal = ({
                 </TouchableOpacity>
               );
             })}
-            {playingXiTabsMeasured && playingXiIndicatorTranslateX && playingXiIndicatorScaleX ? (
+            {tabsMeasured ? (
               <Animated.View
                 pointerEvents="none"
-                style={{ position: 'absolute', left: 0, bottom: 0, width: 100, height: 3, transform: [{ translateX: playingXiIndicatorTranslateX }] }}
+                style={{ position: 'absolute', left: 0, bottom: 0, width: 100, height: 3, transform: [{ translateX: indicatorTranslateX }] }}
               >
-                <Animated.View style={{ flex: 1, borderRadius: 2, backgroundColor: '#0284C7', transform: [{ scaleX: playingXiIndicatorScaleX }] }} />
+                <Animated.View style={{ flex: 1, borderRadius: 2, backgroundColor: '#0284C7', transform: [{ scaleX: indicatorScaleX }] }} />
               </Animated.View>
             ) : null}
           </View>
@@ -94,7 +170,7 @@ export const PlayingXiModal = ({
 
         {/* Horizontal Swipe Pager */}
         <Animated.ScrollView
-          ref={playingXiPagerRef}
+          ref={pagerRef}
           horizontal
           pagingEnabled
           snapToInterval={screenWidth}
@@ -107,19 +183,14 @@ export const PlayingXiModal = ({
           decelerationRate="fast"
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
-          onScroll={playingXiPagerScrollX ? Animated.event(
-            [{ nativeEvent: { contentOffset: { x: playingXiPagerScrollX } } }],
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
             { useNativeDriver: true }
-          ) : undefined}
-          onMomentumScrollEnd={handlePlayingXiPagerEnd}
-          onLayout={() => {
-            const offset = (playingXiTeamTab - 1) * screenWidth;
-            playingXiPagerRef?.current?.scrollTo({ x: offset, animated: false });
-            if (playingXiPagerScrollX) playingXiPagerScrollX.setValue(offset);
-          }}
+          )}
+          onMomentumScrollEnd={handlePagerEnd}
           style={{ flex: 1 }}
         >
-          {playingXiTabs.map(team => (
+          {tabs.map(team => (
             <View key={team.id} style={{ width: screenWidth, flex: 1 }}>
               <ScrollView
                 style={{ flex: 1 }}
@@ -133,32 +204,30 @@ export const PlayingXiModal = ({
                   <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{team.roster?.length || 0} PLAYERS</Text>
                 </View>
 
-                {(team.roster || []).map((playerName) => {
-                  return (
-                    <View
-                      key={`${team.id}-${playerName}`}
-                      style={{
-                        minHeight: 68,
-                        paddingHorizontal: 16,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 12,
-                        backgroundColor: '#FFFFFF',
-                        borderBottomWidth: 1,
-                        borderBottomColor: '#E8ECEF'
-                      }}
+                {(team.roster || []).map((playerName) => (
+                  <View
+                    key={`${team.id}-${playerName}`}
+                    style={{
+                      minHeight: 68,
+                      paddingHorizontal: 16,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      backgroundColor: '#FFFFFF',
+                      borderBottomWidth: 1,
+                      borderBottomColor: '#E8ECEF'
+                    }}
+                  >
+                    <PlayerAvatar name={playerName} size={44} />
+                    <Text
+                      selectable
+                      {...nameFitProps}
+                      style={{ flex: 1, minWidth: 0, color: '#0F172A', fontSize: 14, lineHeight: 19, fontWeight: fontWeights.bold, fontFamily: systemFont }}
                     >
-                      <PlayerAvatar name={playerName} size={44} />
-                      <Text
-                        selectable
-                        {...nameFitProps}
-                        style={{ flex: 1, minWidth: 0, color: '#0F172A', fontSize: 14, lineHeight: 19, fontWeight: fontWeights.bold, fontFamily: systemFont }}
-                      >
-                        {playerName}
-                      </Text>
-                    </View>
-                  );
-                })}
+                      {playerName}
+                    </Text>
+                  </View>
+                ))}
               </ScrollView>
             </View>
           ))}

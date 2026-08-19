@@ -23,6 +23,8 @@ import { MyProfileScreen } from './MyProfileScreen.jsx';
 import { RankingsScreen } from './RankingsScreen.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
+import { MatchListScoreCard } from '../components/MatchListScoreCard.jsx';
+import { formatOvers, getTossWinnerName, getTossDecisionText, getScorePartsFromText, getFinishedResultCardText } from '../utils/cricketUtils.js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
 import { showToast } from '../services/toastService.js';
@@ -49,6 +51,7 @@ export function MatchesScreen({
   renderFinishedMatchListCard,
   visibleFinishedMatches = [],
   activeMatch,
+  setActiveMatch,
   upcomingMatches = [],
   onStartUpcomingMatch = null,
   TOP_BATTERS = [],
@@ -99,6 +102,90 @@ export function MatchesScreen({
       return m.dateText.split('•')[0].trim();
     }
     return 'Match Results';
+  };
+
+  const renderActiveCard = (targetMatch = null, index = 0) => {
+    const m = targetMatch || activeMatch;
+    if (!m) return null;
+
+    const t1 = m.teams?.[0] || m.team1 || { name: m.innings?.[0]?.battingTeam?.name || m.inn1BattingTeam || 'Team 1' };
+    const t2 = m.teams?.[1] || m.team2 || { name: m.innings?.[0]?.bowlingTeam?.name || m.inn1BowlingTeam || 'Team 2' };
+    const inn1 = m.innings?.[0];
+    const inn2 = m.innings?.[1];
+
+    const oversNum = m.maxOvers || m.totalOvers || 20;
+    const venueText = m.venue ? ` - ${m.venue}` : '';
+    const subtitle = `${oversNum}-over match${venueText}`;
+
+    const t1Score = inn1?.battingTeam ? `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}` : '0-0';
+    const t1Overs = inn1 ? formatOvers(inn1.totalLegalBalls || 0) : '0.0';
+    const t2Score = inn2?.battingTeam ? `${inn2.battingTeam.runs ?? 0}-${inn2.battingTeam.wickets ?? 0}` : '';
+    const t2Overs = inn2 ? formatOvers(inn2.totalLegalBalls || 0) : '';
+
+    const currentInning = m.inning === 2 ? (inn2 || inn1) : (inn1 || inn2);
+    const activeBattingTeamName = currentInning?.battingTeam?.name || t1.name;
+
+    const tossWin = getTossWinnerName(m) || m.tossWinner || t1.name;
+    const tossDec = getTossDecisionText(m, m.tossDecision || 'BAT');
+
+    return (
+      <View key={`${m.id || m.supabaseId || m.matchCode || 'live-card'}-${index}`} style={{ marginBottom: 8 }}>
+        <MatchListScoreCard
+          subtitle={subtitle}
+          teamOne={t1}
+          teamTwo={t2}
+          teamOneScore={t1Score}
+          teamOneOvers={t1Overs}
+          teamTwoScore={t2Score}
+          teamTwoOvers={t2Overs}
+          activeTeamName={activeBattingTeamName}
+          statusLabel="Live"
+          statusColor="#E11D48"
+          statusDotColor="#E11D48"
+          footerText={`Toss: ${tossWin}, Elected to ${tossDec}`}
+          onPress={() => {
+            if (setActiveMatch) setActiveMatch(m);
+            if (setCurrentScreen) setCurrentScreen('liveView');
+          }}
+        />
+      </View>
+    );
+  };
+
+  const renderFinishedCard = (match, index = 0) => {
+    if (!match) return null;
+    const teamOneScore = getScorePartsFromText(match.team1?.score);
+    const teamTwoScore = getScorePartsFromText(match.team2?.score);
+    const resultCardText = getFinishedResultCardText(match);
+    const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
+
+    const oversText = `${match.maxOvers || 5} Overs`;
+    const ballTypeText = match.ballType ? ` • ${match.ballType.charAt(0).toUpperCase() + match.ballType.slice(1)} Ball` : ' • Tennis Ball';
+    const venueText = match.venue ? ` • ${match.venue}` : ' • Sadokan Ground';
+    const subtitleText = `${oversText}${ballTypeText}${venueText}`;
+
+    return (
+      <View key={`${match.id || match.title || 'match'}-${index}`} style={{ marginBottom: 8 }}>
+        <MatchListScoreCard
+          subtitle={subtitleText}
+          teamOne={match.team1}
+          teamTwo={match.team2}
+          teamOneScore={teamOneScore.score}
+          teamOneOvers={teamOneScore.overs}
+          teamTwoScore={teamTwoScore.score}
+          teamTwoOvers={teamTwoScore.overs}
+          winnerTeamName={match.winnerTeamName}
+          resultTitle={resultCardText.title}
+          resultDetail={resultCardText.detail}
+          resultColor={resultColor}
+          topRightIcon={null}
+          onPress={() => {
+            if (setSelectedMatch) setSelectedMatch(match);
+            if (setCurrentScreen) setCurrentScreen('finishedView');
+          }}
+        />
+      </View>
+    );
   };
   const liveCount = (visibleLiveMatches || []).length;
   const homeTabs = [
@@ -315,8 +402,8 @@ export function MatchesScreen({
                         MATCHES ({ matchedLive.length + matchedFinished.length })
                       </Text>
                     </View>
-                    {matchedLive.map((m, idx) => renderActiveMatchListCard && renderActiveMatchListCard(m, idx))}
-                    {matchedFinished.map((f, idx) => renderFinishedMatchListCard && renderFinishedMatchListCard(f, idx))}
+                    {matchedLive.map((m, idx) => (renderActiveMatchListCard || renderActiveCard)(m, idx))}
+                    {matchedFinished.map((f, idx) => (renderFinishedMatchListCard || renderFinishedCard)(f, idx))}
                   </View>
                 )}
 
@@ -438,7 +525,7 @@ export function MatchesScreen({
                       <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontMedium }}>LIVE</Text>
                     </View>
                   </View>
-                  {visibleLiveMatches.map((m, idx) => renderActiveMatchListCard ? renderActiveMatchListCard(m, idx) : null)}
+                  {visibleLiveMatches.map((m, idx) => (renderActiveMatchListCard || renderActiveCard)(m, idx))}
                 </>
               )}
 
@@ -581,7 +668,7 @@ export function MatchesScreen({
                       <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
                         {dKey}
                       </Text>
-                      {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
+                      {groups[dKey].map((m, idx) => (renderFinishedMatchListCard || renderFinishedCard)(m, idx))}
                     </View>
                   ));
                 })()
@@ -621,7 +708,7 @@ export function MatchesScreen({
                       <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontMedium }}>LIVE</Text>
                     </View>
                   </View>
-                  {visibleLiveMatches.map((m, idx) => renderActiveMatchListCard ? renderActiveMatchListCard(m, idx) : null)}
+                  {visibleLiveMatches.map((m, idx) => (renderActiveMatchListCard || renderActiveCard)(m, idx))}
                 </>
               ) : (
                 <View style={styles.liteEmptyState}>
@@ -653,7 +740,7 @@ export function MatchesScreen({
                       <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
                         {dKey}
                       </Text>
-                      {groups[dKey].map(m => renderFinishedMatchListCard && renderFinishedMatchListCard(m))}
+                      {groups[dKey].map((m, idx) => (renderFinishedMatchListCard || renderFinishedCard)(m, idx))}
                     </View>
                   ));
                 })()
@@ -850,7 +937,7 @@ export function MatchesScreen({
                     <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
                       {dateKey}
                     </Text>
-                    {groups[dateKey].map(f => renderFinishedMatchListCard && renderFinishedMatchListCard(f))}
+                    {groups[dateKey].map((f, idx) => (renderFinishedMatchListCard || renderFinishedCard)(f, idx))}
                   </View>
                 ));
               })()}

@@ -39,8 +39,6 @@ export function AppNavigator({
   recentFinishedMatches = [],
   visibleFinishedMatches = [],
   activeMatchVisible = false,
-  renderActiveMatchListCard,
-  renderFinishedMatchListCard,
 
   // Actions
   openScorerScreen,
@@ -85,29 +83,6 @@ export function AppNavigator({
   liveViewReturnScreen,
   playingXiVisible,
   setPlayingXiVisible,
-  playingXiMatchTitle,
-  playingXiTabs,
-  playingXiTeamTab,
-  setPlayingXiTeamTab,
-  changePlayingXiTeam,
-  capturePlayingXiTabLayout,
-  playingXiTabsMeasured,
-  playingXiIndicatorTranslateX,
-  playingXiIndicatorScaleX,
-  playingXiPagerRef,
-  playingXiPagerScrollX,
-  handlePlayingXiPagerEnd,
-  screenWidth,
-
-  // Finished Screen props
-  finishedTab,
-  setFinishedTab,
-  finishedInningIndex,
-  setFinishedInningIndex,
-  publicTabLayouts,
-  setPublicTabLayouts,
-  publicTabsRef,
-  publicPagerScrollX,
 
   // Scorer Console & Modals props
   curInning,
@@ -206,9 +181,7 @@ export function AppNavigator({
           handleOpenPlayerProfile={handleOpenPlayerProfile}
           refreshing={refreshing}
           handlePullToRefresh={handlePullToRefresh}
-          setPlayingXiTeamTab={setPlayingXiTeamTab}
           setPlayingXiVisible={setPlayingXiVisible}
-          playingXiPagerScrollX={playingXiPagerScrollX}
         />
       );
     }
@@ -226,14 +199,6 @@ export function AppNavigator({
       return (
         <FinishedMatchViewScreen
           match={finishedMatchSnapshot}
-          finishedTab={finishedTab}
-          setFinishedTab={setFinishedTab}
-          finishedInningIndex={finishedInningIndex}
-          setFinishedInningIndex={setFinishedInningIndex}
-          publicTabLayouts={publicTabLayouts}
-          setPublicTabLayouts={setPublicTabLayouts}
-          publicTabsRef={publicTabsRef}
-          publicPagerScrollX={publicPagerScrollX}
           setCurrentScreen={setCurrentScreen}
           handleOpenPlayerProfile={handleOpenPlayerProfile}
           handleRematch={handleRematch}
@@ -284,14 +249,6 @@ export function AppNavigator({
         return (
           <FinishedMatchViewScreen
             match={finishedSnapshot}
-            finishedTab={finishedTab}
-            setFinishedTab={setFinishedTab}
-            finishedInningIndex={finishedInningIndex}
-            setFinishedInningIndex={setFinishedInningIndex}
-            publicTabLayouts={publicTabLayouts}
-            setPublicTabLayouts={setPublicTabLayouts}
-            publicTabsRef={publicTabsRef}
-            publicPagerScrollX={publicPagerScrollX}
             setCurrentScreen={setCurrentScreen}
             handleOpenPlayerProfile={handleOpenPlayerProfile}
             handleRematch={handleRematch}
@@ -377,13 +334,12 @@ export function AppNavigator({
         setCurrentScreen={setCurrentScreen}
         activeMatchVisible={activeMatchVisible}
         visibleLiveMatches={visibleLiveMatches}
-        renderActiveMatchListCard={renderActiveMatchListCard}
         recentFinishedMatches={recentFinishedMatches}
-        renderFinishedMatchListCard={renderFinishedMatchListCard}
         visibleFinishedMatches={visibleFinishedMatches}
         finishedArchive={finishedArchive}
         setSelectedMatch={setSelectedMatch}
         activeMatch={activeMatch}
+        setActiveMatch={setActiveMatch}
         TOP_BATTERS={TOP_BATTERS}
         TOP_BOWLERS={TOP_BOWLERS}
         TOP_ALLROUNDERS={TOP_ALLROUNDERS}
@@ -412,18 +368,7 @@ export function AppNavigator({
       <PlayingXiModal
         visible={Boolean(playingXiVisible)}
         onClose={() => setPlayingXiVisible(false)}
-        playingXiMatchTitle={playingXiMatchTitle}
-        playingXiTabs={playingXiTabs}
-        playingXiTeamTab={playingXiTeamTab}
-        changePlayingXiTeam={changePlayingXiTeam}
-        capturePlayingXiTabLayout={capturePlayingXiTabLayout}
-        playingXiTabsMeasured={playingXiTabsMeasured}
-        playingXiIndicatorTranslateX={playingXiIndicatorTranslateX}
-        playingXiIndicatorScaleX={playingXiIndicatorScaleX}
-        playingXiPagerRef={playingXiPagerRef}
-        playingXiPagerScrollX={playingXiPagerScrollX}
-        handlePlayingXiPagerEnd={handlePlayingXiPagerEnd}
-        screenWidth={screenWidth}
+        match={activeMatch || selectedMatch}
       />
 
       <WicketDismissalModal

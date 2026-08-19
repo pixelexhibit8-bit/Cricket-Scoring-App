@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -141,14 +141,10 @@ const MatchResultHero = ({ teamOne, teamTwo, winnerTeamName, resultText }) => (
 
 export function FinishedMatchViewScreen({
   match,
-  finishedTab = 'summary',
-  setFinishedTab,
-  finishedInningIndex = 0,
-  setFinishedInningIndex,
-  publicTabLayouts = {},
-  setPublicTabLayouts,
-  publicTabsRef,
-  publicPagerScrollX,
+  finishedTab: externalFinishedTab,
+  setFinishedTab: externalSetFinishedTab,
+  finishedInningIndex: externalFinishedInningIndex,
+  setFinishedInningIndex: externalSetFinishedInningIndex,
   setCurrentScreen,
   handleOpenPlayerProfile,
   handleRematch,
@@ -156,7 +152,20 @@ export function FinishedMatchViewScreen({
   handlePullToRefresh
 }) {
   const { width: screenWidth } = useWindowDimensions();
+  const [internalFinishedTab, setInternalFinishedTab] = useState('summary');
+  const [internalInningIndex, setInternalInningIndex] = useState(0);
+  const [publicTabLayouts, setPublicTabLayouts] = useState({});
+
+  const finishedTab = externalFinishedTab !== undefined ? externalFinishedTab : internalFinishedTab;
+  const setFinishedTab = externalSetFinishedTab || setInternalFinishedTab;
+  const finishedInningIndex = externalFinishedInningIndex !== undefined ? externalFinishedInningIndex : internalInningIndex;
+  const setFinishedInningIndex = externalSetFinishedInningIndex || setInternalInningIndex;
+
   const finishedSwipeRef = useRef(null);
+  const publicTabsRef = useRef(null);
+  const publicPagerScrollX = useRef(new Animated.Value(
+    FINISHED_MATCH_TABS.findIndex(tab => tab.id === finishedTab) * screenWidth
+  )).current;
 
   if (!match) {
     return (
