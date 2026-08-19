@@ -59,19 +59,70 @@ CREATE TABLE IF NOT EXISTS local_players (
     UNIQUE(name)
 );
 
--- 3. Enable Row Level Security (RLS) & Public Access
+-- 3. Enable Row Level Security (RLS) & Secured Public Access
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow public read access on matches" ON matches FOR SELECT USING (true);
-CREATE POLICY "Allow public insert/update on matches" ON matches FOR ALL USING (true);
-
-CREATE POLICY "Allow public read access on players" ON players FOR SELECT USING (true);
-CREATE POLICY "Allow public insert/update on players" ON players FOR ALL USING (true);
-
 ALTER TABLE local_players ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read access on local_players" ON local_players FOR SELECT USING (true);
-CREATE POLICY "Allow public insert/update on local_players" ON local_players FOR ALL USING (true);
+
+-- 3.1 Matches Policies (Read for all, Insert/Update for active builds, Delete restricted)
+DROP POLICY IF EXISTS "Allow public read access on matches" ON matches;
+DROP POLICY IF EXISTS "Allow public insert/update on matches" ON matches;
+DROP POLICY IF EXISTS "Allow public read on matches" ON matches;
+DROP POLICY IF EXISTS "Allow insert on matches" ON matches;
+DROP POLICY IF EXISTS "Allow update on matches" ON matches;
+
+CREATE POLICY "Allow public read on matches" ON matches 
+    FOR SELECT 
+    USING (true);
+
+CREATE POLICY "Allow insert on matches" ON matches 
+    FOR INSERT 
+    WITH CHECK (true);
+
+CREATE POLICY "Allow update on matches" ON matches 
+    FOR UPDATE 
+    USING (true) 
+    WITH CHECK (true);
+
+-- 3.2 Local Players Policies (Read for all, Insert/Update for active app, Delete restricted)
+DROP POLICY IF EXISTS "Allow public read access on local_players" ON local_players;
+DROP POLICY IF EXISTS "Allow public insert/update on local_players" ON local_players;
+DROP POLICY IF EXISTS "Allow public read on local_players" ON local_players;
+DROP POLICY IF EXISTS "Allow insert on local_players" ON local_players;
+DROP POLICY IF EXISTS "Allow update on local_players" ON local_players;
+
+CREATE POLICY "Allow public read on local_players" ON local_players 
+    FOR SELECT 
+    USING (true);
+
+CREATE POLICY "Allow insert on local_players" ON local_players 
+    FOR INSERT 
+    WITH CHECK (true);
+
+CREATE POLICY "Allow update on local_players" ON local_players 
+    FOR UPDATE 
+    USING (true) 
+    WITH CHECK (true);
+
+-- 3.3 Legacy Players Policies
+DROP POLICY IF EXISTS "Allow public read access on players" ON players;
+DROP POLICY IF EXISTS "Allow public insert/update on players" ON players;
+DROP POLICY IF EXISTS "Allow public read on players" ON players;
+DROP POLICY IF EXISTS "Allow insert on players" ON players;
+DROP POLICY IF EXISTS "Allow update on players" ON players;
+
+CREATE POLICY "Allow public read on players" ON players 
+    FOR SELECT 
+    USING (true);
+
+CREATE POLICY "Allow insert on players" ON players 
+    FOR INSERT 
+    WITH CHECK (true);
+
+CREATE POLICY "Allow update on players" ON players 
+    FOR UPDATE 
+    USING (true) 
+    WITH CHECK (true);
 
 -- 4. Enable Realtime Sync for matches
 ALTER PUBLICATION supabase_realtime ADD TABLE matches;

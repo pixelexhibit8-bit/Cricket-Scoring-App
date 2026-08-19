@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   TextInput,
   RefreshControl,
   Keyboard,
   TouchableWithoutFeedback,
-  StyleSheet
+  StyleSheet,
+  Animated,
+  Image,
+  useWindowDimensions
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../components/navigation/AppHeader.jsx';
@@ -17,15 +21,30 @@ import { MatchesScreen } from './MatchesScreen.jsx';
 import { RankingsScreen } from './RankingsScreen.jsx';
 import { MyProfileScreen } from './MyProfileScreen.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
-import { MatchListScoreCard } from '../components/MatchListScoreCard.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
+import { MatchListScoreCard } from '../components/MatchListScoreCard.jsx';
+import { GroundSpotlightSection } from '../components/GroundSpotlightSection.jsx';
+import { SocialConnectCard } from '../components/SocialConnectCard.jsx';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
 import {
   systemFont,
   systemFontMedium,
   systemFontBold,
-  fontWeights
+  fontWeights,
+  theme,
+  themeColors,
+  spacing,
+  radius,
+  typeScale
 } from '../theme.js';
+import { getCurrentUser } from '../services/authService.js';
+
+const BANNER_SLIDES = [
+  { id: '1', image: require('../../assets/banner_1.jpg') },
+  { id: '2', image: require('../../assets/banner_2.jpg') },
+  { id: '3', image: require('../../assets/banner_3.jpg') },
+];
+import { showToast } from '../services/toastService.js';
 import {
   formatOvers,
   getScorePartsFromText,
@@ -58,6 +77,57 @@ export function HomeScreen(props) {
 
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [isJoinCodeExpanded, setIsJoinCodeExpanded] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const { width: screenWidth } = useWindowDimensions();
+  const bannerWidth = Math.max(screenWidth - spacing.md * 2, 280);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const bannerFlatListRef = useRef(null);
+
+  // Auto-play Banner Carousel (3.5s interval)
+  useEffect(() => {
+    if (BANNER_SLIDES.length <= 1) return;
+    const interval = setInterval(() => {
+      setBannerIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % BANNER_SLIDES.length;
+        if (bannerFlatListRef.current) {
+          bannerFlatListRef.current.scrollToOffset({
+            offset: nextIndex * bannerWidth,
+            animated: true
+          });
+        }
+        return nextIndex;
+      });
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [bannerWidth]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchUser = async () => {
+      const u = await getCurrentUser();
+      if (isMounted) setCurrentUser(u);
+    };
+    fetchUser();
+    return () => { isMounted = false; };
+  }, [refreshing, bottomNavTab]);
+
+  const handleStartQuickMatch = () => {
+    if (!currentUser) {
+      showToast({
+        type: 'warning',
+        message: 'Please sign in first to score matches & protect match records.'
+      });
+      if (setBottomNavTab) {
+        setBottomNavTab('profile');
+      }
+      return;
+    }
+    if (openScorerScreen) {
+      openScorerScreen();
+    }
+  };
 
   // 1. If bottom tab is "matches" -> Render MatchesScreen
   if (bottomNavTab === 'matches') {
@@ -67,7 +137,7 @@ export function HomeScreen(props) {
   // 2. If bottom tab is "rankings" -> Render RankingsScreen with bottom nav
   if (bottomNavTab === 'rankings') {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
         <RankingsScreen
           topBatters={TOP_BATTERS}
           topBowlers={TOP_BOWLERS}
@@ -92,7 +162,7 @@ export function HomeScreen(props) {
   // 3. If bottom tab is "profile" -> Render MyProfileScreen with bottom nav
   if (bottomNavTab === 'profile') {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
         <MyProfileScreen
           finishedMatches={finishedArchive || []}
           activeMatch={activeMatch}
@@ -127,6 +197,54 @@ export function HomeScreen(props) {
 
   const topBatter = TOP_BATTERS[0] || null;
   const topBowler = TOP_BOWLERS[0] || null;
+  const topAllRounder = TOP_ALLROUNDERS[0] || null;
+
+  // ── Unified Instant Search Logic ──
+  const trimmedQuery = (searchQuery || '').trim().toLowerCase();
+  const isSearching = trimmedQuery.length > 0;
+
+  // Filter Live Matches
+  const filteredLiveMatches = isSearching
+    ? allLive.filter((m) => {
+        const title = (m.matchTitle || m.title || '').toLowerCase();
+        const t1 = (m.team1?.name || m.teams?.[0]?.name || '').toLowerCase();
+        const t2 = (m.team2?.name || m.teams?.[1]?.name || '').toLowerCase();
+        return title.includes(trimmedQuery) || t1.includes(trimmedQuery) || t2.includes(trimmedQuery);
+      })
+    : [];
+
+  // Filter Finished Matches
+  const allFinishedPool = finishedArchive && finishedArchive.length > 0 ? finishedArchive : recentFinishedMatches;
+  const filteredFinishedMatches = isSearching
+    ? allFinishedPool.filter((m) => {
+        const title = (m.matchTitle || m.title || m.match_title || '').toLowerCase();
+        const t1 = (m.team1?.name || m.teams?.[0]?.name || m.inn1BattingTeam || '').toLowerCase();
+        const t2 = (m.team2?.name || m.teams?.[1]?.name || m.inn1BowlingTeam || '').toLowerCase();
+        return title.includes(trimmedQuery) || t1.includes(trimmedQuery) || t2.includes(trimmedQuery);
+      })
+    : [];
+
+  // Filter Players Pool
+  const allPlayersPool = [];
+  const seenPlayerNames = new Set();
+  [...TOP_BATTERS, ...TOP_BOWLERS, ...TOP_ALLROUNDERS].forEach((p) => {
+    const pName = p.name || p.playerName || p.fullName;
+    if (pName && !seenPlayerNames.has(pName.toLowerCase())) {
+      seenPlayerNames.add(pName.toLowerCase());
+      allPlayersPool.push(p);
+    }
+  });
+
+  const filteredPlayers = isSearching
+    ? allPlayersPool.filter((p) => {
+        const pName = (p.name || p.playerName || '').toLowerCase();
+        const role = (p.role || '').toLowerCase();
+        const team = (p.team || p.city || '').toLowerCase();
+        return pName.includes(trimmedQuery) || role.includes(trimmedQuery) || team.includes(trimmedQuery);
+      })
+    : [];
+
+  const totalSearchCount = filteredLiveMatches.length + filteredFinishedMatches.length + filteredPlayers.length;
 
   const handleJoinSubmit = () => {
     const code = joinCodeInput.trim().toUpperCase();
@@ -141,17 +259,22 @@ export function HomeScreen(props) {
   // 4. Rich Native Home Dashboard
   return (
     <View style={styles.container}>
-      {/* REUSABLE TOP APP HEADER */}
+      {/* REUSABLE TOP APP HEADER WITH SMOOTH COLLAPSIBLE SEARCH */}
       <AppHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        placeholder="Search players, matches..."
+        scrollY={scrollY}
       />
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
         refreshControl={
           handlePullToRefresh ? (
             <RefreshControl
@@ -163,299 +286,340 @@ export function HomeScreen(props) {
           ) : undefined
         }
       >
-        {/* HERO QUICK MATCH ACTIONS */}
-        <FadeSlideIn distance={12} delay={0}>
-          <View style={styles.heroActionCard}>
-            <View style={styles.heroTextContainer}>
-              <Text style={styles.heroTitle}>Local Ground Cricket</Text>
-              <Text style={styles.heroSubtitle}>
-                Instant zero-friction scoring for turf, gaon & gully matches
-              </Text>
-            </View>
-
-            <View style={styles.heroButtonsRow}>
-              <ScalePressable
-                activeScale={0.96}
-                onPress={openScorerScreen}
-                style={styles.primaryActionButton}
-              >
-                <MaterialCommunityIcons name="cricket" size={20} color="#FFFFFF" />
-                <Text style={styles.primaryActionText}>Start Quick Match</Text>
-              </ScalePressable>
-
-              <ScalePressable
-                activeScale={0.96}
-                onPress={() => setIsJoinCodeExpanded(!isJoinCodeExpanded)}
-                style={styles.secondaryActionButton}
-              >
-                <Ionicons name="enter-outline" size={18} color="#0284C7" />
-                <Text style={styles.secondaryActionText}>Join Match</Text>
-              </ScalePressable>
-            </View>
-
-            {/* EXPANDABLE JOIN CODE INPUT */}
-            {isJoinCodeExpanded ? (
-              <View style={styles.joinCodeBox}>
-                <TextInput
-                  value={joinCodeInput}
-                  onChangeText={setJoinCodeInput}
-                  placeholder="Enter Match Code (e.g. CF-1234)"
-                  placeholderTextColor="#94A3B8"
-                  autoCapitalize="characters"
-                  style={styles.joinCodeInput}
-                  returnKeyType="go"
-                  onSubmitEditing={handleJoinSubmit}
-                />
+        {isSearching ? (
+          /* ── INSTANT SEARCH RESULTS VIEW ── */
+          <FadeSlideIn distance={12} delay={0}>
+            <View style={{ gap: spacing.md }}>
+              {/* SEARCH RESULTS SUMMARY */}
+              <View style={styles.searchSummaryRow}>
+                <Text style={styles.searchSummaryText}>
+                  Found {totalSearchCount} result{totalSearchCount === 1 ? '' : 's'} for "{searchQuery}"
+                </Text>
                 <TouchableOpacity
-                  onPress={handleJoinSubmit}
-                  style={styles.joinCodeSubmitBtn}
-                  activeOpacity={0.8}
+                  onPress={() => (setSearchQuery ? setSearchQuery('') : null)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  <Text style={styles.searchClearText}>Clear</Text>
                 </TouchableOpacity>
               </View>
-            ) : null}
-          </View>
-        </FadeSlideIn>
 
-        {/* LIVE MATCH SPOTLIGHT SECTION */}
-        {primaryLiveMatch ? (
-          <FadeSlideIn distance={12} delay={50}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.liveIndicatorRow}>
-                <View style={styles.livePulseDot} />
-                <Text style={styles.sectionTitleLive}>LIVE MATCH</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => {
-                  if (setBottomNavTab) setBottomNavTab('matches');
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.sectionLink}>View all ({allLive.length})</Text>
-              </TouchableOpacity>
-            </View>
+              {totalSearchCount === 0 ? (
+                <View style={styles.emptyCard}>
+                  <Ionicons name="search-outline" size={36} color={themeColors.textSubtle} />
+                  <Text style={styles.emptyCardTitle}>No matches or players found</Text>
+                  <Text style={styles.emptyCardSubtitle}>
+                    Try searching with a different player name, team, or match title.
+                  </Text>
+                </View>
+              ) : null}
 
-            {(() => {
-              const inn = primaryLiveMatch.inning === 2
-                ? (primaryLiveMatch.innings?.[1] || primaryLiveMatch.secondInning)
-                : (primaryLiveMatch.innings?.[0] || primaryLiveMatch.firstInning);
-              const batTeam = inn?.battingTeam || primaryLiveMatch.team1;
-              const bowlTeam = inn?.bowlingTeam || primaryLiveMatch.team2;
-              const runs = batTeam?.runs ?? 0;
-              const wkts = batTeam?.wickets ?? 0;
-              const totalBalls = inn?.totalLegalBalls ?? 0;
-              const overs = formatOvers(totalBalls);
-              const maxOvers = primaryLiveMatch.maxOvers || 20;
-
-              return (
-                <ScalePressable
-                  activeScale={0.98}
-                  onPress={() => {
-                    if (setActiveMatch) setActiveMatch(primaryLiveMatch);
-                    if (setCurrentScreen) setCurrentScreen('liveView');
-                  }}
-                  style={styles.liveMatchCard}
-                >
-                  <View style={styles.liveCardHeader}>
-                    <Text style={styles.liveMatchTitle} numberOfLines={1}>
-                      {primaryLiveMatch.matchTitle || primaryLiveMatch.title || `${batTeam?.name || 'Team 1'} vs ${bowlTeam?.name || 'Team 2'}`}
-                    </Text>
-                    <View style={styles.liveTag}>
-                      <Text style={styles.liveTagText}>INNING {primaryLiveMatch.inning || 1}</Text>
-                    </View>
+              {/* FILTERED LIVE MATCHES */}
+              {filteredLiveMatches.length > 0 ? (
+                <View style={{ gap: spacing.xs }}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitleLive}>LIVE MATCHES ({filteredLiveMatches.length})</Text>
                   </View>
-
-                  <View style={styles.liveScoreRow}>
-                    <View style={styles.liveTeamCol}>
-                      <TeamIdentityMark team={batTeam} size={36} />
-                      <Text style={styles.liveTeamName} numberOfLines={1}>
-                        {getTeamShortCode(batTeam, batTeam?.name)}
-                      </Text>
-                      <Text style={styles.liveScoreBig}>
-                        {runs}/{wkts}
-                      </Text>
-                      <Text style={styles.liveOversSmall}>
-                        ({overs}/{maxOvers} Ov)
-                      </Text>
-                    </View>
-
-                    <Text style={styles.liveVsText}>VS</Text>
-
-                    <View style={styles.liveTeamCol}>
-                      <TeamIdentityMark team={bowlTeam} size={36} isMuted />
-                      <Text style={styles.liveTeamNameMuted} numberOfLines={1}>
-                        {getTeamShortCode(bowlTeam, bowlTeam?.name)}
-                      </Text>
-                      <Text style={styles.liveScoreMuted}>
-                        {primaryLiveMatch.inning === 2 ? `${primaryLiveMatch.target ? `Target: ${primaryLiveMatch.target}` : 'Bowling'}` : 'Yet to bat'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.liveCardFooter}>
-                    <TouchableOpacity
+                  {filteredLiveMatches.map((m, idx) => (
+                    <ScalePressable
+                      key={`search-live-${m.id || idx}`}
+                      activeScale={0.98}
                       onPress={() => {
-                        if (setActiveMatch) setActiveMatch(primaryLiveMatch);
+                        if (setActiveMatch) setActiveMatch(m);
                         if (setCurrentScreen) setCurrentScreen('liveView');
                       }}
-                      style={styles.liveFooterBtn}
-                      activeOpacity={0.7}
+                      style={[styles.liveMatchCard, { marginBottom: 10 }]}
                     >
-                      <Ionicons name="radio-outline" size={14} color="#0284C7" />
-                      <Text style={styles.liveFooterBtnText}>Watch Live</Text>
-                    </TouchableOpacity>
+                      <View style={styles.liveCardHeader}>
+                        <Text style={styles.liveMatchTitle} numberOfLines={1}>
+                          {m.matchTitle || m.title || `${m.team1?.name || 'Team 1'} vs ${m.team2?.name || 'Team 2'}`}
+                        </Text>
+                        <View style={styles.liveTag}>
+                          <Text style={styles.liveTagText}>LIVE</Text>
+                        </View>
+                      </View>
+                    </ScalePressable>
+                  ))}
+                </View>
+              ) : null}
 
+              {/* FILTERED FINISHED MATCHES */}
+              {filteredFinishedMatches.length > 0 ? (
+                <View style={{ gap: spacing.xs }}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>MATCH RESULTS ({filteredFinishedMatches.length})</Text>
+                  </View>
+                  {filteredFinishedMatches.map((match, idx) => {
+                    const teamOneScore = getScorePartsFromText(match.team1?.score);
+                    const teamTwoScore = getScorePartsFromText(match.team2?.score);
+                    const resultCardText = getFinishedResultCardText(match);
+                    const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
+                    const subtitleText = `${match.maxOvers || 5} Overs • ${match.venue || 'Sadokan Ground'}`;
+
+                    return (
+                      <View key={`search-fin-${match.id || 'm'}-${idx}`} style={{ marginBottom: 10 }}>
+                        <MatchListScoreCard
+                          subtitle={subtitleText}
+                          teamOne={match.team1}
+                          teamTwo={match.team2}
+                          teamOneScore={teamOneScore.score}
+                          teamOneOvers={teamOneScore.overs}
+                          teamTwoScore={teamTwoScore.score}
+                          teamTwoOvers={teamTwoScore.overs}
+                          winnerTeamName={match.winnerTeamName}
+                          resultTitle={resultCardText.title}
+                          resultDetail={resultCardText.detail}
+                          resultColor={resultColor}
+                          topRightIcon={null}
+                          onPress={() => {
+                            if (setSelectedMatch) setSelectedMatch(match);
+                            if (setCurrentScreen) setCurrentScreen('finishedView');
+                          }}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : null}
+
+              {/* FILTERED PLAYERS */}
+              {filteredPlayers.length > 0 ? (
+                <View style={{ gap: spacing.xs }}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>PLAYERS ({filteredPlayers.length})</Text>
+                  </View>
+                  <View style={styles.searchPlayerListCard}>
+                    {filteredPlayers.map((player, idx) => (
+                      <TouchableOpacity
+                        key={`search-pl-${player.name || idx}`}
+                        style={[
+                          styles.searchPlayerRow,
+                          idx < filteredPlayers.length - 1 && styles.searchPlayerBorder
+                        ]}
+                        onPress={() => {
+                          if (setSelectedPlayerProfile) setSelectedPlayerProfile(player);
+                          if (setCurrentScreen) setCurrentScreen('playerProfile');
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <PlayerAvatar name={player.name} size={36} photoUrl={player.photoUrl || player.photo_url} />
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text style={styles.searchPlayerName}>{player.name}</Text>
+                          <Text style={styles.searchPlayerRole}>
+                            {player.role || 'Cricket Player'} {player.city || player.team ? `• ${player.city || player.team}` : ''}
+                          </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color={themeColors.textSubtle} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          </FadeSlideIn>
+        ) : (
+          /* ── REGULAR HOME DASHBOARD ── */
+          <>
+            {/* ── NATIVE AUTO-PLAY BANNER CAROUSEL ── */}
+            <View style={styles.carouselWrap}>
+              <FlatList
+                ref={bannerFlatListRef}
+                data={BANNER_SLIDES}
+                keyExtractor={(item) => item.id}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={bannerWidth}
+                decelerationRate="fast"
+                bounces={false}
+                onMomentumScrollEnd={(e) => {
+                  const contentOffset = e.nativeEvent.contentOffset.x;
+                  const newIndex = Math.round(contentOffset / bannerWidth);
+                  setBannerIndex(Math.max(0, Math.min(newIndex, BANNER_SLIDES.length - 1)));
+                }}
+                renderItem={({ item }) => (
+                  <View style={[styles.bannerSlideItem, { width: bannerWidth }]}>
+                    <Image
+                      source={item.image}
+                      style={styles.bannerImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
+              />
+
+              {/* DOT INDICATORS */}
+              <View style={styles.dotsRow}>
+                {BANNER_SLIDES.map((_, i) => (
+                  <View
+                    key={`dot-${i}`}
+                    style={[styles.dot, i === bannerIndex && styles.dotActive]}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {/* HERO QUICK MATCH ACTIONS (AUTH-PROTECTED) */}
+            <FadeSlideIn distance={12} delay={0}>
+              <View style={styles.heroActionCard}>
+                <View style={styles.heroTextContainer}>
+                  <Text style={styles.heroTitle}>
+                    {currentUser ? 'LOCAL GROUND CRICKET' : 'SCORER SIGN-IN REQUIRED'}
+                  </Text>
+                  <Text style={styles.heroSubtitle}>
+                    {currentUser
+                      ? 'Instant real-time scoring for turf, box & club matches'
+                      : 'Sign in to create matches, score games & keep match records secure'}
+                  </Text>
+                </View>
+
+                <View style={styles.heroButtonsRow}>
+                  <ScalePressable
+                    activeScale={0.96}
+                    onPress={handleStartQuickMatch}
+                    style={styles.primaryActionButton}
+                  >
+                    <MaterialCommunityIcons
+                      name={currentUser ? 'cricket' : 'login'}
+                      size={16}
+                      color={themeColors.heroText}
+                    />
+                    <Text style={styles.primaryActionText}>
+                      {currentUser ? 'Start Quick Match' : 'Sign In to Score'}
+                    </Text>
+                  </ScalePressable>
+
+                  <ScalePressable
+                    activeScale={0.96}
+                    onPress={() => setIsJoinCodeExpanded(!isJoinCodeExpanded)}
+                    style={styles.secondaryActionButton}
+                  >
+                    <Ionicons name="enter-outline" size={15} color={themeColors.heroText} />
+                    <Text style={styles.secondaryActionText}>Join Match</Text>
+                  </ScalePressable>
+                </View>
+
+                {/* EXPANDABLE JOIN CODE INPUT */}
+                {isJoinCodeExpanded ? (
+                  <View style={styles.joinCodeBox}>
+                    <TextInput
+                      value={joinCodeInput}
+                      onChangeText={setJoinCodeInput}
+                      placeholder="Enter Match Code (e.g. CF-1234)"
+                      placeholderTextColor={themeColors.heroSubtext}
+                      autoCapitalize="characters"
+                      style={styles.joinCodeInput}
+                      returnKeyType="go"
+                      onSubmitEditing={handleJoinSubmit}
+                    />
                     <TouchableOpacity
-                      onPress={() => {
-                        if (setActiveMatch) setActiveMatch(primaryLiveMatch);
-                        if (setCurrentScreen) setCurrentScreen('scorerWizard');
-                      }}
-                      style={styles.liveFooterBtnPrimary}
-                      activeOpacity={0.7}
+                      onPress={handleJoinSubmit}
+                      style={styles.joinCodeSubmitBtn}
+                      activeOpacity={0.8}
                     >
-                      <MaterialCommunityIcons name="scoreboard-outline" size={14} color="#FFFFFF" />
-                      <Text style={styles.liveFooterBtnPrimaryText}>Score Match</Text>
+                      <Ionicons name="arrow-forward" size={15} color={themeColors.heroText} />
                     </TouchableOpacity>
                   </View>
-                </ScalePressable>
-              );
-            })()}
-          </FadeSlideIn>
-        ) : null}
+                ) : null}
+              </View>
+            </FadeSlideIn>
 
-        {/* RECENT MATCHES SECTION */}
-        <FadeSlideIn distance={12} delay={100}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>RECENT MATCHES</Text>
-            {finishedArchive.length > 0 ? (
-              <TouchableOpacity
-                onPress={() => {
-                  if (setBottomNavTab) setBottomNavTab('matches');
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.sectionLink}>See all ({finishedArchive.length})</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
 
-          {displayedFinished.length > 0 ? (
-            displayedFinished.map((match, idx) => {
-              const teamOneScore = getScorePartsFromText(match.team1?.score);
-              const teamTwoScore = getScorePartsFromText(match.team2?.score);
-              const resultCardText = getFinishedResultCardText(match);
-              const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
-              const subtitleText = `${match.maxOvers || 5} Overs • ${match.venue || 'Sadokan Ground'}`;
 
-              return (
-                <View key={`home-fin-${match.id || 'm'}-${idx}`} style={{ marginBottom: 10 }}>
-                  <MatchListScoreCard
-                    subtitle={subtitleText}
-                    teamOne={match.team1}
-                    teamTwo={match.team2}
-                    teamOneScore={teamOneScore.score}
-                    teamOneOvers={teamOneScore.overs}
-                    teamTwoScore={teamTwoScore.score}
-                    teamTwoOvers={teamTwoScore.overs}
-                    winnerTeamName={match.winnerTeamName}
-                    resultTitle={resultCardText.title}
-                    resultDetail={resultCardText.detail}
-                    resultColor={resultColor}
-                    topRightIcon={null}
+            {/* RECENT MATCHES SECTION */}
+            <FadeSlideIn distance={12} delay={100}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>RECENT MATCHES</Text>
+                {finishedArchive.length > 0 ? (
+                  <TouchableOpacity
                     onPress={() => {
-                      if (setSelectedMatch) setSelectedMatch(match);
-                      if (setCurrentScreen) setCurrentScreen('finishedView');
+                      if (setBottomNavTab) setBottomNavTab('matches');
                     }}
-                  />
-                </View>
-              );
-            })
-          ) : (
-            <View style={styles.emptyCard}>
-              <MaterialCommunityIcons name="cricket" size={36} color="#CBD5E1" />
-              <Text style={styles.emptyCardTitle}>No finished matches yet</Text>
-              <Text style={styles.emptyCardSubtitle}>
-                Score your first ground match to start tracking team results and career stats.
-              </Text>
-              <TouchableOpacity
-                onPress={openScorerScreen}
-                style={styles.emptyCardBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.emptyCardBtnText}>+ Start Match</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </FadeSlideIn>
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.sectionLink}>See all ({finishedArchive.length})</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
 
-        {/* TOP PERFORMERS SPOTLIGHT */}
-        {(topBatter || topBowler) ? (
-          <FadeSlideIn distance={12} delay={150}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>GROUND RANKINGS</Text>
-              <TouchableOpacity
-                onPress={() => {
+              {displayedFinished.length > 0 ? (
+                displayedFinished.map((match, idx) => {
+                  const teamOneScore = getScorePartsFromText(match.team1?.score);
+                  const teamTwoScore = getScorePartsFromText(match.team2?.score);
+                  const resultCardText = getFinishedResultCardText(match);
+                  const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
+                  const subtitleText = `${match.maxOvers || 5} Overs • ${match.venue || 'Sadokan Ground'}`;
+
+                  return (
+                    <View key={`home-fin-${match.id || 'm'}-${idx}`} style={{ marginBottom: 10 }}>
+                      <MatchListScoreCard
+                        subtitle={subtitleText}
+                        teamOne={match.team1}
+                        teamTwo={match.team2}
+                        teamOneScore={teamOneScore.score}
+                        teamOneOvers={teamOneScore.overs}
+                        teamTwoScore={teamTwoScore.score}
+                        teamTwoOvers={teamTwoScore.overs}
+                        winnerTeamName={match.winnerTeamName}
+                        resultTitle={resultCardText.title}
+                        resultDetail={resultCardText.detail}
+                        resultColor={resultColor}
+                        topRightIcon={null}
+                        onPress={() => {
+                          if (setSelectedMatch) setSelectedMatch(match);
+                          if (setCurrentScreen) setCurrentScreen('finishedView');
+                        }}
+                      />
+                    </View>
+                  );
+                })
+              ) : (
+                <View style={styles.emptyCard}>
+                  <MaterialCommunityIcons name="cricket" size={36} color="#CBD5E1" />
+                  <Text style={styles.emptyCardTitle}>No finished matches yet</Text>
+                  <Text style={styles.emptyCardSubtitle}>
+                    Score your first ground match to start tracking team results and career stats.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={openScorerScreen}
+                    style={styles.emptyCardBtn}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.emptyCardBtnText}>+ Start Match</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </FadeSlideIn>
+
+            {/* REUSABLE COLORFUL GROUND SPOTLIGHT */}
+            <FadeSlideIn distance={12} delay={150}>
+              <GroundSpotlightSection
+                topBatters={TOP_BATTERS}
+                topBowlers={TOP_BOWLERS}
+                topAllRounders={TOP_ALLROUNDERS}
+                onSelectPlayer={(name, meta) => {
+                  if (setSelectedPlayerProfile) setSelectedPlayerProfile({ name, ...meta });
+                  if (setCurrentScreen) setCurrentScreen('playerProfile');
+                }}
+                onViewAll={() => {
                   if (setBottomNavTab) setBottomNavTab('rankings');
                 }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.sectionLink}>Full Leaderboard</Text>
-              </TouchableOpacity>
-            </View>
+              />
+            </FadeSlideIn>
 
-            <View style={styles.performersRow}>
-              {topBatter ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    if (setSelectedPlayerProfile) setSelectedPlayerProfile({ name: topBatter.name });
-                    if (setCurrentScreen) setCurrentScreen('playerProfile');
-                  }}
-                  activeOpacity={0.8}
-                  style={styles.performerCard}
-                >
-                  <View style={styles.performerBadge}>
-                    <MaterialCommunityIcons name="bat" size={12} color="#0284C7" />
-                    <Text style={styles.performerBadgeText}>TOP BATTER</Text>
-                  </View>
-                  <PlayerAvatar name={topBatter.name} photoUrl={topBatter.photoUrl || topBatter.photo_url} size={40} />
-                  <Text style={styles.performerName} numberOfLines={1}>
-                    {topBatter.name}
-                  </Text>
-                  <Text style={styles.performerStat}>
-                    {topBatter.runs || topBatter.total_runs || 0} <Text style={styles.performerStatLabel}>runs</Text>
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
+            {/* CREX-STYLE SOCIAL CONNECT SECTION */}
+            <FadeSlideIn distance={12} delay={200}>
+              <SocialConnectCard
+                instagramHandle="cricflow.live_"
+                instagramUrl="https://instagram.com/cricflow.live_"
+                xHandle="cricflow_live"
+                xUrl="https://x.com/cricflow_live"
+              />
+            </FadeSlideIn>
+          </>
+        )}
 
-              {topBowler ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    if (setSelectedPlayerProfile) setSelectedPlayerProfile({ name: topBowler.name });
-                    if (setCurrentScreen) setCurrentScreen('playerProfile');
-                  }}
-                  activeOpacity={0.8}
-                  style={styles.performerCard}
-                >
-                  <View style={[styles.performerBadge, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
-                    <MaterialCommunityIcons name="baseball" size={12} color="#16A34A" />
-                    <Text style={[styles.performerBadgeText, { color: '#16A34A' }]}>TOP BOWLER</Text>
-                  </View>
-                  <PlayerAvatar name={topBowler.name} photoUrl={topBowler.photoUrl || topBowler.photo_url} size={40} />
-                  <Text style={styles.performerName} numberOfLines={1}>
-                    {topBowler.name}
-                  </Text>
-                  <Text style={styles.performerStat}>
-                    {topBowler.wickets || topBowler.total_wickets || 0} <Text style={styles.performerStatLabel}>wickets</Text>
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </FadeSlideIn>
-        ) : null}
-
-        <View style={{ height: 24 }} />
-      </ScrollView>
+        <View style={{ height: 20 }} />
+      </Animated.ScrollView>
 
       {/* INDUSTRIAL STANDARD BOTTOM NAVIGATION BAR */}
       <AppBottomNav
@@ -471,98 +635,135 @@ export function HomeScreen(props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF'
+    backgroundColor: theme.light.cardBg
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#F8FAFC'
+    backgroundColor: theme.light.bg
   },
   scrollContent: {
-    padding: 14,
-    gap: 16
+    padding: spacing.md,
+    gap: spacing.lg
+  },
+  carouselWrap: {
+    alignItems: 'center',
+    gap: 8,
+    overflow: 'hidden'
+  },
+  bannerSlideItem: {
+    height: 168,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#0F172A'
+  },
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 14
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: themeColors.border
+  },
+  dotActive: {
+    backgroundColor: themeColors.textPrimary,
+    width: 20,
+    borderRadius: 4
   },
   heroActionCard: {
-    backgroundColor: '#071B2C',
-    borderRadius: 18,
-    padding: 18,
+    backgroundColor: theme.hero.bg,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#123A56',
+    borderColor: theme.hero.border,
     gap: 14
   },
   heroTextContainer: {
     gap: 4
   },
   heroTitle: {
-    fontSize: 20,
-    color: '#FFFFFF',
-    fontFamily: systemFontBold,
-    letterSpacing: -0.2
+    fontSize: 16,
+    color: theme.hero.text,
+    fontFamily: systemFontMedium,
+    letterSpacing: -0.1
   },
   heroSubtitle: {
-    fontSize: 12.5,
-    color: '#9FC4D7',
-    fontFamily: systemFontMedium,
-    lineHeight: 18
+    fontSize: 12,
+    color: theme.hero.subtext,
+    fontFamily: systemFont,
+    lineHeight: 17
   },
   heroButtonsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10
+    gap: 10,
+    width: '100%'
   },
   primaryActionButton: {
-    flex: 1.3,
-    backgroundColor: '#0284C7',
+    flex: 1,
+    backgroundColor: 'rgba(250, 248, 245, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(250, 248, 245, 0.3)',
     paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8
+    gap: 6
   },
   primaryActionText: {
-    color: '#FFFFFF',
-    fontSize: 13.5,
-    fontFamily: systemFontBold
+    color: theme.hero.text,
+    fontSize: 13,
+    fontFamily: systemFontMedium
   },
   secondaryActionButton: {
     flex: 1,
-    backgroundColor: '#0E2A42',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#1E4D6B',
+    borderColor: 'rgba(250, 248, 245, 0.2)',
     paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6
   },
   secondaryActionText: {
-    color: '#38BDF8',
+    color: theme.hero.text,
     fontSize: 13,
-    fontFamily: systemFontBold
+    fontFamily: systemFontMedium
   },
   joinCodeBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0A2236',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
     borderRadius: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#1E4D6B'
+    borderColor: theme.hero.divider
   },
   joinCodeInput: {
     flex: 1,
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: systemFontBold,
+    color: theme.hero.text,
+    fontSize: 13,
+    fontFamily: systemFontMedium,
     paddingVertical: 4
   },
   joinCodeSubmitBtn: {
-    backgroundColor: '#0284C7',
+    backgroundColor: 'rgba(250, 248, 245, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(250, 248, 245, 0.25)',
     width: 32,
     height: 32,
     borderRadius: 8,
@@ -573,23 +774,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8
+    marginBottom: spacing.sm
   },
   sectionTitle: {
     fontSize: 11.5,
-    color: '#64748B',
+    color: theme.light.textMuted,
     letterSpacing: 0.8,
     fontFamily: systemFontBold
   },
   sectionTitleLive: {
     fontSize: 11.5,
-    color: '#0284C7',
+    color: theme.light.primary,
     letterSpacing: 0.8,
     fontFamily: systemFontBold
   },
   sectionLink: {
-    fontSize: 12,
-    color: '#0284C7',
+    fontSize: typeScale.caption,
+    color: theme.light.primary,
     fontFamily: systemFontMedium
   },
   liveIndicatorRow: {
@@ -604,12 +805,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#22C55E'
   },
   liveMatchCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: theme.light.cardBg,
+    borderRadius: radius.xxl,
+    padding: spacing.lg,
     borderWidth: 1.5,
     borderColor: '#BAE6FD',
-    gap: 14
+    gap: spacing.lg - 2
   },
   liveCardHeader: {
     flexDirection: 'row',
@@ -617,20 +818,20 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   liveMatchTitle: {
-    fontSize: 13,
-    color: '#0F172A',
+    fontSize: typeScale.label,
+    color: theme.light.textPrimary,
     fontFamily: systemFontBold,
     flex: 1
   },
   liveTag: {
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 8,
+    backgroundColor: theme.light.primaryLight,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: 6
+    borderRadius: radius.sm
   },
   liveTagText: {
     fontSize: 10,
-    color: '#0284C7',
+    color: theme.light.primary,
     fontFamily: systemFontBold
   },
   liveScoreRow: {
@@ -641,38 +842,38 @@ const styles = StyleSheet.create({
   },
   liveTeamCol: {
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     flex: 1
   },
   liveTeamName: {
-    fontSize: 14,
-    color: '#0F172A',
+    fontSize: typeScale.body,
+    color: theme.light.textPrimary,
     fontFamily: systemFontBold
   },
   liveTeamNameMuted: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: typeScale.body,
+    color: theme.light.textMuted,
     fontFamily: systemFontMedium
   },
   liveScoreBig: {
     fontSize: 22,
-    color: '#0284C7',
+    color: theme.light.primary,
     fontFamily: systemFontBold,
     fontVariant: ['tabular-nums']
   },
   liveOversSmall: {
-    fontSize: 11,
-    color: '#64748B',
+    fontSize: typeScale.micro,
+    color: theme.light.textMuted,
     fontFamily: systemFontMedium
   },
   liveScoreMuted: {
-    fontSize: 12,
-    color: '#94A3B8',
+    fontSize: typeScale.caption,
+    color: theme.light.textSubtle,
     fontFamily: systemFontMedium
   },
   liveVsText: {
-    fontSize: 12,
-    color: '#CBD5E1',
+    fontSize: typeScale.caption,
+    color: theme.light.cardBorderDark,
     fontFamily: systemFontBold
   },
   liveCardFooter: {
@@ -689,15 +890,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    backgroundColor: '#F0F9FF',
-    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    backgroundColor: theme.light.primarySurface,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: '#BAE6FD'
   },
   liveFooterBtnText: {
-    color: '#0284C7',
-    fontSize: 12,
+    color: theme.light.primary,
+    fontSize: typeScale.caption,
     fontFamily: systemFontBold
   },
   liveFooterBtnPrimary: {
@@ -706,48 +907,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    backgroundColor: '#0284C7',
-    borderRadius: 8
+    paddingVertical: spacing.sm,
+    backgroundColor: theme.light.primary,
+    borderRadius: radius.md
   },
   liveFooterBtnPrimaryText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: theme.hero.text,
+    fontSize: typeScale.caption,
     fontFamily: systemFontBold
   },
   emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: theme.light.cardBg,
+    borderRadius: radius.xxl,
+    padding: spacing.xxl,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 8
+    borderColor: theme.light.cardBorder,
+    gap: spacing.sm
   },
   emptyCardTitle: {
-    fontSize: 15,
-    color: '#0F172A',
+    fontSize: typeScale.name,
+    color: theme.light.textPrimary,
     fontFamily: systemFontBold,
-    marginTop: 4
+    marginTop: spacing.xs
   },
   emptyCardSubtitle: {
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: typeScale.caption,
+    color: theme.light.textMuted,
     fontFamily: systemFontMedium,
     textAlign: 'center',
     lineHeight: 17,
     maxWidth: 260
   },
   emptyCardBtn: {
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: theme.light.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
     marginTop: 6
   },
   emptyCardBtnText: {
-    color: '#FFFFFF',
+    color: theme.hero.text,
     fontSize: 12.5,
     fontFamily: systemFontBold
   },
@@ -757,45 +958,89 @@ const styles = StyleSheet.create({
   },
   performerCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 12,
+    backgroundColor: theme.light.cardBg,
+    borderRadius: radius.xl,
+    padding: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.light.cardBorder,
     gap: 6
   },
   performerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F0F9FF',
+    gap: spacing.xs,
+    backgroundColor: theme.light.primarySurface,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: radius.xs,
     borderWidth: 1,
     borderColor: '#BAE6FD',
     marginBottom: 2
   },
   performerBadgeText: {
     fontSize: 9,
-    color: '#0284C7',
+    color: theme.light.primary,
     fontFamily: systemFontBold
   },
   performerName: {
     fontSize: 12.5,
-    color: '#0F172A',
+    color: theme.light.textPrimary,
     fontFamily: systemFontBold
   },
   performerStat: {
-    fontSize: 15,
-    color: '#0284C7',
+    fontSize: typeScale.name,
+    color: theme.light.primary,
     fontFamily: systemFontBold
   },
   performerStatLabel: {
-    fontSize: 11,
-    color: '#64748B',
+    fontSize: typeScale.micro,
+    color: theme.light.textMuted,
     fontFamily: systemFont
+  },
+  searchSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    paddingVertical: 4
+  },
+  searchSummaryText: {
+    fontSize: 13,
+    color: themeColors.textSecondary,
+    fontFamily: systemFontMedium
+  },
+  searchClearText: {
+    fontSize: 13,
+    color: themeColors.textPrimary,
+    fontFamily: systemFontBold
+  },
+  searchPlayerListCard: {
+    backgroundColor: themeColors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+    overflow: 'hidden'
+  },
+  searchPlayerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12
+  },
+  searchPlayerBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: themeColors.border
+  },
+  searchPlayerName: {
+    fontSize: 13.5,
+    color: themeColors.textPrimary,
+    fontFamily: systemFontMedium
+  },
+  searchPlayerRole: {
+    fontSize: 12,
+    color: themeColors.textMuted,
+    fontFamily: systemFont,
+    marginTop: 1
   }
 });
 

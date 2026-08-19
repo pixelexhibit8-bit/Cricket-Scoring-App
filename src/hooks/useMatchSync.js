@@ -168,12 +168,68 @@ export function useMatchSync({
     AsyncStorage.setItem(STORAGE_KEY, payload).catch(() => { });
   }, [activeMatch, selectedMatch, finishedArchive, storageReady]);
 
-  // 5. Scorer Broadcast: Auto-sync activeMatch to Supabase
+  // 5. Offline Delivery Queue & Scorer Broadcast
+  const OFFLINE_SYNC_QUEUE_KEY = '@cricflow_offline_sync_queue_v1';
+  const isSyncingQueueRef = useRef(false);
+
+  // Flush pending offline match states to Supabase
+  const flushOfflineSyncQueue = useCallback(async () => {
+    if (isSyncingQueueRef.current) return;
+    try {
+      isSyncingQueueRef.current = true;
+      const rawQueue = await AsyncStorage.getItem(OFFLINE_SYNC_QUEUE_KEY);
+      if (!rawQueue) return;
+      const queue = JSON.parse(rawQueue);
+      if (!Array.isArray(queue) || queue.length === 0) return;
+
+      const remaining = [];
+      for (const pendingMatch of queue) {
+        if (!pendingMatch) continue;
+        const res = await syncMatchToSupabase(pendingMatch);
+        if (!res) {
+          remaining.push(pendingMatch);
+        }
+      }
+
+      if (remaining.length === 0) {
+        await AsyncStorage.removeItem(OFFLINE_SYNC_QUEUE_KEY);
+      } else {
+        await AsyncStorage.setItem(OFFLINE_SYNC_QUEUE_KEY, JSON.stringify(remaining));
+      }
+    } catch (err) {
+      console.warn('[OfflineSyncQueue] Flush error:', err);
+    } finally {
+      isSyncingQueueRef.current = false;
+    }
+  }, []);
+
+  // Periodic queue flush retry (every 20s when online)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      flushOfflineSyncQueue();
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [flushOfflineSyncQueue]);
+
+  // Scorer Broadcast: Auto-sync activeMatch to Supabase with offline queue fallback
   useEffect(() => {
     if (activeMatch && currentScreen === 'scorerWizard') {
-      syncMatchToSupabase(activeMatch).catch(() => { });
+      syncMatchToSupabase(activeMatch).then(res => {
+        if (!res) {
+          // Enqueue for background retry if network failed
+          AsyncStorage.getItem(OFFLINE_SYNC_QUEUE_KEY).then(raw => {
+            const queue = raw ? JSON.parse(raw) : [];
+            const filtered = (Array.isArray(queue) ? queue : []).filter(m => m?.id !== activeMatch.id);
+            filtered.push(activeMatch);
+            AsyncStorage.setItem(OFFLINE_SYNC_QUEUE_KEY, JSON.stringify(filtered)).catch(() => {});
+          }).catch(() => {});
+        } else {
+          // Connection healthy: flush any backlog
+          flushOfflineSyncQueue();
+        }
+      }).catch(() => { });
     }
-  }, [activeMatch, currentScreen]);
+  }, [activeMatch, currentScreen, flushOfflineSyncQueue]);
 
   // 6. Handle Match Finished aggregation
   useEffect(() => {

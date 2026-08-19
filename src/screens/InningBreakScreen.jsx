@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { systemFontMedium } from '../theme.js';
+import { systemFontMedium, themeColors } from '../theme.js';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { OpeningPlayersSelector } from '../components/OpeningPlayersSelector.jsx';
 import { formatOvers } from '../utils/cricketUtils.js';
@@ -31,16 +31,16 @@ export function InningBreakScreen({
   const bowl2Roster = getRosterForTeam ? getRosterForTeam(inn1.battingTeam.name, []) : [];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
       {/* TOP INNINGS BREAK BANNER */}
-      <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
-        <View style={{ minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+      <View style={{ backgroundColor: themeColors.surface, borderBottomWidth: 1, borderBottomColor: themeColors.border }}>
+        <View style={{ minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: themeColors.surfaceOffWhite, borderBottomWidth: 1, borderBottomColor: themeColors.border }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="pause-circle" size={18} color="#0284C7" />
+            <Ionicons name="pause-circle" size={18} color="#18181B" />
             <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }}>INNINGS BREAK</Text>
           </View>
-          <View style={{ backgroundColor: '#E0F2FE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-            <Text style={{ color: '#0369A1', fontSize: 11, fontFamily: systemFontMedium }}>1ST INNINGS COMPLETED</Text>
+          <View style={{ backgroundColor: '#F8F8FA', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#EEEEF0' }}>
+            <Text style={{ color: '#18181B', fontSize: 11, fontFamily: systemFontMedium }}>1ST INNINGS COMPLETED</Text>
           </View>
         </View>
 

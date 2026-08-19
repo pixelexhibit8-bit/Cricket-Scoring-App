@@ -43,19 +43,19 @@ export function AppButton({
 
   // Resolve Variant Colors
   let bg = themeColors.primary;
-  let textColor = '#FFFFFF';
+  let textColor = themeColors.buttonText || '#FFFBF4';
   let borderColor = themeColors.primary;
   let borderWidth = 0;
 
   if (isOutline) {
-    bg = '#FFFFFF';
+    bg = themeColors.surface;
     textColor = themeColors.primary;
     borderColor = themeColors.primary;
     borderWidth = 1.5;
   } else if (isSecondary) {
-    bg = '#F8FAFC';
-    textColor = '#334155';
-    borderColor = '#CBD5E1';
+    bg = themeColors.surfaceOffWhite;
+    textColor = themeColors.textPrimary;
+    borderColor = themeColors.borderDark;
     borderWidth = 1;
   } else if (isWarning) {
     bg = '#FEF3C7';

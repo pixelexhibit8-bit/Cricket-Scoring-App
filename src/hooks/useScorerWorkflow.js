@@ -12,7 +12,6 @@ import {
   getSearchBlob,
   getCleanPlayerNames
 } from '../utils/cricketUtils.js';
-import { MASTER_PLAYERS_DB } from '../../mockData.js';
 
 export function useScorerWorkflow({
   activeMatch,
@@ -45,7 +44,7 @@ export function useScorerWorkflow({
   const openScorerScreen = async (matchToScore = null) => {
     const user = await getCurrentUser();
     if (!user) {
-      showToast('Please login from Profile to start a ground match', 'error', '🔒 Login Required');
+      showToast('Please login from Profile to start a ground match', 'error', 'Login Required');
       if (setBottomNavTab) setBottomNavTab('profile');
       if (setCurrentScreen) setCurrentScreen('home');
       return;
@@ -270,15 +269,6 @@ export function useScorerWorkflow({
         name: local.name,
         avatar: local.photoUrl || local.photo_url || local.avatar || null,
         role: local.role || 'Player'
-      };
-    }
-
-    const master = MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === cleanName);
-    if (master) {
-      return {
-        name: master.name,
-        avatar: master.avatar || master.photoUrl || null,
-        role: master.role || 'Player'
       };
     }
 

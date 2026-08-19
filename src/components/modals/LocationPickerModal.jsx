@@ -216,7 +216,8 @@ export function LocationPickerModal({
                     }}
                     style={styles.fallbackBtn}
                   >
-                    <Text style={styles.fallbackBtnText}>Use "{searchQuery.trim()}" directly ➜</Text>
+                    <Text style={styles.fallbackBtnText}>Use "{searchQuery.trim()}" directly</Text>
+                    <Ionicons name="arrow-forward" size={14} color="#0284C7" />
                   </TouchableOpacity>
                 </View>
               ) : (

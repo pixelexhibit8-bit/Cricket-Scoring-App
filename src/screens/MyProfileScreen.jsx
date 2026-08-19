@@ -48,6 +48,7 @@ import { DobPickerModal } from '../components/modals/DobPickerModal.jsx';
 import { LocationPickerModal } from '../components/modals/LocationPickerModal.jsx';
 import { showToast } from '../services/toastService.js';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
+import { fetchFinishedMatchesFromSupabase } from '../services/matchService.js';
 
 export function MyProfileScreen({
   finishedMatches = [],
@@ -84,27 +85,22 @@ export function MyProfileScreen({
   const loadMatchesForCareer = async () => {
     try {
       let combined = Array.isArray(finishedMatches) ? [...finishedMatches] : [];
-      if (supabase) {
-        try {
-          const { data: dbMatches } = await supabase
-            .from('finished_matches')
-            .select('*')
-            .order('created_at', { ascending: false });
-          if (Array.isArray(dbMatches) && dbMatches.length > 0) {
-            dbMatches.forEach(m => {
-              const matchId = m.id;
-              const matchTitle = m.match_title || m.title;
-              const idx = combined.findIndex(c => (c.id && c.id === matchId) || (c.title && c.title === matchTitle) || (c.matchTitle && c.matchTitle === matchTitle));
-              if (idx >= 0) {
-                combined[idx] = m;
-              } else {
-                combined.unshift(m);
-              }
-            });
-          }
-        } catch (e) {
-          console.warn('finished_matches fetch fallback:', e);
+      try {
+        const dbMatches = await fetchFinishedMatchesFromSupabase();
+        if (Array.isArray(dbMatches) && dbMatches.length > 0) {
+          dbMatches.forEach(m => {
+            const matchId = m.id || m.supabaseId;
+            const matchTitle = m.match_title || m.title || m.matchTitle;
+            const idx = combined.findIndex(c => (c.id && c.id === matchId) || (c.title && c.title === matchTitle) || (c.matchTitle && c.matchTitle === matchTitle));
+            if (idx >= 0) {
+              combined[idx] = m;
+            } else {
+              combined.unshift(m);
+            }
+          });
         }
+      } catch (e) {
+        console.warn('Finished matches fetch notice:', e);
       }
       const raw = await AsyncStorage.getItem('cricflow.mobile.match-state.v2');
       if (raw) {
@@ -805,7 +801,7 @@ export function MyProfileScreen({
               >
                 <Ionicons name="flash" size={16} color="#38BDF8" />
                 <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontFamily: systemFontBold }}>
-                  ⚡ Quick Test Login (Dev Mode)
+                  Quick Test Login (Dev Mode)
                 </Text>
               </TouchableOpacity>
             )}
@@ -822,7 +818,7 @@ export function MyProfileScreen({
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
       {onBack ? (
         <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
           <TouchableOpacity onPress={onBack} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -877,7 +873,7 @@ export function MyProfileScreen({
 
             <View style={styles.styleBadgesRow}>
               <View style={styles.styleBadgeItem}>
-                <MaterialCommunityIcons name="cricket" size={12} color="#0284C7" />
+                <MaterialCommunityIcons name="cricket" size={12} color="#18181B" />
                 <Text style={styles.styleBadgeText}>{profile?.battingStyle || 'Right Hand Bat'}</Text>
               </View>
               <View style={[styles.styleBadgeItem, styles.bowlingBadgeItem]}>
@@ -951,39 +947,39 @@ export function MyProfileScreen({
             style={styles.pageScrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
           >
             <View style={{ gap: 14 }}>
               <View style={styles.summaryGrid}>
                 <View style={styles.summaryCard}>
-                  <MaterialCommunityIcons name="scoreboard-outline" size={48} color="#0F172A" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.06 }} />
+                  <MaterialCommunityIcons name="scoreboard-outline" size={48} color="#18181B" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.05 }} />
                   <Text style={styles.summaryVal}>{stats.matchesPlayed}</Text>
                   <Text style={styles.summaryLbl}>Matches</Text>
                 </View>
 
                 <View style={styles.summaryCard}>
-                  <MaterialCommunityIcons name="cricket" size={48} color="#0284C7" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.08 }} />
-                  <Text style={[styles.summaryVal, { color: '#0284C7' }]}>{stats.totalRuns}</Text>
+                  <MaterialCommunityIcons name="cricket" size={48} color="#0F2744" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.06 }} />
+                  <Text style={[styles.summaryVal, { color: '#0F2744' }]}>{stats.totalRuns}</Text>
                   <Text style={styles.summaryLbl}>Total Runs</Text>
                 </View>
 
                 <View style={styles.summaryCard}>
-                  <Ionicons name="trophy-outline" size={44} color="#059669" style={{ position: 'absolute', right: -6, bottom: -6, opacity: 0.08 }} />
-                  <Text style={[styles.summaryVal, { color: '#059669' }]}>{stats.highestScore}</Text>
+                  <Ionicons name="trophy-outline" size={44} color="#18181B" style={{ position: 'absolute', right: -6, bottom: -6, opacity: 0.06 }} />
+                  <Text style={[styles.summaryVal, { color: '#18181B' }]}>{stats.highestScore}</Text>
                   <Text style={styles.summaryLbl}>High Score</Text>
                 </View>
 
                 <View style={styles.summaryCard}>
-                  <MaterialCommunityIcons name="baseball" size={48} color="#7C3AED" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.08 }} />
-                  <Text style={[styles.summaryVal, { color: '#7C3AED' }]}>{stats.wickets}</Text>
+                  <MaterialCommunityIcons name="baseball" size={48} color="#EA580C" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.06 }} />
+                  <Text style={[styles.summaryVal, { color: '#EA580C' }]}>{stats.wickets}</Text>
                   <Text style={styles.summaryLbl}>Wickets</Text>
                 </View>
               </View>
 
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 }}>
+                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#EEEEF0', gap: 6 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MaterialCommunityIcons name="cricket" size={16} color="#0284C7" />
+                    <MaterialCommunityIcons name="cricket" size={16} color="#0F2744" />
                     <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>Batting</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
@@ -992,13 +988,13 @@ export function MyProfileScreen({
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Strike Rate</Text>
-                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0284C7' }}>{stats.strikeRate}</Text>
+                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F2744' }}>{stats.strikeRate}</Text>
                   </View>
                 </View>
 
-                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 }}>
+                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#EEEEF0', gap: 6 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MaterialCommunityIcons name="baseball" size={16} color="#7C3AED" />
+                    <MaterialCommunityIcons name="baseball" size={16} color="#EA580C" />
                     <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>Bowling</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
@@ -1007,7 +1003,7 @@ export function MyProfileScreen({
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Best</Text>
-                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#7C3AED' }}>{stats.bestBowling || '-'}</Text>
+                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#EA580C' }}>{stats.bestBowling || '-'}</Text>
                   </View>
                 </View>
               </View>
@@ -1021,17 +1017,17 @@ export function MyProfileScreen({
             style={styles.pageScrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
           >
             <View style={styles.statsCard}>
               <MaterialCommunityIcons
                 name="cricket"
                 size={135}
-                color="#0284C7"
-                style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.05, transform: [{ rotate: '-12deg' }] }}
+                color="#0F2744"
+                style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.04, transform: [{ rotate: '-12deg' }] }}
               />
               <View style={styles.statsCardHeader}>
-                <MaterialCommunityIcons name="cricket" size={18} color="#0284C7" />
+                <MaterialCommunityIcons name="cricket" size={18} color="#0F2744" />
                 <Text style={styles.statsCardTitle}>Batting Performance</Text>
               </View>
               <View style={styles.statRowGrid}>
@@ -1070,17 +1066,17 @@ export function MyProfileScreen({
             style={styles.pageScrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
           >
             <View style={styles.statsCard}>
               <MaterialCommunityIcons
                 name="baseball"
                 size={135}
-                color="#7C3AED"
-                style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.05, transform: [{ rotate: '12deg' }] }}
+                color="#EA580C"
+                style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.04, transform: [{ rotate: '12deg' }] }}
               />
               <View style={styles.statsCardHeader}>
-                <MaterialCommunityIcons name="baseball" size={18} color="#7C3AED" />
+                <MaterialCommunityIcons name="baseball" size={18} color="#EA580C" />
                 <Text style={styles.statsCardTitle}>Bowling Performance</Text>
               </View>
               <View style={styles.statRowGrid}>
@@ -1119,7 +1115,7 @@ export function MyProfileScreen({
             style={styles.pageScrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
           >
             <View style={{ gap: 10 }}>
               {stats.participatedMatches.length === 0 ? (
@@ -1153,7 +1149,7 @@ export function MyProfileScreen({
                         <Text style={styles.matchDate}>{matchDate}</Text>
                         <Text style={styles.matchResultText} numberOfLines={1}>{matchResult}</Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color="#0284C7" />
+                      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
                     </TouchableOpacity>
                   );
                 })
@@ -1169,25 +1165,25 @@ export function MyProfileScreen({
               style={styles.pageScrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284C7']} tintColor="#0284C7" />}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
             >
               <View style={{
                 backgroundColor: '#FFFFFF',
                 borderRadius: 16,
                 padding: 16,
                 borderWidth: 1,
-                borderColor: '#E2E8F0',
+                borderColor: '#EEEEF0',
                 gap: 12
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <MaterialCommunityIcons name="scoreboard-outline" size={18} color="#0284C7" />
+                    <MaterialCommunityIcons name="scoreboard-outline" size={18} color="#18181B" />
                     <Text style={{ fontSize: 11, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFontBold }}>
                       GROUND MATCH SCORING
                     </Text>
                   </View>
-                  <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#BAE6FD' }}>
-                    <Text style={{ fontSize: 10, color: '#0284C7', fontFamily: systemFontBold }}>Verified Scorer</Text>
+                  <View style={{ backgroundColor: '#F8F8FA', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#EEEEF0' }}>
+                    <Text style={{ fontSize: 10, color: '#18181B', fontFamily: systemFontBold }}>Verified Scorer</Text>
                   </View>
                 </View>
 
@@ -1198,7 +1194,7 @@ export function MyProfileScreen({
                     if (onStartQuickMatch) onStartQuickMatch();
                   }}
                   style={{
-                    backgroundColor: '#0284C7',
+                    backgroundColor: '#18181B',
                     borderRadius: 12,
                     height: 44,
                     flexDirection: 'row',
@@ -1220,7 +1216,7 @@ export function MyProfileScreen({
                     onPress={() => setJoinModalVisible(true)}
                     style={{
                       flex: 1,
-                      backgroundColor: '#F8FAFC',
+                      backgroundColor: '#F8F8FA',
                       borderRadius: 10,
                       paddingVertical: 9,
                       alignItems: 'center',
@@ -1228,11 +1224,11 @@ export function MyProfileScreen({
                       flexDirection: 'row',
                       gap: 6,
                       borderWidth: 1,
-                      borderColor: '#E2E8F0'
+                      borderColor: '#EEEEF0'
                     }}
                   >
-                    <Ionicons name="key-outline" size={14} color="#0284C7" />
-                    <Text style={{ color: '#334155', fontSize: 11.5, fontFamily: systemFontMedium }}>Enter Match Code</Text>
+                    <Ionicons name="key-outline" size={14} color="#18181B" />
+                    <Text style={{ color: '#333333', fontSize: 11.5, fontFamily: systemFontMedium }}>Enter Match Code</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -1240,7 +1236,7 @@ export function MyProfileScreen({
                     onPress={() => setShareModalVisible(true)}
                     style={{
                       flex: 1,
-                      backgroundColor: '#F8FAFC',
+                      backgroundColor: '#F8F8FA',
                       borderRadius: 10,
                       paddingVertical: 9,
                       alignItems: 'center',
@@ -1248,11 +1244,11 @@ export function MyProfileScreen({
                       flexDirection: 'row',
                       gap: 6,
                       borderWidth: 1,
-                      borderColor: '#E2E8F0'
+                      borderColor: '#EEEEF0'
                     }}
                   >
-                    <Ionicons name="share-social-outline" size={14} color="#0284C7" />
-                    <Text style={{ color: '#334155', fontSize: 11.5, fontFamily: systemFontMedium }}>Share Access</Text>
+                    <Ionicons name="share-social-outline" size={14} color="#18181B" />
+                    <Text style={{ color: '#333333', fontSize: 11.5, fontFamily: systemFontMedium }}>Share Access</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1281,12 +1277,12 @@ export function MyProfileScreen({
                   activeOpacity={0.85}
                 >
                   <PlayerAvatar name={editName || playerName} photoUrl={profile?.photoUrl} size={76} />
-                  <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#0284C7', width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' }}>
+                  <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#18181B', width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' }}>
                     <Ionicons name="camera" size={13} color="#FFFFFF" />
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handlePickImage} style={{ marginTop: 6 }}>
-                  <Text style={{ color: '#0284C7', fontSize: 12.5, fontFamily: systemFontMedium }}>Change Profile Photo</Text>
+                  <Text style={{ color: '#18181B', fontSize: 12.5, fontFamily: systemFontMedium }}>Change Profile Photo</Text>
                 </TouchableOpacity>
               </View>
 
@@ -1367,7 +1363,7 @@ export function MyProfileScreen({
                   activeOpacity={0.8}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name="calendar-outline" size={18} color="#0284C7" />
+                    <Ionicons name="calendar-outline" size={18} color="#18181B" />
                     <Text style={{ color: editDob ? '#0F172A' : '#94A3B8', fontSize: 13, fontFamily: systemFontMedium }}>
                       {editDob ? editDob : 'Select Date of Birth'}
                     </Text>
@@ -1384,7 +1380,7 @@ export function MyProfileScreen({
                   activeOpacity={0.75}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="location-outline" size={18} color="#0284C7" />
+                    <Ionicons name="location-outline" size={18} color="#18181B" />
                     <Text style={{ color: editCity ? '#0F172A' : '#94A3B8', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
                       {editCity || 'Select City, District or Village'}
                     </Text>
@@ -1460,7 +1456,7 @@ export function MyProfileScreen({
             </View>
 
             {/* Large High-Res Photo Circle */}
-            <View style={{ width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 3, borderColor: '#0284C7', backgroundColor: '#0F2942', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 18, elevation: 12 }}>
+            <View style={{ width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 3, borderColor: '#18181B', backgroundColor: '#0F2942', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 18, elevation: 12 }}>
               <PlayerAvatar
                 name={playerName}
                 photoUrl={profile?.photoUrl}
@@ -1482,7 +1478,7 @@ export function MyProfileScreen({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    backgroundColor: '#0284C7',
+                    backgroundColor: '#18181B',
                     paddingVertical: 13,
                     borderRadius: 12
                   }}
@@ -1545,8 +1541,8 @@ export function MyProfileScreen({
               }}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F0F9FF' }]}>
-                <Ionicons name="create-outline" size={18} color="#0284C7" />
+              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8F8FA' }]}>
+                <Ionicons name="create-outline" size={18} color="#18181B" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.actionMenuLabel}>Edit Profile</Text>
@@ -1564,7 +1560,7 @@ export function MyProfileScreen({
               }}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8FAFC' }]}>
+              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8F8FA' }]}>
                 <Ionicons name="refresh-outline" size={18} color="#475569" />
               </View>
               <View style={{ flex: 1 }}>
@@ -1610,11 +1606,11 @@ export function MyProfileScreen({
         >
           <TouchableOpacity
             activeOpacity={1}
-            style={{ width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, gap: 14, borderWidth: 1, borderColor: '#E2E8F0' }}
+            style={{ width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, gap: 14, borderWidth: 1, borderColor: '#EEEEF0' }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="key" size={20} color="#0284C7" />
+                <Ionicons name="key" size={20} color="#18181B" />
                 <Text style={{ fontSize: 16, color: '#0F172A', fontFamily: systemFontBold }}>Enter Match Code</Text>
               </View>
               <TouchableOpacity onPress={() => setJoinModalVisible(false)}>
@@ -1629,15 +1625,15 @@ export function MyProfileScreen({
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: '#F8FAFC',
+              backgroundColor: '#F8F8FA',
               borderRadius: 12,
-              borderWidth: 1.5,
-              borderColor: '#CBD5E1',
+              borderWidth: 1,
+              borderColor: '#EEEEF0',
               paddingHorizontal: 14,
               height: 48,
               gap: 10
             }}>
-              <Ionicons name="barcode-outline" size={20} color="#0284C7" />
+              <Ionicons name="barcode-outline" size={20} color="#18181B" />
               <TextInput
                 style={{
                   flex: 1,
@@ -1680,7 +1676,7 @@ export function MyProfileScreen({
                   showToast(`Searching match ${inputMatchCode.trim()}...`, 'success');
                 }
               }}
-              style={{ backgroundColor: '#0284C7', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' }}
+              style={{ backgroundColor: '#18181B', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' }}
             >
               <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>Join Match</Text>
             </TouchableOpacity>
@@ -1702,11 +1698,11 @@ export function MyProfileScreen({
         >
           <TouchableOpacity
             activeOpacity={1}
-            style={{ width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, gap: 14, borderWidth: 1, borderColor: '#E2E8F0' }}
+            style={{ width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, gap: 14, borderWidth: 1, borderColor: '#EEEEF0' }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="share-social" size={20} color="#0284C7" />
+                <Ionicons name="share-social" size={20} color="#18181B" />
                 <Text style={{ fontSize: 16, color: '#0F172A', fontFamily: systemFontBold }}>Share Scoring Access</Text>
               </View>
               <TouchableOpacity onPress={() => setShareModalVisible(false)}>
@@ -1720,11 +1716,11 @@ export function MyProfileScreen({
                   Share this access code with your co-scorer or umpire on the ground for <Text style={{ color: '#0F172A', fontFamily: systemFontBold }}>{activeMatch.matchTitle || 'Live Match'}</Text>.
                 </Text>
 
-                <View style={{ backgroundColor: '#F0F9FF', padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#BAE6FD' }}>
-                  <Text style={{ fontSize: 24, letterSpacing: 4, color: '#0284C7', fontFamily: systemFontBold }}>
+                <View style={{ backgroundColor: '#F8F8FA', padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#EEEEF0' }}>
+                  <Text style={{ fontSize: 24, letterSpacing: 4, color: '#18181B', fontFamily: systemFontBold }}>
                     {activeMatch.matchCode || activeMatch.scorerPin || ('CF-' + (activeMatch.id || '8421').slice(-4).toUpperCase())}
                   </Text>
-                  <Text style={{ fontSize: 10, color: '#0369A1', marginTop: 4, fontFamily: systemFontMedium }}>Valid for current active match</Text>
+                  <Text style={{ fontSize: 10, color: '#64748B', marginTop: 4, fontFamily: systemFontMedium }}>Valid for current active match</Text>
                 </View>
 
                 <TouchableOpacity
@@ -1733,7 +1729,7 @@ export function MyProfileScreen({
                     const code = activeMatch.matchCode || activeMatch.scorerPin || ('CF-' + (activeMatch.id || '8421').slice(-4).toUpperCase());
                     showToast(`Scorer code ${code} copied!`, 'success');
                   }}
-                  style={{ backgroundColor: '#0284C7', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' }}
+                  style={{ backgroundColor: '#18181B', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>Copy Access Code</Text>
                 </TouchableOpacity>
@@ -1752,7 +1748,7 @@ export function MyProfileScreen({
                     setShareModalVisible(false);
                     if (onStartQuickMatch) onStartQuickMatch();
                   }}
-                  style={{ backgroundColor: '#0284C7', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, marginTop: 4 }}
+                  style={{ backgroundColor: '#18181B', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, marginTop: 4 }}
                 >
                   <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Start New Match</Text>
                 </TouchableOpacity>
@@ -1791,8 +1787,8 @@ export function MyProfileScreen({
               onPress={handlePickFromCamera}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F0F9FF' }]}>
-                <Ionicons name="camera" size={20} color="#0284C7" />
+              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8F8FA' }]}>
+                <Ionicons name="camera" size={20} color="#18181B" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.actionMenuLabel}>Take Photo</Text>
@@ -1807,8 +1803,8 @@ export function MyProfileScreen({
               onPress={handlePickFromGallery}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8FAFC' }]}>
-                <Ionicons name="images" size={20} color="#0284C7" />
+              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8F8FA' }]}>
+                <Ionicons name="images" size={20} color="#18181B" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.actionMenuLabel}>Choose from Gallery</Text>
@@ -1820,7 +1816,6 @@ export function MyProfileScreen({
         </TouchableOpacity>
       </Modal>
 
-
     </View>
   );
 }
@@ -1828,14 +1823,14 @@ export function MyProfileScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC'
+    backgroundColor: themeColors.appBackground
   },
   loadingCenter: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: '#F8FAFC'
+    backgroundColor: themeColors.appBackground
   },
   loadingText: {
     fontSize: 13,
@@ -2075,14 +2070,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1
   },
   tabButtonTextActive: {
-    color: '#0284C7',
+    color: '#18181B',
     fontFamily: systemFontBold
   },
   animatedUnderline: {
     position: 'absolute',
     bottom: 0,
     height: 2.5,
-    backgroundColor: '#0284C7',
+    backgroundColor: '#18181B',
     borderRadius: 2
   },
   pageScrollView: {
@@ -2323,8 +2318,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0'
   },
   roleSelectPillActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7'
+    backgroundColor: '#18181B',
+    borderColor: '#18181B'
   },
   roleSelectPillText: {
     fontSize: 11,
@@ -2336,7 +2331,7 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold
   },
   saveBtn: {
-    backgroundColor: '#0284C7',
+    backgroundColor: '#18181B',
     borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',

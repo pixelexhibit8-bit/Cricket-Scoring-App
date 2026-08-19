@@ -15,7 +15,11 @@ import {
   systemFontBold,
   systemFontMedium,
   typeScale,
-  fontWeights
+  fontWeights,
+  theme,
+  themeColors,
+  spacing,
+  radius
 } from '../theme.js';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { MatchTabBar } from '../components/MatchTabBar.jsx';
@@ -170,10 +174,10 @@ export function FinishedMatchViewScreen({
 
   if (!match) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F8FAFC' }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: themeColors.appBackground }}>
         <Ionicons name="checkmark-done-outline" size={34} color="#94A3B8" />
         <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: systemFontBold, marginTop: 10 }}>No finished match</Text>
-        <TouchableOpacity onPress={() => setCurrentScreen && setCurrentScreen('home')} style={{ minHeight: 42, marginTop: 14, paddingHorizontal: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0284C7' }}>
+        <TouchableOpacity onPress={() => setCurrentScreen && setCurrentScreen('home')} style={{ minHeight: 42, marginTop: 14, paddingHorizontal: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181B' }}>
           <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>BACK TO HOME</Text>
         </TouchableOpacity>
       </View>
@@ -246,7 +250,7 @@ export function FinishedMatchViewScreen({
   const team2Name = f.team2?.name || 'Team 2';
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
       {/* ─── TOP DARK NAVY HEADER (TITLE + TABS + INTEGRATED HERO) ─── */}
       <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
         {/* Top Title & Back */}
@@ -322,8 +326,8 @@ export function FinishedMatchViewScreen({
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={handlePullToRefresh}
-                  colors={['#0284C7']}
-                  tintColor="#0284C7"
+                  colors={['#18181B']}
+                  tintColor="#18181B"
                 />
               }
             >
@@ -393,15 +397,15 @@ export function FinishedMatchViewScreen({
                             borderRadius: 8,
                             alignItems: 'center',
                             justifyContent: 'center',
-                            backgroundColor: active ? '#0284C7' : '#FFFFFF',
+                            backgroundColor: active ? '#18181B' : '#FFFFFF',
                             borderWidth: 1,
-                            borderColor: active ? '#0284C7' : '#D9DEE3'
+                            borderColor: active ? '#18181B' : '#EEEEF0'
                           }}
                         >
                           <Text style={{ fontSize: 13, fontFamily: systemFontMedium, color: active ? '#FFFFFF' : '#0F172A', textAlign: 'center' }} numberOfLines={1}>
                             {tObj.name}
                           </Text>
-                          <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: active ? '#D6EEFF' : '#64748B', marginTop: 2 }} numberOfLines={1}>
+                          <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: active ? '#D4D4D8' : '#64748B', marginTop: 2 }} numberOfLines={1}>
                             {tObj.score || 'Yet to bat'}
                           </Text>
                         </TouchableOpacity>
@@ -438,7 +442,7 @@ export function FinishedMatchViewScreen({
                               <Text selectable style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
                                 {b.name}
                               </Text>
-                              <Text selectable style={{ color: b.dismissal === 'Not out' ? '#0284C7' : '#64748B', fontSize: 10.5, marginTop: 2, fontFamily: systemFontMedium }} numberOfLines={1}>
+                              <Text selectable style={{ color: b.dismissal === 'Not out' ? '#059669' : '#64748B', fontSize: 10.5, marginTop: 2, fontFamily: systemFontMedium }} numberOfLines={1}>
                                 {b.dismissal || 'Not out'}
                               </Text>
                             </View>

@@ -103,3 +103,44 @@ This is a **Cricket App (CricFlow)**. ALWAYS use the installed icon libraries:
 4. **Modular Foundation & Reusable Core**:
    - Perfect the Local Ground Match platform first as a solid foundation.
    - Build all UI primitives (Scorecards, Live Pagers, Overs, Graphs, Player Cards) and Database models modularly so they can be seamlessly reused for Official Tournaments & Leagues in Phase 2.
+
+# Official CricFlow Color Palette & Design Rule - STRICT
+
+The entire application MUST strictly follow this exact locked color system. Never introduce random, unapproved colors.
+
+### 1. Canvas & Surface Backgrounds
+- **App Canvas Background**: `#FCFCFD` (`themeColors.appBackground` - Clean cream/airy off-white root background for all screens and scroll views).
+- **Card & Modal Surface**: `#FFFFFF` (`themeColors.surface` / `themeColors.cardBackground` - Pure white card surfaces).
+- **Soft Contrast / Table Header**: `#F8F8FA` (`themeColors.surfaceOffWhite`).
+- **Dividers & Card Borders**: `#EEEEF0` (`themeColors.border` / `themeColors.cardBorder` - Ultra-clean subtle borders).
+- **Emphasized Active Border**: `#DCDCE0` (`themeColors.borderDark`).
+
+### 2. Brand & Active Accent Color (Dark Hero)
+- **Primary Brand / Active State**: `#18181B` (`themeColors.primary` / `themeColors.heroBackground`).
+- **Active Navigation Tabs**: `#18181B` (Icons and labels on active Bottom Navigation Tabs and Rankings Tabs).
+- **Inactive Navigation Tabs**: `#94A3B8` (Muted Slate Gray for unselected tabs).
+- **Hero Card Background**: `#18181B` (Local Ground Cricket Hero Card on HomeScreen).
+
+### 3. Ground Spotlight Colors (Top Ranked Ground Players)
+- **Top Batter Card**:
+  - Background: `#0F2744` (Full Navy Blue)
+  - Border: `#1E3A8A`
+  - Text: `#FFFFFF`
+  - Chip & Badge: `#0284C7` (Sky Blue)
+- **Top Bowler Card**:
+  - Background: `#EA580C` (Full Vibrant Orange)
+  - Border: `#C2410C`
+  - Text: `#FFFFFF`
+  - Chip & Badge: `#9A3412` / `#FFEDD5` (Warm Orange)
+- **Top All-Rounder Card**:
+  - Background: `#18181B` (Full Sleek Black)
+  - Border: `#27272A`
+  - Text: `#FFFFFF`
+  - Chip & Badge: `#3F3F46` / `#E2E8F0` (Platinum / Silver)
+- **Single Reusable Component**: Ground Spotlight MUST always use `src/components/GroundSpotlightSection.jsx` across both `HomeScreen` and `MatchesScreen`. Never create separate or conflicting inline spotlight cards.
+
+### 4. Typography & Text Colors
+- **Headings & Primary Text**: `#0F172A` / `#333333` (`themeColors.textPrimary`).
+- **Secondary Neutral Text**: `#64748B` / `#555555` (`themeColors.textSecondary`).
+- **Muted Hints & Subtext**: `#94A3B8` / `#777777` (`themeColors.textMuted`).
+- **Light Text on Dark Surfaces**: `#FFFFFF` / `#FAF8F5`.

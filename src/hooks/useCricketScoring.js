@@ -640,7 +640,7 @@ export function useCricketScoring({
       Alert.alert('Undo Ball', 'No previous ball recorded to undo.');
       return;
     }
-    const previousState = matchHistoryStack[matchHistoryStack.length - 1];
+    const previousState = JSON.parse(JSON.stringify(matchHistoryStack[matchHistoryStack.length - 1]));
     setMatchHistoryStack(prev => prev.slice(0, -1));
     setMatchRedoStack(prev => [...prev, JSON.parse(JSON.stringify(activeMatch))]);
     setActiveMatch(previousState);
@@ -653,7 +653,7 @@ export function useCricketScoring({
       Alert.alert('Redo Ball', 'No action available to redo.');
       return;
     }
-    const nextState = matchRedoStack[matchRedoStack.length - 1];
+    const nextState = JSON.parse(JSON.stringify(matchRedoStack[matchRedoStack.length - 1]));
     setMatchRedoStack(prev => prev.slice(0, -1));
     setMatchHistoryStack(prev => [...prev, JSON.parse(JSON.stringify(activeMatch))]);
     setActiveMatch(nextState);

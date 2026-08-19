@@ -16,7 +16,17 @@ import {
   StyleSheet
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { systemFont, systemFontBold, systemFontMedium, fontWeights, theme, typeScale } from '../theme.js';
+import {
+  systemFont,
+  systemFontBold,
+  systemFontMedium,
+  fontWeights,
+  theme,
+  themeColors,
+  typeScale,
+  spacing,
+  radius
+} from '../theme.js';
 import { AppHeader } from '../components/navigation/AppHeader.jsx';
 import { AppBottomNav } from '../components/navigation/AppBottomNav.jsx';
 import { MyProfileScreen } from './MyProfileScreen.jsx';
@@ -24,6 +34,7 @@ import { RankingsScreen } from './RankingsScreen.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { MatchListScoreCard } from '../components/MatchListScoreCard.jsx';
+import { GroundSpotlightSection } from '../components/GroundSpotlightSection.jsx';
 import { formatOvers, getTossWinnerName, getTossDecisionText, getScorePartsFromText, getFinishedResultCardText } from '../utils/cricketUtils.js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
@@ -58,7 +69,6 @@ export function MatchesScreen({
   TOP_BOWLERS = [],
   TOP_ALLROUNDERS = [],
   localPlayersList = [],
-  MASTER_PLAYERS_DB = [],
   getSetupPlayerProfile,
   setSelectedPlayerProfile,
   finishedArchive = [],
@@ -70,8 +80,7 @@ export function MatchesScreen({
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   const handlePlayerPress = (name, extraProps = {}) => {
-    const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === String(name).trim().toLowerCase())
-      || MASTER_PLAYERS_DB.find(p => p && p.name && p.name.trim().toLowerCase() === String(name).trim().toLowerCase());
+    const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === String(name).trim().toLowerCase());
     const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(name) : { name, role: extraProps.role || 'Local Player', photoUrl: extraProps.photoUrl, city: extraProps.city });
     
     if (setSelectedPlayerName) setSelectedPlayerName(name);
@@ -196,6 +205,7 @@ export function MatchesScreen({
   ];
   const activeTabIndex = Math.max(0, homeTabs.findIndex(t => t.id === matchesSubTab));
   const homePagerScrollX = useRef(new Animated.Value(activeTabIndex * screenWidth)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const [tabLayouts, setTabLayouts] = useState({});
   const onTabLayout = (id, e) => {
@@ -264,20 +274,20 @@ export function MatchesScreen({
   }, [searchQuery, bottomNavTab, isSearchExpanded]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      {/* REUSABLE TOP APP HEADER (Full width Search below Brand, No Notification) */}
+    <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
+      {/* REUSABLE TOP APP HEADER (Full width Search below Brand, Dynamic Collapse) */}
       <AppHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        placeholder="Search matches, players, grounds..."
+        scrollY={scrollY}
       />
 
       {/* MATCHES SUB-TABS (CREX STYLE CLEAN TEXT-ONLY UNDERLINE TABS) */}
       {(bottomNavTab === 'matches' || bottomNavTab === 'home' || !bottomNavTab) && (
         <View style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: themeColors.surface,
           borderBottomWidth: 1,
-          borderBottomColor: '#E2E8F0',
+          borderBottomColor: themeColors.border,
           position: 'relative'
         }}>
           <ScrollView
@@ -301,8 +311,8 @@ export function MatchesScreen({
                   }}
                 >
                   <Text style={{
-                    fontSize: 15.5,
-                    color: active ? '#0284C7' : '#475569',
+                    fontSize: 15,
+                    color: active ? themeColors.primary : themeColors.textMuted,
                     fontFamily: systemFontMedium,
                     letterSpacing: -0.1
                   }}>
@@ -318,9 +328,9 @@ export function MatchesScreen({
               bottom: 0,
               left: 0,
               width: animatedUnderlineWidth,
-              height: 3,
+              height: 2.5,
               borderRadius: 2,
-              backgroundColor: '#0284C7',
+              backgroundColor: themeColors.primary,
               transform: [{ translateX: animatedUnderlineX }]
             }} />
           </ScrollView>
@@ -329,12 +339,17 @@ export function MatchesScreen({
 
       {/* BODY (SEARCH RESULTS, ABOUT TAB, OR MATCHES SWIPE PAGER) */}
       {Boolean(searchQuery && searchQuery.trim().length > 0) ? (
-        <ScrollView
-          style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+        <Animated.ScrollView
+          style={{ flex: 1, backgroundColor: themeColors.appBackground }}
           contentContainerStyle={[styles.tabContent, { paddingBottom: 40 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          scrollEventThrottle={16}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false }
+          )}
         >
           {(() => {
             const q = searchQuery.toLowerCase().trim();
@@ -343,7 +358,6 @@ export function MatchesScreen({
             // 1. Search Players
             const allPlayersMap = new Map();
             (localPlayersList || []).forEach(p => { if (p?.name) allPlayersMap.set(p.name.trim().toLowerCase(), p); });
-            (MASTER_PLAYERS_DB || []).forEach(p => { if (p?.name && !allPlayersMap.has(p.name.trim().toLowerCase())) allPlayersMap.set(p.name.trim().toLowerCase(), p); });
             (setupPlayerNames || []).forEach(name => {
               if (name && !allPlayersMap.has(name.trim().toLowerCase())) {
                 allPlayersMap.set(name.trim().toLowerCase(), { name, role: 'Local Player' });
@@ -452,9 +466,9 @@ export function MatchesScreen({
               </View>
             );
           })()}
-        </ScrollView>
+        </Animated.ScrollView>
       ) : bottomNavTab === 'rankings' ? (
-        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
           <RankingsScreen
             topBatters={TOP_BATTERS}
             topBowlers={TOP_BOWLERS}
@@ -465,7 +479,7 @@ export function MatchesScreen({
           />
         </View>
       ) : bottomNavTab === 'profile' ? (
-        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
           <MyProfileScreen
             finishedMatches={finishedArchive || []}
             activeMatch={activeMatch}
@@ -496,7 +510,7 @@ export function MatchesScreen({
           {/* 0. FOR YOU (HOME DISCOVERY) PAGE */}
           <View style={{ width: screenWidth, flex: 1 }}>
             <ScrollView
-              style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+              style={{ flex: 1, backgroundColor: themeColors.appBackground }}
               contentContainerStyle={styles.tabContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -529,129 +543,16 @@ export function MatchesScreen({
                 </>
               )}
 
-              {/* Ground Spotlight (Top Batsman, Bowler, All-Rounder) */}
-              {(TOP_BATTERS.length > 0 || TOP_BOWLERS.length > 0 || TOP_ALLROUNDERS.length > 0) && (
-                <View style={{ marginTop: 14 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
-                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                      GROUND SPOTLIGHT
-                    </Text>
-                    <TouchableOpacity onPress={() => setBottomNavTab ? setBottomNavTab('rankings') : null}>
-                      <Text style={{ color: '#0284C7', fontSize: 11.5, fontFamily: systemFontMedium }}>View All ➜</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {/* Top Batsman Card */}
-                    {TOP_BATTERS[0] ? (
-                      <TouchableOpacity
-                        onPress={() => handlePlayerPress(TOP_BATTERS[0].name, { role: 'Top Batsman', photoUrl: TOP_BATTERS[0].photoUrl })}
-                        activeOpacity={0.75}
-                        style={{
-                          flex: 1,
-                          backgroundColor: '#FFFFFF',
-                          borderRadius: 14,
-                          paddingVertical: 10,
-                          paddingHorizontal: 6,
-                          borderWidth: 1,
-                          borderColor: '#E2E8F0',
-                          alignItems: 'center',
-                          gap: 5
-                        }}
-                      >
-                        <View style={{ position: 'relative' }}>
-                          <PlayerAvatar name={TOP_BATTERS[0].name} photoUrl={TOP_BATTERS[0].photoUrl} size={38} />
-                          <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#0284C7', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, borderWidth: 1.5, borderColor: '#FFFFFF' }}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontMedium }}>#1</Text>
-                          </View>
-                        </View>
-                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontMedium, textAlign: 'center' }} numberOfLines={1}>
-                          {TOP_BATTERS[0].name}
-                        </Text>
-                        <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1, borderColor: '#BAE6FD' }}>
-                          <Text style={{ fontSize: 9, color: '#0284C7', fontFamily: systemFontMedium }}>BATTER</Text>
-                        </View>
-                        <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 5, alignItems: 'center' }}>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontMedium }}>{TOP_BATTERS[0].runs} Runs</Text>
-                          <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>SR: {TOP_BATTERS[0].sr || '0.0'}</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ) : null}
-
-                    {/* Top Bowler Card */}
-                    {TOP_BOWLERS[0] ? (
-                      <TouchableOpacity
-                        onPress={() => handlePlayerPress(TOP_BOWLERS[0].name, { role: 'Top Bowler', photoUrl: TOP_BOWLERS[0].photoUrl })}
-                        activeOpacity={0.75}
-                        style={{
-                          flex: 1,
-                          backgroundColor: '#FFFFFF',
-                          borderRadius: 14,
-                          paddingVertical: 10,
-                          paddingHorizontal: 6,
-                          borderWidth: 1,
-                          borderColor: '#E2E8F0',
-                          alignItems: 'center',
-                          gap: 5
-                        }}
-                      >
-                        <View style={{ position: 'relative' }}>
-                          <PlayerAvatar name={TOP_BOWLERS[0].name} photoUrl={TOP_BOWLERS[0].photoUrl} size={38} />
-                          <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#7C3AED', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, borderWidth: 1.5, borderColor: '#FFFFFF' }}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontMedium }}>#1</Text>
-                          </View>
-                        </View>
-                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontMedium, textAlign: 'center' }} numberOfLines={1}>
-                          {TOP_BOWLERS[0].name}
-                        </Text>
-                        <View style={{ backgroundColor: '#FDF4FF', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1, borderColor: '#F5D0FE' }}>
-                          <Text style={{ fontSize: 9, color: '#7C3AED', fontFamily: systemFontMedium }}>BOWLER</Text>
-                        </View>
-                        <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 5, alignItems: 'center' }}>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontMedium }}>{TOP_BOWLERS[0].wickets} Wkts</Text>
-                          <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>Eco: {TOP_BOWLERS[0].econ || '0.0'}</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ) : null}
-
-                    {/* Top All-Rounder Card */}
-                    {TOP_ALLROUNDERS[0] ? (
-                      <TouchableOpacity
-                        onPress={() => handlePlayerPress(TOP_ALLROUNDERS[0].name, { role: 'All-Rounder', photoUrl: TOP_ALLROUNDERS[0].photoUrl })}
-                        activeOpacity={0.75}
-                        style={{
-                          flex: 1,
-                          backgroundColor: '#FFFFFF',
-                          borderRadius: 14,
-                          paddingVertical: 10,
-                          paddingHorizontal: 6,
-                          borderWidth: 1,
-                          borderColor: '#E2E8F0',
-                          alignItems: 'center',
-                          gap: 5
-                        }}
-                      >
-                        <View style={{ position: 'relative' }}>
-                          <PlayerAvatar name={TOP_ALLROUNDERS[0].name} photoUrl={TOP_ALLROUNDERS[0].photoUrl} size={38} />
-                          <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#059669', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, borderWidth: 1.5, borderColor: '#FFFFFF' }}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontFamily: systemFontMedium }}>#1</Text>
-                          </View>
-                        </View>
-                        <Text style={{ fontSize: 11.5, color: '#0F172A', fontFamily: systemFontMedium, textAlign: 'center' }} numberOfLines={1}>
-                          {TOP_ALLROUNDERS[0].name}
-                        </Text>
-                        <View style={{ backgroundColor: '#F0FDF4', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1, borderColor: '#BBF7D0' }}>
-                          <Text style={{ fontSize: 9, color: '#059669', fontFamily: systemFontMedium }}>ALL-R</Text>
-                        </View>
-                        <View style={{ width: '100%', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 5, alignItems: 'center' }}>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontMedium }}>{TOP_ALLROUNDERS[0].runs}R • {TOP_ALLROUNDERS[0].wickets}W</Text>
-                          <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFontMedium }} numberOfLines={1}>{TOP_ALLROUNDERS[0].matches || 1} Matches</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
-                </View>
-              )}
+              {/* Ground Spotlight (Top Batsman, Bowler, All-Rounder) - REUSABLE COLORFUL COMPONENT */}
+              <GroundSpotlightSection
+                topBatters={TOP_BATTERS}
+                topBowlers={TOP_BOWLERS}
+                topAllRounders={TOP_ALLROUNDERS}
+                onSelectPlayer={(name, meta) => handlePlayerPress(name, meta)}
+                onViewAll={() => {
+                  if (setBottomNavTab) setBottomNavTab('rankings');
+                }}
+              />
 
               {/* Recent Finished Matches Grouped by Exact Date */}
               {recentFinishedMatches && recentFinishedMatches.length > 0 ? (
@@ -679,7 +580,7 @@ export function MatchesScreen({
           {/* 1. LIVE MATCHES PAGE */}
           <View style={{ width: screenWidth, flex: 1 }}>
             <ScrollView
-              style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+              style={{ flex: 1, backgroundColor: themeColors.appBackground }}
               contentContainerStyle={styles.tabContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -751,7 +652,7 @@ export function MatchesScreen({
           {/* 2. UPCOMING MATCHES PAGE */}
           <View style={{ width: screenWidth, flex: 1 }}>
             <ScrollView
-              style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+              style={{ flex: 1, backgroundColor: themeColors.appBackground }}
               contentContainerStyle={styles.tabContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -887,7 +788,7 @@ export function MatchesScreen({
           {/* 3. FINISHED MATCHES PAGE */}
           <View style={{ width: screenWidth, flex: 1 }}>
             <ScrollView
-              style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+              style={{ flex: 1, backgroundColor: themeColors.appBackground }}
               contentContainerStyle={styles.tabContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -958,37 +859,65 @@ export function MatchesScreen({
 }
 
 const styles = StyleSheet.create({
-  tabContent: { padding: 12, gap: 10 },
-  sectionLabel: { fontSize: 10, color: '#64748B', letterSpacing: 0.8, marginBottom: 6, fontFamily: systemFontBold },
-  idleCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 22, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', gap: 8 },
-  idleIconBg: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#E0F2FE', justifyContent: 'center', alignItems: 'center' },
-  idleTitle: { fontSize: 15, color: '#0F172A', fontFamily: systemFontBold },
+  tabContent: {
+    padding: spacing.md,
+    gap: spacing.sm + 2
+  },
+  sectionLabel: {
+    fontSize: 10,
+    color: theme.light.textMuted,
+    letterSpacing: 0.8,
+    marginBottom: 6,
+    fontFamily: systemFontBold
+  },
+  idleCard: {
+    backgroundColor: theme.light.cardBg,
+    borderRadius: radius.xxl,
+    padding: 22,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.light.cardBorder,
+    gap: spacing.sm
+  },
+  idleIconBg: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: theme.light.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  idleTitle: {
+    fontSize: typeScale.name,
+    color: theme.light.textPrimary,
+    fontFamily: systemFontBold
+  },
   liteEmptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 44,
-    paddingHorizontal: 24,
-    gap: 12
+    paddingHorizontal: spacing.xxl,
+    gap: spacing.md
   },
   liteEmptyText: {
     fontSize: 14.5,
-    color: '#64748B',
+    color: theme.light.textMuted,
     fontFamily: systemFontMedium,
     textAlign: 'center',
     lineHeight: 21,
     maxWidth: 280
   },
   liteEmptyBtn: {
-    backgroundColor: '#F0F9FF',
-    paddingHorizontal: 16,
+    backgroundColor: theme.light.primarySurface,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 9,
-    borderRadius: 20,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: '#BAE6FD',
-    marginTop: 4
+    marginTop: spacing.xs
   },
   liteEmptyBtnText: {
-    color: '#0284C7',
+    color: theme.light.primary,
     fontSize: 12.5,
     fontFamily: systemFontMedium
   }

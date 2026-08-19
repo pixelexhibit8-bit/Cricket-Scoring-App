@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import * as Speech from 'expo-speech';
 import { systemFont, systemFontBold, fontWeights } from '../theme.js';
-import { MASTER_PLAYERS_DB } from '../../mockData.js';
 import {
   makeTeamCode,
   getTeamShortCode,
@@ -78,8 +77,6 @@ export const makeLastDelivery = ({ ballLabel, runs, addedRuns, extraType, byeTyp
   return { token: ballLabel, label, type };
 };
 
-// ── Sample Data Constants ───────────────────────────────────────────────────
-export const FINISHED_MATCHES_DB = [];
 export const MATCH_SYNC_URL = process.env.EXPO_PUBLIC_MATCH_SYNC_URL || '';
 export const STORAGE_KEY = 'cricflow.mobile.match-state.v2';
 export const MAX_MATCH_OVERS = 50;
@@ -979,11 +976,10 @@ export const buildFinishedLiveSnapshot = (finishedMatch) => {
 };
 
 export const getPlayerPreview = (name) => {
-  const profile = MASTER_PLAYERS_DB.find(player => player.name === name);
   return {
     name,
-    avg: profile?.avg != null ? Number(profile.avg).toFixed(2) : '-',
-    sr: profile?.sr != null ? Number(profile.sr).toFixed(2) : '-'
+    avg: '-',
+    sr: '-'
   };
 };
 

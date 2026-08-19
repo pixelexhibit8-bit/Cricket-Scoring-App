@@ -10,7 +10,7 @@ import {
   StyleSheet
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { systemFont, systemFontBold, systemFontMedium } from '../theme.js';
+import { systemFont, systemFontBold, systemFontMedium, themeColors } from '../theme.js';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
 
@@ -94,8 +94,8 @@ export function RankingsScreen({
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                colors={['#0284C7']}
-                tintColor="#0284C7"
+                colors={['#18181B']}
+                tintColor="#18181B"
               />
             ) : undefined
           }
@@ -285,12 +285,12 @@ export function RankingsScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC'
+    backgroundColor: themeColors.appBackground
   },
   tabsBarWrapper: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: themeColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: themeColors.border,
     position: 'relative'
   },
   tabsScrollContent: {
@@ -311,13 +311,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1
   },
   tabButtonTextActive: {
-    color: '#0284C7'
+    color: '#18181B'
   },
   animatedUnderline: {
     position: 'absolute',
     bottom: 0,
     height: 2.5,
-    backgroundColor: '#0284C7',
+    backgroundColor: '#18181B',
     borderRadius: 2
   },
   pageScrollView: {
@@ -328,10 +328,10 @@ const styles = StyleSheet.create({
     paddingBottom: 28
   },
   tableCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: themeColors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: themeColors.border,
     overflow: 'hidden'
   },
   tableHeader: {
@@ -339,9 +339,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 9,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: themeColors.surfaceOffWhite,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0'
+    borderBottomColor: themeColors.border
   },
   tableColRank: {
     width: 32,

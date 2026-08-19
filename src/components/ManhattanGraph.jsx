@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { systemFont, fontWeights, typeScale, themeColors } from '../theme';
-
-const getTeamShortCode = (name = '') => {
-  const words = String(name).trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
-  return String(name).replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'TM';
-};
+import { getTeamShortCode } from '../utils/teamUtils.js';
 
 export const ManhattanGraph = ({ match, team1Inning, team2Inning }) => {
   const [selectedTeamIndex, setSelectedTeamIndex] = useState(0); // 0 = Team 1, 1 = Team 2

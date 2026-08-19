@@ -1,76 +1,41 @@
 import { Platform } from 'react-native';
 
+// ==============================================================================
+// CRICFLOW DESIGN SYSTEM V1 (4-COLOR MINIMAL PREMIUM PALETTE)
+// Single Source of Truth for Colors, Typography, Spacing, Cards, Inputs & UI Tokens
+// ==============================================================================
+
 // ─── 1. CORE FONTS & TYPOGRAPHY TOKENS ───────────────────────────────────────
+// Only Regular (400) and Medium (500/SemiBold) — Bold removed by design
 export const fonts = {
-  regular: 'SFProDisplay-Regular', // 400 - Paragraphs, meta info, commentary, helper text
-  medium: 'SFProDisplay-Medium',   // 500 - Player names, rankings, tab labels, table rows
-  bold: 'SFProDisplay-Bold',       // 700 - Big match scores, titles, primary buttons
+  regular: 'SFProDisplay-Regular', // 400 - Paragraphs, meta, helper text
+  medium: 'SFProDisplay-Medium',   // 500 - Names, scores, titles, buttons, labels
+  bold: 'SFProDisplay-Medium',     // Alias → Medium (Bold intentionally removed)
 };
 
 export const typography = {
   body: fonts.regular,
   subheading: fonts.medium,
-  heading: fonts.bold,
+  heading: fonts.medium,
   caption: fonts.regular,
   label: fonts.medium,
-  score: fonts.bold,
+  score: fonts.medium,
 };
 
 // Aliases for seamless backward compatibility across all existing screens & modals
 export const systemFont = fonts.regular;
 export const systemFontMedium = fonts.medium;
-export const systemFontBold = fonts.bold;
+export const systemFontBold = fonts.medium; // → Medium (Bold removed)
 
-// ─── 1. DESIGN TOKENS (COLORS) ────────────────────────────────────────────────
-export const themeColors = {
-  // Light Theme (Standard Screens)
-  appBackground: '#F8FAFC',
-  surface: '#FFFFFF',
-  surfaceOffWhite: '#F8FAFC',
-  cardBackground: '#FFFFFF',
-  cardBorder: '#E2E8F0',
-  border: '#E2E8F0',
-  borderDark: '#CBD5E1',
-  primary: '#0284C7',
-  primaryDark: '#0369A1',
-  primaryLight: '#E0F2FE',
-  textPrimary: '#0F172A',
-  textSecondary: '#475569',
-  textMuted: '#64748B',
-  textSubtle: '#94A3B8',
-  warning: '#D97706',
-  warningLight: '#FEF3C7',
-
-  // Hero Theme (Live Match Header - CREX Style)
-  heroBackground: '#071B2C',
-  heroBorder: '#123A56',
-  heroDivider: '#1E4D6B',
-  heroText: '#FFFFFF',
-  heroSubtext: '#9FC4D7',
-
-  // Scorer Theme (High Contrast Dark)
-  scorerBg: '#0F172A',
-  scorerCard: '#1E293B',
-  scorerBorder: '#334155',
-  scorerText: '#FFFFFF',
-  scorerMuted: '#94A3B8',
-
-  // Outcomes & Ball-by-ball Badges
-  wicket: '#EF4444',
-  boundaryFour: '#2563EB',
-  boundarySix: '#7C3AED',
-  normalDot: '#E2E8F0',
-  normalDotText: '#0F172A',
-  wideNoBall: '#D97706',
-  wideAmber: '#B45309',
-
-  // Win Bar & Accents
-  winTeamA: '#2563EB',
-  winTeamB: '#059669',
-  accentGold: '#F59E0B'
+export const fontWeights = {
+  regular: 'normal',
+  medium: Platform.OS === 'ios' ? '500' : 'normal',
+  semibold: Platform.OS === 'ios' ? '600' : 'normal',
+  bold: Platform.OS === 'ios' ? '700' : 'normal',
+  strong: Platform.OS === 'ios' ? 'bold' : 'normal'
 };
 
-// ─── TYPE SCALE (px) ──────────────────────────────────────────────────────────
+// ─── 2. TYPE SCALE (px) ──────────────────────────────────────────────────────
 export const typeScale = {
   micro: 11,
   caption: 12,
@@ -80,21 +45,13 @@ export const typeScale = {
   title: 17,
   pageTitle: 19,
   score: 30,
-  heroScore: 50,
+  heroScore: 46,
   outcome: 26,
   preInningsScore: 32,
-  scorerScore: 32,
+  scorerScore: 38,
   keypad: 26,
   keyAction: 20,
   weather: 32
-};
-
-export const fontWeights = {
-  regular: 'normal',
-  medium: Platform.OS === 'ios' ? '500' : 'normal',
-  semibold: Platform.OS === 'ios' ? '600' : 'normal',
-  bold: Platform.OS === 'ios' ? '700' : 'normal',
-  strong: Platform.OS === 'ios' ? 'bold' : 'normal'
 };
 
 export const publicType = {
@@ -107,7 +64,72 @@ export const publicType = {
   tableValue: { fontSize: typeScale.body, fontFamily: systemFontBold }
 };
 
-// ─── 3. SPACING & RADIUS ──────────────────────────────────────────────────────
+// ─── 3. DESIGN TOKENS (COLORS - 4-COLOR PREMIUM SYSTEM) ───────────────────────
+export const themeColors = {
+  // ── 1. Clean Canvas Background & Surfaces ──
+  appBackground: '#FCFCFD',   // Pure & Airy Near-White Canvas
+  surface: '#FFFFFF',         // Pure White Surface
+  surfaceOffWhite: '#F8F8FA', // Subtle Soft Contrast
+  cardBackground: '#FFFFFF',  // Card Surface
+  cardBorder: '#EEEEF0',      // Ultra-clean Subtle Border
+  border: '#EEEEF0',          // Divider Lines
+  borderDark: '#DCDCE0',      // Active / Emphasized Border
+
+  // ── 2. Primary Font & Neutral Palette ──
+  textPrimary: '#333333',     // Charcoal Dark Font on Light Canvas
+  textSecondary: '#555555',   // Medium Neutral Font
+  textMuted: '#777777',       // Muted Label / Hint Font
+  textSubtle: '#999999',      // Subtle Placeholder Font
+
+  // ── 3. Brand & Interactive Buttons ──
+  primary: '#1E1E20',         // Deep Dark Action / Button Color
+  primaryDark: '#121214',     // Dark Pressed State
+  primaryLight: '#F5F5F5',    // Light Hover / Soft Tag
+  primarySurface: '#FAFAFA',  // Light Surface
+  buttonText: '#FAF8F5',      // Soft Off-White Font on Dark Buttons
+
+  // ── 4. Dark Popups & Match Hero Header ──
+  heroBackground: '#18181B',  // Deep Dark Charcoal Popup & Hero
+  heroCardBg: '#232326',      // Dark Card Surface
+  heroBorder: '#323236',      // Dark Border
+  heroDivider: '#3D3D42',     // Dark Divider
+  heroText: '#FAF8F5',        // Soft Off-White Font on Dark Surfaces
+  heroSubtext: '#D4D4D8',     // Muted Font on Dark Surfaces
+
+  // ── 5. Scorer Console Theme (Dark Outdoor Contrast) ──
+  scorerBg: '#18181B',
+  scorerCard: '#232326',
+  scorerBorder: '#323236',
+  scorerText: '#FAF8F5',      // Soft Off-White Font on Scorer Console
+  scorerMuted: '#A1A1AA',
+
+  // ── 6. Status & Cricket Ball Outcomes ──
+  warning: '#D97706',
+  warningLight: '#FEF3C7',
+  wicket: '#DC2626',
+  wicketDark: '#B91C1C',
+  boundaryFour: '#2563EB',
+  boundarySix: '#7C3AED',
+  normalDot: '#EBE3D5',
+  normalDotText: '#333333',
+  wideNoBall: '#D97706',
+  wideAmber: '#B45309',
+
+  // ── 7. Win Indicators & Accents ──
+  winTeamA: '#2563EB',
+  winTeamB: '#059669',
+  accentGold: '#D97706',
+
+  // ── 8. Ground Spotlight Card Theme Tokens ──
+  spotlightBatterBg: '#0F2744',
+  spotlightBatterBorder: '#1E3A8A',
+  spotlightBowlerBg: '#EA580C',
+  spotlightBowlerBorder: '#C2410C',
+  spotlightAllRounderBg: '#18181B',
+  spotlightAllRounderBorder: '#27272A'
+};
+
+// ─── 4. SPACING & RADIUS ──────────────────────────────────────────────────────
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -120,14 +142,15 @@ export const spacing = {
 
 export const radius = {
   xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
+  sm: 6,
+  md: 8,
+  lg: 12,
+  xl: 14,
+  xxl: 16,
   pill: 999
 };
 
-// ─── 4. SHADOWS (Clean Border-Led Flat Design) ──────────────────────────────────
+// ─── 5. SHADOWS (Clean Border-Led Flat Design) ──────────────────────────────────
 export const shadows = {
   small: {
     elevation: 0,
@@ -143,54 +166,56 @@ export const shadows = {
   }
 };
 
-// ─── UNIFIED INDUSTRIAL DESIGN TOKENS SYSTEM ──────────────────────────────────
+// ─── 6. UNIFIED THEME MAP (LINKED DIRECTLY TO TOKENS FOR 100% CONSISTENCY) ─────
 export const theme = {
-  // 1. Scorer Outdoor High-Contrast Dark Console Theme
+  // 1. Scorer Console Theme
   scorer: {
-    bg: '#0F172A',
-    card: '#1E293B',
-    border: '#334155',
-    text: '#FFFFFF',
-    textMuted: '#94A3B8',
+    bg: themeColors.scorerBg,
+    card: themeColors.scorerCard,
+    border: themeColors.scorerBorder,
+    text: themeColors.scorerText,
+    textMuted: themeColors.scorerMuted,
     accentSky: '#38BDF8',
     undoBg: '#78350F',
     undoBorder: '#F59E0B',
     undoText: '#FDE68A',
   },
 
-  // 2. CREX Dark Hero Match Header Theme
+  // 2. Dark Hero & Dark Popup Theme
   hero: {
-    bg: '#071B2C',
-    border: '#123A56',
-    divider: '#1E4D6B',
-    text: '#FFFFFF',
-    subtext: '#9FC4D7',
+    bg: themeColors.heroBackground,
+    cardBg: themeColors.heroCardBg,
+    border: themeColors.heroBorder,
+    divider: themeColors.heroDivider,
+    text: themeColors.heroText,
+    subtext: themeColors.heroSubtext,
   },
 
-  // 3. Crisp Light Mode (Standard Screens)
+  // 3. Butter Canvas Light Mode (Standard Screens)
   light: {
-    bg: '#F8FAFC',
-    cardBg: '#FFFFFF',
-    cardBorder: '#E2E8F0',
-    cardBorderDark: '#CBD5E1',
-    textPrimary: '#0F172A',
-    textSecondary: '#475569',
-    textMuted: '#64748B',
-    textSubtle: '#94A3B8',
-    primary: '#0284C7',
-    primaryDark: '#0369A1',
-    primaryLight: '#E0F2FE',
+    bg: themeColors.appBackground,
+    cardBg: themeColors.cardBackground,
+    cardBorder: themeColors.cardBorder,
+    cardBorderDark: themeColors.borderDark,
+    textPrimary: themeColors.textPrimary,
+    textSecondary: themeColors.textSecondary,
+    textMuted: themeColors.textMuted,
+    textSubtle: themeColors.textSubtle,
+    primary: themeColors.primary,
+    primaryDark: themeColors.primaryDark,
+    primaryLight: themeColors.primaryLight,
+    primarySurface: themeColors.primarySurface,
   },
 
   // 4. Ball Outcome & Result Badges
   outcomes: {
-    four: '#2563EB',
-    six: '#7C3AED',
-    wicket: '#EF4444',
-    wide: '#B45309',
-    noBall: '#D97706',
-    dot: '#E2E8F0',
-    dotText: '#0F172A',
+    four: themeColors.boundaryFour,
+    six: themeColors.boundarySix,
+    wicket: themeColors.wicket,
+    wide: themeColors.wideAmber,
+    noBall: themeColors.wideNoBall,
+    dot: themeColors.normalDot,
+    dotText: themeColors.normalDotText,
   },
 
   colors: themeColors,
@@ -206,7 +231,7 @@ export const theme = {
   }
 };
 
-// ─── 6. REUSABLE UI BUILDING BLOCKS (COMMON STYLES) ───────────────────────────
+// ─── 7. REUSABLE UI BUILDING BLOCKS (COMMON STYLES) ───────────────────────────
 export const commonStyles = {
   rowBetween: {
     flexDirection: 'row',
@@ -218,11 +243,11 @@ export const commonStyles = {
     alignItems: 'center'
   },
   headerBar: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
+    backgroundColor: themeColors.surface,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between'
@@ -230,62 +255,62 @@ export const commonStyles = {
   closeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
+    gap: spacing.xs,
+    backgroundColor: '#F3EDE1',
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: '#E2E8F0'
+    borderColor: themeColors.border
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: themeColors.cardBackground,
+    borderRadius: radius.lg,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: themeColors.cardBorder,
     ...shadows.small
   },
   badgePill: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center'
   },
   primaryButton: {
-    backgroundColor: '#0284C7',
-    paddingVertical: 12,
+    backgroundColor: themeColors.primary,
+    paddingVertical: spacing.md,
     paddingHorizontal: 18,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center'
   },
   outlineButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: themeColors.surface,
     borderWidth: 1,
-    borderColor: '#0284C7',
-    paddingVertical: 12,
+    borderColor: themeColors.primary,
+    paddingVertical: spacing.md,
     paddingHorizontal: 18,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center'
   },
   textButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center'
   },
   inputField: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: themeColors.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontSize: 14,
+    fontSize: typeScale.body,
     fontFamily: systemFont,
-    color: '#0F172A'
+    color: themeColors.textPrimary
   }
 };

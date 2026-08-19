@@ -1,12 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { systemFont, fontWeights, typeScale, themeColors } from '../theme';
-
-const getTeamShortCode = (name = '') => {
-  const words = String(name).trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
-  return String(name).replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'TM';
-};
+import { getTeamShortCode } from '../utils/teamUtils.js';
 
 export const WormGraph = ({ match, team1Inning, team2Inning }) => {
   const team1Name = match?.teams?.[0]?.name || match?.team1?.name || 'Team 1';

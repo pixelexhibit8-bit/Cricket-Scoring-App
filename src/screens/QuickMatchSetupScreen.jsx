@@ -27,7 +27,6 @@ import { AddPlayerModal } from '../components/modals/AddPlayerModal.jsx';
 import { SquadSelectorModal } from '../components/modals/SquadSelectorModal.jsx';
 import { EditPlayerPhotoModal } from '../components/modals/EditPlayerPhotoModal.jsx';
 import { SquadPreviewModal } from '../components/modals/SquadPreviewModal.jsx';
-import { MASTER_PLAYERS_DB } from '../../mockData.js';
 import { fetchLocalPlayers, saveLocalPlayer } from '../services/localPlayerService.js';
 import { syncPlayersToPhotoRegistry, registerPlayerPhoto } from '../services/playerPhotoStore.js';
 import { generateUUID } from '../services/supabaseClient.js';

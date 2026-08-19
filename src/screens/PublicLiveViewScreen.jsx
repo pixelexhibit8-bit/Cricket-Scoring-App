@@ -15,7 +15,11 @@ import {
   systemFontBold,
   systemFontMedium,
   typeScale,
-  fontWeights
+  fontWeights,
+  theme,
+  themeColors,
+  spacing,
+  radius
 } from '../theme.js';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { MatchTabBar } from '../components/MatchTabBar.jsx';
@@ -41,7 +45,6 @@ import {
   formatOrdinal,
   makeInning
 } from '../utils/cricketUtils.js';
-import { MASTER_PLAYERS_DB } from '../../mockData.js';
 
 const PUBLIC_LIVE_TABS = [
   { id: 'info', label: 'Info' },
@@ -75,10 +78,10 @@ export function PublicLiveViewScreen({
 
   if (!activeMatch || !activeMatch.innings || !activeMatch.innings.length) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F8FAFC' }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: themeColors.appBackground }}>
         <Ionicons name="radio-outline" size={34} color="#94A3B8" />
         <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: systemFontBold, marginTop: 10 }}>No live match in progress</Text>
-        <TouchableOpacity onPress={() => setCurrentScreen && setCurrentScreen('home')} style={{ minHeight: 42, marginTop: 14, paddingHorizontal: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0284C7' }}>
+        <TouchableOpacity onPress={() => setCurrentScreen && setCurrentScreen('home')} style={{ minHeight: 42, marginTop: 14, paddingHorizontal: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181B' }}>
           <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>BACK TO HOME</Text>
         </TouchableOpacity>
       </View>
@@ -169,14 +172,11 @@ export function PublicLiveViewScreen({
   const scorecardBowlingRows = getInningBowlingRows(viewInningObj);
 
   const scorecardDeclaredRoster = activeMatch.playingXI?.[viewInningObj.battingTeam?.name] || [];
-  const scorecardDeclaredPlayers = scorecardDeclaredRoster.map(name => {
-    const profile = MASTER_PLAYERS_DB.find(player => player.name === name);
-    return {
-      name,
-      avg: profile?.avg != null ? Number(profile.avg).toFixed(2) : '-',
-      sr: profile?.sr != null ? Number(profile.sr).toFixed(2) : '-'
-    };
-  });
+  const scorecardDeclaredPlayers = scorecardDeclaredRoster.map(name => ({
+    name,
+    avg: '-',
+    sr: '-'
+  }));
   const scorecardPendingBatters = getUnplayedBatters(scorecardDeclaredRoster, scorecardKnownBatters);
   const scorecardHasStarted = Boolean(
     (viewInningObj.totalLegalBalls || 0) > 0
@@ -236,7 +236,7 @@ export function PublicLiveViewScreen({
   const oversHistoryList = oversViewInning?.overHistory || [];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
       {/* ─── TOP DARK NAVY HEADER (MATCH TITLE + TABS + INTEGRATED LIVE HERO) ─── */}
       <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
         {/* Top Title & Back */}
@@ -374,8 +374,8 @@ export function PublicLiveViewScreen({
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={handlePullToRefresh}
-                  colors={['#0284C7']}
-                  tintColor="#0284C7"
+                  colors={['#18181B']}
+                  tintColor="#18181B"
                 />
               }
             >
@@ -536,15 +536,15 @@ export function PublicLiveViewScreen({
                             borderRadius: 8,
                             alignItems: 'center',
                             justifyContent: 'center',
-                            backgroundColor: active ? '#0284C7' : '#FFFFFF',
+                            backgroundColor: active ? '#18181B' : '#FFFFFF',
                             borderWidth: 1,
-                            borderColor: active ? '#0284C7' : '#D9DEE3'
+                            borderColor: active ? '#18181B' : '#EEEEF0'
                           }}
                         >
                           <Text style={{ fontSize: 13, fontFamily: systemFontMedium, color: active ? '#FFFFFF' : '#0F172A', textAlign: 'center' }} numberOfLines={1}>
                             {tObj.name}
                           </Text>
-                          <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: active ? '#D6EEFF' : '#64748B', marginTop: 2 }} numberOfLines={1}>
+                          <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: active ? '#D4D4D8' : '#64748B', marginTop: 2 }} numberOfLines={1}>
                             {tObj.score}
                           </Text>
                         </TouchableOpacity>

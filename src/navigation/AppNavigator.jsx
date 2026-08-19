@@ -65,7 +65,6 @@ function HomeScreenRoute() {
       TOP_BOWLERS={matchCtx.TOP_BOWLERS}
       TOP_ALLROUNDERS={matchCtx.TOP_ALLROUNDERS}
       localPlayersList={matchCtx.localPlayersList}
-      MASTER_PLAYERS_DB={matchCtx.MASTER_PLAYERS_DB}
       getSetupPlayerProfile={matchCtx.getSetupPlayerProfile}
       setSelectedPlayerProfile={matchCtx.setSelectedPlayerProfile}
       onJoinMatchByCode={matchCtx.handleJoinMatchByCode}
@@ -413,6 +412,10 @@ export function AppNavigator(props) {
     activeMatch,
     selectedMatch,
     setSelectedMatch,
+    selectedPlayerName,
+    setSelectedPlayerName,
+    selectedPlayerProfile,
+    setSelectedPlayerProfile,
     setCurrentScreen,
     setBottomNavTab,
     setMatchesSubTab,
@@ -497,7 +500,30 @@ export function AppNavigator(props) {
           <Stack.Screen name="ScorerConsole" component={ScorerConsoleScreenRoute} />
           <Stack.Screen name="PublicLiveView" component={PublicLiveViewScreenRoute} />
           <Stack.Screen name="FinishedMatchView" component={FinishedMatchViewScreenRoute} />
-          <Stack.Screen name="PlayerProfile" component={PlayerProfileScreenRoute} />
+          <Stack.Screen
+            name="PlayerProfile"
+            component={PlayerProfileScreenRoute}
+            options={({ navigation }) => ({
+              headerShown: true,
+              headerTitle: selectedPlayerProfile?.name || 'Player Career Profile',
+              headerTitleStyle: { fontFamily: systemFontBold, fontSize: 16, color: '#FFFFFF' },
+              headerStyle: { backgroundColor: '#071B2C' },
+              headerTintColor: '#FFFFFF',
+              headerShadowVisible: false,
+              headerLeft: () => (
+                <TouchableOpacity
+                  onPress={() => {
+                    if (setCurrentScreen) setCurrentScreen('home');
+                    else if (navigation.canGoBack()) navigation.goBack();
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={{ marginRight: 12, paddingVertical: 4 }}
+                >
+                  <Ionicons name="arrow-back" size={22} color="#E0F2FE" />
+                </TouchableOpacity>
+              )
+            })}
+          />
           <Stack.Screen name="InningBreak" component={InningBreakScreenRoute} />
           <Stack.Screen name="Matches" component={MatchesScreenRoute} />
           <Stack.Screen name="Rankings" component={RankingsScreenRoute} />

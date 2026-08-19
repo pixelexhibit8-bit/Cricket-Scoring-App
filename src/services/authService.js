@@ -213,13 +213,16 @@ export async function signInWithGoogle({ name, email, photoUrl } = {}) {
     // DIRECT SUPABASE DATABASE ENTRY: Save user's email, name and profile
     if (supabase) {
       try {
+        const playerId = profile.id || user.id || generateUUID();
         await supabase.from('local_players').upsert({
+          id: playerId,
           name: profile.name || userName,
           role: profile.role || 'All-Rounder',
           city: profile.city || 'Local Ground',
           photo_url: userPhoto,
-          phone: userEmail // Stores email / contact in Supabase
-        }, { onConflict: 'name' }).catch(() => {});
+          phone: userEmail,
+          auth_user_id: user.id
+        }, { onConflict: 'id' }).catch(() => {});
       } catch (dbErr) {
         console.warn('Supabase email save notice:', dbErr);
       }

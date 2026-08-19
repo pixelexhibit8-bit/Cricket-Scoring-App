@@ -9,7 +9,7 @@ import { AppNavigator } from './src/navigation/AppNavigator.jsx';
 import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
 import { ErrorBoundary } from './src/components/ErrorBoundary.jsx';
 import { MatchProvider, useMatch } from './src/context/MatchContext.jsx';
-import { systemFont, theme } from './src/theme.js';
+import { theme, themeColors } from './src/theme.js';
 
 LogBox.ignoreLogs([
   '[Supabase Realtime Warning]',
@@ -22,8 +22,7 @@ SplashScreen.preventAutoHideAsync();
 export default function App() {
   const [fontsLoaded] = useFonts({
     'SFProDisplay-Regular': require('./assets/fonts/SFProDisplay-Regular.otf'),
-    'SFProDisplay-Medium': require('./assets/fonts/SFProDisplay-Medium.otf'),
-    'SFProDisplay-Bold': require('./assets/fonts/SFProDisplay-Bold.otf')
+    'SFProDisplay-Medium': require('./assets/fonts/SFProDisplay-Medium.otf')
   });
 
   useEffect(() => {
@@ -47,8 +46,8 @@ export default function App() {
 
 function AppShell() {
   const { currentScreen } = useMatch();
-  const isDarkMatchScreen = currentScreen === 'scorerWizard' || currentScreen === 'finishedView' || currentScreen === 'liveView';
-  const shellBackgroundColor = isDarkMatchScreen ? '#071B2C' : '#FFFFFF';
+  const isDarkMatchScreen = currentScreen === 'scorerWizard' || currentScreen === 'finishedView' || currentScreen === 'liveView' || currentScreen === 'playerProfile';
+  const shellBackgroundColor = isDarkMatchScreen ? theme.hero.bg : themeColors.appBackground;
 
   return (
     <View style={[styles.root, { backgroundColor: shellBackgroundColor }]}>
@@ -65,6 +64,6 @@ function AppShell() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.hero.bg, fontFamily: systemFont },
+  root: { flex: 1, backgroundColor: theme.hero.bg },
   safe: { flex: 1, backgroundColor: theme.hero.bg }
 });

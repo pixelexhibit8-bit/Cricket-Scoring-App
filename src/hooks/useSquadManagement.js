@@ -4,7 +4,6 @@ import { fetchLocalPlayers, saveLocalPlayer } from '../services/localPlayerServi
 import { syncPlayersToPhotoRegistry } from '../services/playerPhotoStore.js';
 import { showToast } from '../services/toastService.js';
 import { capitalizeWords } from '../utils/textUtils.js';
-import { MASTER_PLAYERS_DB } from '../../mockData.js';
 import { syncMatchToSupabase } from '../services/matchService.js';
 
 export function useSquadManagement({ activeMatch, setActiveMatch }) {
@@ -33,7 +32,6 @@ export function useSquadManagement({ activeMatch, setActiveMatch }) {
 
   const allMidMatchPlayersPool = [...new Set([
     ...(localPlayersList || []).map(p => p.name),
-    ...MASTER_PLAYERS_DB.map(p => p.name),
     ...((activeMatch?.playingXI && Object.values(activeMatch.playingXI).flat()) || [])
   ])].filter(Boolean);
 

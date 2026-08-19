@@ -59,13 +59,13 @@ export function AppBottomNav({ activeTab, onTabChange }) {
                 <MaterialCommunityIcons
                   name={tab.activeIcon}
                   size={24}
-                  color={isActive ? '#0284C7' : '#94A3B8'}
+                  color={isActive ? '#18181B' : '#94A3B8'}
                 />
               ) : (
                 <Ionicons
                   name={isActive ? tab.activeIcon : tab.inactiveIcon}
                   size={24}
-                  color={isActive ? '#0284C7' : '#94A3B8'}
+                  color={isActive ? '#18181B' : '#94A3B8'}
                 />
               )}
               <Text
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2
   },
   tabLabelActive: {
-    color: '#0284C7',
+    color: '#18181B',
     fontFamily: systemFontBold
   },
   tabLabelInactive: {

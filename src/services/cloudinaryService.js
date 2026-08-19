@@ -13,17 +13,14 @@ export const uploadImageToCloudinary = async (imageDataUri) => {
       filePayload = `data:image/jpeg;base64,${filePayload}`;
     }
 
-    const formData = new URLSearchParams();
+    const formData = new FormData();
     formData.append('file', filePayload);
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
     const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: formData.toString()
+      body: formData
     });
 
     if (!res.ok) {

@@ -97,9 +97,10 @@ export function SquadSelectorModal({
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                 {team1Roster.length > 0 ? (
-                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
+                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                    <Ionicons name="checkmark-circle" size={11} color="#15803D" />
                     <Text style={{ fontSize: 10.5, color: '#15803D', fontFamily: systemFontBold }}>
-                      ✓ {team1Roster.length} Added
+                      {team1Roster.length} Added
                     </Text>
                   </View>
                 ) : (
@@ -139,15 +140,16 @@ export function SquadSelectorModal({
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                 {team2Roster.length > 0 ? (
-                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
+                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                    <Ionicons name="checkmark-circle" size={11} color="#15803D" />
                     <Text style={{ fontSize: 10.5, color: '#15803D', fontFamily: systemFontBold }}>
-                      ✓ {team2Roster.length} Added
+                      {team2Roster.length} Added
                     </Text>
                   </View>
                 ) : (
                   <View style={{ backgroundColor: team1Roster.length > 0 ? '#FEF3C7' : '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
                     <Text style={{ fontSize: 10.5, color: team1Roster.length > 0 ? '#B45309' : '#64748B', fontFamily: systemFontBold }}>
-                      {team1Roster.length > 0 ? 'Needs Players ➔' : '0 Selected'}
+                      {team1Roster.length > 0 ? 'Needs Players' : '0 Selected'}
                     </Text>
                   </View>
                 )}
