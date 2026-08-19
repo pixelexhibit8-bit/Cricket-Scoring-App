@@ -43,6 +43,7 @@ export function MatchesScreen({
   setSelectedPlayerName,
   setCurrentScreen,
   activeMatchVisible,
+  visibleLiveMatches = [],
   renderActiveMatchListCard,
   recentFinishedMatches = [],
   renderFinishedMatchListCard,
@@ -99,9 +100,10 @@ export function MatchesScreen({
     }
     return 'Match Results';
   };
+  const liveCount = (visibleLiveMatches || []).length;
   const homeTabs = [
     { id: 'home', label: 'For you' },
-    { id: 'live', label: activeMatchVisible ? 'Live (1)' : 'Live (0)' },
+    { id: 'live', label: `Live (${liveCount})` },
     { id: 'upcoming', label: 'Upcoming' },
     { id: 'finished', label: 'Finished' }
   ];
@@ -278,15 +280,15 @@ export function MatchesScreen({
               return t1.includes(q) || t2.includes(q) || title.includes(q) || venue.includes(q);
             });
 
-            const isLiveMatchMatch = activeMatch && (() => {
-              const t1 = (activeMatch.innings?.[0]?.battingTeam?.name || activeMatch.teams?.[0]?.name || '').toLowerCase();
-              const t2 = (activeMatch.innings?.[0]?.bowlingTeam?.name || activeMatch.teams?.[1]?.name || '').toLowerCase();
-              const title = (activeMatch.matchTitle || '').toLowerCase();
-              const venue = (activeMatch.venueName || '').toLowerCase();
+            const matchedLive = (visibleLiveMatches || []).filter(m => {
+              const t1 = (m.teams?.[0]?.name || m.innings?.[0]?.battingTeam?.name || m.inn1BattingTeam || '').toLowerCase();
+              const t2 = (m.teams?.[1]?.name || m.innings?.[0]?.bowlingTeam?.name || m.inn1BowlingTeam || '').toLowerCase();
+              const title = (m.matchTitle || m.title || '').toLowerCase();
+              const venue = (m.venue || m.venueName || m.ground || '').toLowerCase();
               return t1.includes(q) || t2.includes(q) || title.includes(q) || venue.includes(q);
-            })();
+            });
 
-            const totalResults = matchedPlayers.length + matchedFinished.length + (isLiveMatchMatch ? 1 : 0);
+            const totalResults = matchedPlayers.length + matchedFinished.length + matchedLive.length;
 
             if (totalResults === 0) {
               return (
@@ -305,16 +307,16 @@ export function MatchesScreen({
             return (
               <View style={{ gap: 16 }}>
                 {/* MATCHES SECTION */}
-                {(isLiveMatchMatch || matchedFinished.length > 0) && (
+                {(matchedLive.length > 0 || matchedFinished.length > 0) && (
                   <View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
                       <Ionicons name="trophy-outline" size={15} color="#0284C7" />
                       <Text style={[styles.sectionLabel, { marginBottom: 0 }]}>
-                        MATCHES ({ (isLiveMatchMatch ? 1 : 0) + matchedFinished.length })
+                        MATCHES ({ matchedLive.length + matchedFinished.length })
                       </Text>
                     </View>
-                    {isLiveMatchMatch && renderActiveMatchListCard && renderActiveMatchListCard()}
-                    {matchedFinished.map(f => renderFinishedMatchListCard && renderFinishedMatchListCard(f))}
+                    {matchedLive.map((m, idx) => renderActiveMatchListCard && renderActiveMatchListCard(m, idx))}
+                    {matchedFinished.map((f, idx) => renderFinishedMatchListCard && renderFinishedMatchListCard(f, idx))}
                   </View>
                 )}
 
@@ -426,17 +428,17 @@ export function MatchesScreen({
               }
             >
               {/* Top Featured / Live Match Banner */}
-              {activeMatchVisible && (
+              {visibleLiveMatches.length > 0 && (
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
                     <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                      FEATURED LIVE MATCH
+                      {visibleLiveMatches.length > 1 ? `FEATURED LIVE MATCHES (${visibleLiveMatches.length})` : 'FEATURED LIVE MATCH'}
                     </Text>
                     <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
                       <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontMedium }}>LIVE</Text>
                     </View>
                   </View>
-                  {renderActiveMatchListCard && renderActiveMatchListCard()}
+                  {visibleLiveMatches.map((m, idx) => renderActiveMatchListCard ? renderActiveMatchListCard(m, idx) : null)}
                 </>
               )}
 
@@ -609,17 +611,17 @@ export function MatchesScreen({
               }
             >
 
-              {activeMatchVisible ? (
+              {visibleLiveMatches.length > 0 ? (
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 2 }}>
                     <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                      LIVE MATCH
+                      LIVE MATCHES ({visibleLiveMatches.length})
                     </Text>
                     <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
                       <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontMedium }}>LIVE</Text>
                     </View>
                   </View>
-                  {renderActiveMatchListCard && renderActiveMatchListCard()}
+                  {visibleLiveMatches.map((m, idx) => renderActiveMatchListCard ? renderActiveMatchListCard(m, idx) : null)}
                 </>
               ) : (
                 <View style={styles.liteEmptyState}>

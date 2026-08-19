@@ -266,22 +266,45 @@ export const syncPlayerToSupabase = async (player) => {
   }
 };
 
-export const fetchLiveMatchFromSupabase = async () => {
-  if (!isSupabaseConfigured() || !supabase) return null;
+export const fetchLiveMatchesFromSupabase = async () => {
+  if (!isSupabaseConfigured() || !supabase) return [];
   try {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
       .neq('phase', 'result')
-      .order('updated_at', { ascending: false })
-      .limit(1);
+      .order('updated_at', { ascending: false });
 
-    if (error || !Array.isArray(data) || !data.length) return null;
-    const currentBuildMatch = data.find(row => row.match_data?.app_build_token === CURRENT_BUILD_TOKEN);
-    return currentBuildMatch?.match_data || null;
+    if (error || !Array.isArray(data)) return [];
+
+    return data
+      .filter(row => {
+        const isFinished = row.phase === 'result'
+          || row.phase === 'finished'
+          || row.phase === 'completed'
+          || row.match_data?.phase === 'result'
+          || row.match_data?.isCompleted;
+        const isCurrentBuild = row.match_data?.app_build_token === CURRENT_BUILD_TOKEN;
+        return !isFinished && isCurrentBuild && row.match_data;
+      })
+      .map(row => {
+        const md = row.match_data || {};
+        return {
+          ...md,
+          id: md.id || row.id,
+          supabaseId: row.id
+        };
+      })
+      .filter(m => Boolean(m && (m.team1?.name || m.teams?.[0]?.name || m.inn1BattingTeam)));
   } catch (err) {
-    return null;
+    console.warn('[Supabase Exception fetchLiveMatches]:', err.message || err);
+    return [];
   }
+};
+
+export const fetchLiveMatchFromSupabase = async () => {
+  const matches = await fetchLiveMatchesFromSupabase();
+  return matches[0] || null;
 };
 
 // TRUE REAL-TIME WebSocket subscription using @supabase/supabase-js
@@ -301,8 +324,8 @@ export const subscribeToSupabaseLiveMatches = (onUpdate) => {
         { event: '*', schema: 'public', table: 'matches' },
         (payload) => {
           const matchData = payload?.new?.match_data;
-          if (matchData && matchData.phase !== 'result' && matchData.app_build_token === CURRENT_BUILD_TOKEN) {
-            onUpdate(matchData);
+          if (matchData && matchData.app_build_token === CURRENT_BUILD_TOKEN) {
+            onUpdate(matchData, payload?.eventType, payload?.new);
           }
         }
       )

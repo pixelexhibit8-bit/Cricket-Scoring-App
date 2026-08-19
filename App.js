@@ -37,10 +37,14 @@ import { WicketPendingModal } from './src/components/modals/WicketPendingModal.j
 import { RunOutModal } from './src/components/modals/RunOutModal.jsx';
 import { SquadSelectorModal } from './src/components/modals/SquadSelectorModal.jsx';
 import { AddPlayerModal } from './src/components/modals/AddPlayerModal.jsx';
+import { PlayingXiModal } from './src/components/modals/PlayingXiModal.jsx';
+import { WicketDismissalModal } from './src/components/modals/WicketDismissalModal.jsx';
 import { QuickMatchSetupScreen } from './src/screens/QuickMatchSetupScreen.jsx';
 import { ScorerConsoleScreen } from './src/screens/ScorerConsoleScreen.jsx';
 import { InningBreakScreen } from './src/screens/InningBreakScreen.jsx';
 import { PublicLiveViewScreen } from './src/screens/PublicLiveViewScreen.jsx';
+import { FinishedMatchViewScreen } from './src/screens/FinishedMatchViewScreen.jsx';
+import { AppNavigator } from './src/navigation/AppNavigator.jsx';
 import { capitalizeWords } from './src/utils/textUtils.js';
 import { fetchLocalPlayers, saveLocalPlayer } from './src/services/localPlayerService.js';
 import { syncPlayersToPhotoRegistry } from './src/services/playerPhotoStore.js';
@@ -48,7 +52,7 @@ import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
 import { showToast } from './src/services/toastService.js';
 import { AppSplashScreen } from './src/components/common/AppSplashScreen.jsx';
 import { useFonts } from 'expo-font';
-import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, fetchLiveMatchFromSupabase, subscribeToSupabaseLiveMatches, fetchMatchByAccessCode } from './src/services/matchService.js';
+import { syncMatchToSupabase, fetchFinishedMatchesFromSupabase, fetchPlayersFromSupabase, fetchLiveMatchFromSupabase, fetchLiveMatchesFromSupabase, subscribeToSupabaseLiveMatches, fetchMatchByAccessCode } from './src/services/matchService.js';
 import { getCurrentUser } from './src/services/authService.js';
 import { generateUUID } from './src/services/supabaseClient.js';
 import { AppButton } from './src/components/common/AppButton.jsx';
@@ -202,278 +206,9 @@ const getUnplayedBatters = (roster = [], recordedBatters = []) => {
     .map(getPlayerPreview);
 };
 
-const PendingBattersSection = ({ title, players, onPressPlayer }) => {
-  if (!players?.length) return null;
 
-  return (
-    <View style={{ backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingHorizontal: 16, paddingTop: 18, paddingBottom: 18 }}>
-      <Text style={{ color: '#64748B', fontSize: typeScale.label, lineHeight: 15, includeFontPadding: false, fontWeight: fontWeights.bold, fontFamily: systemFont }}>
-        {title}
-      </Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 16 }}>
-        {players.map(player => (
-          <TouchableOpacity
-            key={`${title}-${player.name}`}
-            onPress={() => onPressPlayer && onPressPlayer(player.name)}
-            activeOpacity={0.7}
-            style={{ width: '47%', minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 10 }}
-          >
-            <PlayerAvatar name={player.name} photoUrl={player.avatar} size={38} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text selectable {...nameFitProps} style={{ color: '#0F172A', fontSize: typeScale.name, lineHeight: 17, fontWeight: fontWeights.semibold, fontFamily: systemFont }}>
-                {player.name}
-              </Text>
-              <Text style={{ color: '#64748B', fontSize: typeScale.caption, lineHeight: 14, includeFontPadding: false, fontWeight: fontWeights.medium, marginTop: 3, fontFamily: systemFont }}>
-                SR: {player.sr}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-};
 
-const ResultTeamBlock = ({ team, isWinner, align = 'left' }) => {
-  const scoreParts = getScorePartsFromText(team?.score);
-  const rawName = String(team?.name || '').trim();
-  const displayName = rawName.length <= 6 ? rawName : getTeamShortCode(team, rawName);
-  const isLoser = !isWinner;
 
-  return (
-    <View style={{ flex: 1, flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 10 }}>
-      <TeamIdentityMark team={team} size={42} isLoser={isLoser} />
-      <View style={{ flex: 1, alignItems: align === 'left' ? 'flex-start' : 'flex-end', justifyContent: 'center' }}>
-        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'center', gap: 4 }}>
-          <Text
-            selectable
-            numberOfLines={1}
-            style={{
-              color: isWinner ? '#FFFFFF' : '#94A3B8',
-              fontSize: 13.5,
-              fontFamily: systemFontMedium,
-              letterSpacing: 0.3
-            }}
-          >
-            {displayName}
-          </Text>
-          {isWinner ? (
-            <MaterialCommunityIcons name="trophy" size={13} color="#F59E0B" />
-          ) : null}
-        </View>
-
-        <View style={{ flexDirection: align === 'left' ? 'row' : 'row-reverse', alignItems: 'baseline', gap: 5, marginTop: 1 }}>
-          <Text
-            selectable
-            style={{
-              color: '#FFFFFF',
-              fontSize: 17,
-              fontFamily: systemFontBold,
-              fontVariant: ['tabular-nums']
-            }}
-            numberOfLines={1}
-          >
-            {scoreParts.score || 'Yet to bat'}
-          </Text>
-          {Boolean(scoreParts.overs) && (
-            <Text
-              selectable
-              style={{
-                color: '#94A3B8',
-                fontSize: 11,
-                fontFamily: systemFontMedium,
-                fontVariant: ['tabular-nums']
-              }}
-              numberOfLines={1}
-            >
-              {scoreParts.overs}
-            </Text>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-};
-
-const MatchResultHero = ({ teamOne, teamTwo, winnerTeamName, resultText }) => (
-  <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
-    <View style={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <ResultTeamBlock team={teamOne} isWinner={winnerTeamName === teamOne?.name || (resultText && resultText.toLowerCase().includes(teamOne?.name?.toLowerCase()))} align="left" />
-      <View style={{ width: 28, alignItems: 'center', justifyContent: 'center' }}>
-        <MaterialCommunityIcons name="lightning-bolt" size={20} color="#64748B" />
-      </View>
-      <ResultTeamBlock team={teamTwo} isWinner={winnerTeamName === teamTwo?.name || (resultText && resultText.toLowerCase().includes(teamTwo?.name?.toLowerCase()))} align="right" />
-    </View>
-    <View style={{ paddingHorizontal: 16, paddingBottom: 12, alignItems: 'center', justifyContent: 'center' }}>
-      <Text
-        selectable
-        style={{
-          color: '#F59E0B',
-          fontSize: 12.5,
-          fontFamily: systemFontMedium,
-          textAlign: 'center',
-          letterSpacing: 0.2
-        }}
-      >
-        {resultText}
-      </Text>
-    </View>
-  </View>
-);
-
-const getTeamPerformers = (match, targetTeamName) => {
-  const team = [match.team1, match.team2].find(t => (t?.name || '').toLowerCase() === (targetTeamName || '').toLowerCase()) || (targetTeamName === match.team1?.name ? match.team1 : match.team2) || {};
-  const batters = [...(team?.batting || [])]
-    .filter(player => player.runs > 0 || player.balls > 0)
-    .sort((a, b) => b.runs - a.runs || a.balls - b.balls)
-    .slice(0, 2)
-    .map(player => {
-      const srVal = player.balls > 0
-        ? ((player.runs / player.balls) * 100).toFixed(1)
-        : (player.sr != null && !isNaN(player.sr) ? player.sr : '0.0');
-      return {
-        key: `bat-${team.name || targetTeamName}-${player.name}`,
-        name: player.name,
-        detail: `SR ${srVal}`,
-        value: `${player.runs} (${player.balls})`,
-        icon: 'cricket'
-      };
-    });
-  const bowler = [...(team?.bowling || [])].sort((a, b) => b.wickets - a.wickets || a.runs - b.runs)[0];
-  const econVal = bowler
-    ? (bowler.econ != null && !isNaN(bowler.econ) ? bowler.econ : (bowler.overs > 0 ? (bowler.runs / parseFloat(bowler.overs)).toFixed(2) : '0.00'))
-    : '0.00';
-  const performers = bowler
-    ? [...batters, {
-      key: `bowl-${team.name || targetTeamName}-${bowler.name}`,
-      name: bowler.name,
-      detail: `ECO ${econVal}`,
-      value: `${bowler.wickets}-${bowler.runs} (${bowler.overs})`,
-      icon: 'baseball'
-    }]
-    : batters;
-  return performers;
-};
-
-const FinishedMatchSummary = ({ match, onRematch, onPressPlayer }) => {
-  const team1 = match.team1 || {};
-  const team2 = match.team2 || {};
-  const team1Name = team1.name || 'Team 1';
-  const team2Name = team2.name || 'Team 2';
-
-  const team1Performers = getTeamPerformers(match, team1Name);
-  const team2Performers = getTeamPerformers(match, team2Name);
-  const teamSections = [
-    { team: team1, performers: team1Performers },
-    { team: team2, performers: team2Performers }
-  ].filter(section => section.team?.name);
-
-  return (
-    <View style={{ marginHorizontal: -14 }}>
-      {match.lastOver?.balls?.length ? (
-        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
-          <View style={{ minHeight: 48, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ minWidth: 58 }}>
-              <Text style={{ color: '#7C8793', fontSize: 9, fontWeight: fontWeights.bold, fontFamily: systemFont }}>FINAL OVER</Text>
-              <Text selectable style={{ color: '#0F172A', fontSize: 12, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }}>Over {match.lastOver.overNum}</Text>
-            </View>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              {match.lastOver.balls.map((ball, index) => {
-                const strongBall = isWicketToken(ball) || ball === '4' || ball === '6';
-                const ballColor = isWicketToken(ball) ? '#E11D48' : ball === '4' ? '#0284C7' : ball === '6' ? '#7C3AED' : '#F1F5F9';
-                return (
-                  <View key={`${ball}-${index}`} style={{ minWidth: 27, height: 27, paddingHorizontal: 5, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: ballColor, borderWidth: strongBall ? 0 : 1, borderColor: '#CBD5E1' }}>
-                    <Text style={{ color: strongBall ? '#FFFFFF' : '#334155', fontSize: 10, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{ball}</Text>
-                  </View>
-                );
-              })}
-            </View>
-            <Text selectable style={{ color: '#0F172A', fontSize: 12, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{match.lastOver.runs} R</Text>
-          </View>
-        </View>
-      ) : null}
-
-      {(() => {
-        const potm = match.playerOfTheMatch
-          || (match.topScorer ? { name: match.topScorer.name, statText: `${match.topScorer.runs} (${match.topScorer.balls})` } : null)
-          || (() => {
-            const allBatters = [...(match.team1?.batting || []), ...(match.team2?.batting || [])]
-              .filter(p => p && ((Number(p.runs) || 0) > 0 || (Number(p.balls) || 0) > 0))
-              .sort((a, b) => (Number(b.runs) || 0) - (Number(a.runs) || 0));
-            const allBowlers = [...(match.team1?.bowling || []), ...(match.team2?.bowling || [])]
-              .filter(b => b && ((Number(b.wickets) || 0) > 0 || (Number(b.balls) || 0) > 0))
-              .sort((a, b) => (Number(b.wickets) || 0) - (Number(a.wickets) || 0) || (Number(a.runs) || 0) - (Number(b.runs) || 0));
-
-            const topB = allBatters[0];
-            const topBw = allBowlers[0];
-
-            if (topBw && (topBw.wickets >= 3 || (topB && topBw.wickets * 25 > topB.runs))) {
-              return { name: topBw.name, statText: `${topBw.wickets}-${topBw.runs || 0} (${topBw.overs || '0.0'} Ov)` };
-            }
-            if (topB) {
-              return { name: topB.name, statText: `${topB.runs} (${topB.balls || 0})` };
-            }
-            return null;
-          })();
-
-        if (!potm) return null;
-        return (
-          <TouchableOpacity
-            onPress={() => onPressPlayer && onPressPlayer(potm.name)}
-            activeOpacity={0.7}
-            style={{ marginHorizontal: 16, marginVertical: 14, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#F7F3EE', borderRadius: 16, borderWidth: 1, borderColor: '#F0EAE1' }}
-          >
-            <PlayerAvatar name={potm.name} size={54} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text selectable style={{ color: '#1C1917', fontSize: 16, fontWeight: fontWeights.bold, fontFamily: systemFont }} numberOfLines={1}>
-                {potm.name}
-              </Text>
-              <Text selectable style={{ color: '#8C857B', fontSize: 13, fontWeight: fontWeights.medium, marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
-                Player of the Match
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text selectable style={{ color: '#1C1917', fontSize: 16, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>
-                {potm.statText}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        );
-      })()}
-
-      <View style={{ paddingHorizontal: 16, paddingVertical: 15, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-        <Text style={{ color: '#0F172A', fontSize: 15, fontWeight: fontWeights.bold, fontFamily: systemFont }}>TOP PERFORMERS</Text>
-      </View>
-      {teamSections.map(({ team, performers }) => (
-        <View key={team.name} style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
-          <View style={{ minHeight: 42, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, backgroundColor: '#F8FAFC' }}>
-            <Text selectable style={{ flex: 1, color: '#64748B', fontSize: 11, fontWeight: fontWeights.semibold, fontFamily: systemFont }} numberOfLines={1}>{team.name}</Text>
-            <Text selectable style={{ color: '#64748B', fontSize: 11, fontWeight: fontWeights.semibold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{team.score}</Text>
-          </View>
-          {performers.map((performer, index) => (
-            <TouchableOpacity
-              key={performer.key}
-              onPress={() => onPressPlayer && onPressPlayer(performer.name)}
-              activeOpacity={0.7}
-              style={{ minHeight: 66, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: index > 0 ? 1 : 0, borderTopColor: '#E8ECEF' }}
-            >
-              <PlayerAvatar name={performer.name} size={36} />
-              <View style={{ flex: 1 }}>
-                <Text selectable style={{ color: '#0F172A', fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }} numberOfLines={1}>{performer.name}</Text>
-                <Text selectable style={{ color: '#7C8793', fontSize: 10, fontWeight: fontWeights.semibold, marginTop: 2, fontFamily: systemFont }}>{performer.detail}</Text>
-              </View>
-              <Text selectable style={{ color: '#0F172A', fontSize: 14, fontWeight: fontWeights.bold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{performer.value}</Text>
-            </TouchableOpacity>
-          ))}
-          {performers.length === 0 ? (
-            <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: fontWeights.semibold, paddingHorizontal: 16, paddingVertical: 18, fontFamily: systemFont }}>No recorded performance</Text>
-          ) : null}
-        </View>
-      ))}
-
-    </View>
-  );
-};
 
 
 const WICKET_TYPES = [
@@ -498,7 +233,7 @@ export default function App() {
 
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync().catch(() => {});
+      SplashScreen.hideAsync().catch(() => { });
     }
   }, [fontsLoaded]);
 
@@ -585,9 +320,9 @@ export default function App() {
       };
       await saveLocalPlayer(playerObj);
       setLocalPlayersList(prev => [...(prev || []).filter(p => p.name !== cleanName), playerObj]);
-      
+
       handleMidMatchMoveToTeam(cleanName, 'team1');
-      
+
       setIsAddPlayerModalOpen(false);
       setNewPlayerPhoneInput('');
       setSelectedLocalImageUri(null);
@@ -606,7 +341,7 @@ export default function App() {
           setLocalPlayersList(players);
           syncPlayersToPhotoRegistry(players);
         }
-      }).catch(() => {});
+      }).catch(() => { });
     };
     loadPlayers();
     const interval = setInterval(loadPlayers, 3000);
@@ -634,11 +369,18 @@ export default function App() {
   const handlePullToRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const [liveData, finishedData] = await Promise.all([
-        fetchLiveMatchFromSupabase(),
+      const [liveDataList, finishedData] = await Promise.all([
+        fetchLiveMatchesFromSupabase(),
         fetchFinishedMatchesFromSupabase()
       ]);
-      if (liveData) setActiveMatch(liveData);
+      if (Array.isArray(liveDataList)) {
+        setLiveMatches(liveDataList);
+        setActiveMatch(prev => {
+          if (!prev) return liveDataList[0] || null;
+          const found = liveDataList.find(m => (m.id && m.id === prev.id) || (m.supabaseId && m.supabaseId === prev.supabaseId));
+          return found || prev;
+        });
+      }
       if (finishedData && Array.isArray(finishedData)) {
         setFinishedArchive(finishedData);
       }
@@ -680,8 +422,9 @@ export default function App() {
 
   const [savedTeamsList, setSavedTeamsList] = useState([]);
 
-  // â”€â”€ Active match (multi-inning) â”€â”€
+  // ── Active match (multi-inning) ──
   const [activeMatch, setActiveMatch] = useState(null);
+  const [liveMatches, setLiveMatches] = useState([]);
   const [rematchSetup, setRematchSetup] = useState(null);
   // activeMatch shape:
   // { matchTitle, tossResult, maxOvers,
@@ -753,25 +496,57 @@ export default function App() {
 
   // ── TRUE REAL-TIME WebSocket Subscription (zero delay via Supabase Realtime) ──
   useEffect(() => {
-    if (currentScreen === 'scorerWizard') return; // Don't overwrite scorer's active local state
+    const onLiveUpdate = (matchData, eventType, fullRow) => {
+      if (!matchData || (!matchData.matchTitle && !matchData.title)) return;
+      const matchId = matchData.id || matchData.supabaseId || fullRow?.id;
+      const isFinished = matchData.phase === 'result' || matchData.phase === 'finished' || matchData.isCompleted;
 
-    const onLiveUpdate = (matchData) => {
-      if (!matchData || !matchData.matchTitle) return;
-      setActiveMatch(prev => {
-        if (!prev) return matchData;
-        const prevUpdated = prev.updatedAt || prev.startedAt || '';
-        const newUpdated = matchData.updatedAt || matchData.startedAt || '';
-        if (newUpdated >= prevUpdated) return matchData;
-        return prev;
+      // 1. Update liveMatches array
+      setLiveMatches(prev => {
+        const list = Array.isArray(prev) ? [...prev] : [];
+        const index = list.findIndex(m => (m.id && m.id === matchId) || (m.supabaseId && m.supabaseId === matchId));
+        if (isFinished) {
+          if (index !== -1) list.splice(index, 1);
+          return list;
+        }
+        if (index !== -1) {
+          list[index] = { ...list[index], ...matchData };
+        } else {
+          list.unshift(matchData);
+        }
+        return list;
       });
+
+      // 2. If finished, sync finished matches archive
+      if (isFinished) {
+        fetchFinishedMatchesFromSupabase().then(dbMatches => {
+          if (Array.isArray(dbMatches) && dbMatches.length > 0) {
+            setFinishedArchive(dbMatches);
+          }
+        }).catch(() => { });
+      }
+
+      // 3. Update activeMatch if matching or if viewing
+      if (currentScreen !== 'scorerWizard') {
+        setActiveMatch(prev => {
+          if (!prev) return matchData;
+          if ((prev.id && prev.id === matchId) || (prev.supabaseId && prev.supabaseId === matchId)) {
+            return { ...prev, ...matchData };
+          }
+          return prev;
+        });
+      }
     };
 
     // Subscribe via WebSocket (instant push — zero delay)
     const unsubscribe = subscribeToSupabaseLiveMatches(onLiveUpdate);
 
-    // Initial fetch on mount only (no aggressive polling interval)
-    fetchLiveMatchFromSupabase().then(liveMatch => {
-      if (liveMatch && liveMatch.matchTitle) onLiveUpdate(liveMatch);
+    // Initial fetch of all live matches on mount
+    fetchLiveMatchesFromSupabase().then(liveList => {
+      if (Array.isArray(liveList) && liveList.length > 0) {
+        setLiveMatches(liveList);
+        setActiveMatch(prev => prev || liveList[0]);
+      }
     }).catch(() => { });
 
     return () => {
@@ -1282,6 +1057,10 @@ export default function App() {
     };
 
     setActiveMatch(newMatch);
+    setLiveMatches(prev => {
+      const filtered = (prev || []).filter(m => (m.id !== newMatch.id && m.supabaseId !== newMatch.id));
+      return [newMatch, ...filtered];
+    });
     syncMatchToSupabase(newMatch).catch(() => { });
     setIsScorerUnlocked(true);
     setCurrentScreen('scorerWizard');
@@ -2370,674 +2149,9 @@ export default function App() {
     if (nextTeamId !== playingXiTeamTab) setPlayingXiTeamTab(nextTeamId);
   };
 
-  const renderLiveView = () => (
-    <PublicLiveViewScreen
-      activeMatch={activeMatch}
-      publicLiveTab={publicLiveTab}
-      setPublicLiveTab={setPublicLiveTab}
-      liveViewReturnScreen={liveViewReturnScreen}
-      setCurrentScreen={setCurrentScreen}
-      handleOpenPlayerProfile={handleOpenPlayerProfile}
-      refreshing={refreshing}
-      handlePullToRefresh={handlePullToRefresh}
-      setPlayingXiTeamTab={setPlayingXiTeamTab}
-      setPlayingXiVisible={setPlayingXiVisible}
-      playingXiPagerScrollX={playingXiPagerScrollX}
-    />
-  );
-
-  // FULL SCREEN FINISHED MATCH SCORECARD VIEW (MATCHING LIVE VIEW LAYOUT EXACTLY)
   // FULL SCREEN FINISHED MATCH SCORECARD VIEW (MATCHING CREX EXACT SCREENSHOT 2)
   const [finishedTab, setFinishedTab] = useState('summary');
   const [finishedInningIndex, setFinishedInningIndex] = useState(0);
-
-  const renderFinishedView = () => {
-    const f = (selectedMatch?.id ? selectedMatch : null) || (activeMatch && (activeMatch.phase === 'result' || activeMatch.resultText) ? buildFinishedMatch(activeMatch) : null) || selectedMatch || finishedMatches[0];
-    if (!f) {
-      return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F8FAFC' }}>
-          <Ionicons name="checkmark-done-outline" size={34} color="#94A3B8" />
-          <Text style={{ color: '#0F172A', fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, marginTop: 10, fontFamily: systemFont }}>No finished match</Text>
-          <TouchableOpacity onPress={() => setCurrentScreen('home')} style={{ minHeight: 42, marginTop: 14, paddingHorizontal: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0284C7' }}>
-            <Text style={{ color: '#FFFFFF', fontSize: typeScale.body, fontWeight: fontWeights.bold, fontFamily: systemFont }}>BACK TO HOME</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-    const getResolvedFallOfWickets = (team) => {
-      if (Array.isArray(team?.fallOfWickets) && team.fallOfWickets.length > 0) {
-        return team.fallOfWickets;
-      }
-      const dismissed = (team?.batting || []).filter(p => p && p.dismissal && p.dismissal !== 'Not out' && p.dismissal !== 'Did not bat');
-      if (dismissed.length === 0) return [];
-      let runningRuns = 0;
-      return dismissed.map((p, idx) => {
-        runningRuns += (Number(p.runs) || 0);
-        return {
-          dismissedName: p.name,
-          score: `${runningRuns}-${idx + 1}`,
-          over: ''
-        };
-      });
-    };
-
-    const getResolvedPartnerships = (team) => {
-      if (Array.isArray(team?.partnerships) && team.partnerships.length > 0) {
-        return team.partnerships;
-      }
-      const batters = (team?.batting || []).filter(p => p && ((Number(p.runs) || 0) > 0 || (Number(p.balls) || 0) > 0));
-      if (batters.length < 2) return [];
-      const p1 = batters[0];
-      const p2 = batters[1];
-      const totalRuns = (Number(p1.runs) || 0) + (Number(p2.runs) || 0);
-      const totalBalls = (Number(p1.balls) || 0) + (Number(p2.balls) || 0);
-      return [{
-        wkt: '1st Wicket',
-        p1: p1.name,
-        r1: Number(p1.runs) || 0,
-        p2: p2.name,
-        r2: Number(p2.runs) || 0,
-        totalRuns,
-        totalBalls
-      }];
-    };
-
-    const ensureOverHistory = (overHistory, team) => {
-      if (Array.isArray(overHistory) && overHistory.length > 0) return overHistory;
-      const totalRuns = Number(team?.runs) || 0;
-      const legalBalls = Number(team?.legalBalls) || 0;
-      if (totalRuns === 0 && legalBalls === 0) return [];
-      const totalOvers = Math.ceil(legalBalls / 6) || 1;
-      const avgRunsPerOver = Math.round(totalRuns / totalOvers) || 0;
-      let remainingRuns = totalRuns;
-      const synthetic = [];
-      for (let i = 1; i <= totalOvers; i++) {
-        const isLast = i === totalOvers;
-        const runsThisOver = isLast ? remainingRuns : Math.min(remainingRuns, Math.max(0, Math.round(avgRunsPerOver + (Math.sin(i) * 3))));
-        remainingRuns -= runsThisOver;
-        const ballsInOver = isLast && (legalBalls % 6 > 0) ? (legalBalls % 6) : 6;
-        const ballTokens = Array(ballsInOver).fill('1');
-        if (runsThisOver > 0 && ballsInOver > 0) {
-          ballTokens[0] = String(Math.min(6, runsThisOver));
-        }
-        synthetic.push({
-          overNum: i,
-          bowlerName: 'Bowler',
-          runs: runsThisOver,
-          wickets: 0,
-          balls: ballTokens
-        });
-      }
-      return synthetic;
-    };
-
-    const finishedLiveMatch = buildFinishedLiveSnapshot(f);
-    const viewTeam = (finishedInningIndex === 0 ? finishedLiveMatch?.team1 : finishedLiveMatch?.team2) || {
-      name: 'Team',
-      score: '0-0',
-      batting: [],
-      bowling: [],
-      overHistory: [],
-      fallOfWickets: [],
-      partnerships: []
-    };
-    const opponentTeam = (finishedInningIndex === 0 ? finishedLiveMatch?.team2 : finishedLiveMatch?.team1) || {};
-    const finishedBowlingRows = (viewTeam?.bowling?.length ? viewTeam.bowling : opponentTeam?.bowling) || [];
-    const finishedBattingRows = (viewTeam.batting || []).filter(player => player.dismissal !== 'Did not bat');
-    const finishedDeclaredRoster = finishedLiveMatch.playingXI?.[viewTeam.name]
-      || f.sourceMatch?.playingXI?.[viewTeam.name]
-      || (viewTeam.batting || []).map(player => player.name);
-    const finishedPendingBatters = getUnplayedBatters(finishedDeclaredRoster, finishedBattingRows);
-    const finishedFallOfWickets = getResolvedFallOfWickets(viewTeam);
-    const finishedPartnerships = getResolvedPartnerships(viewTeam);
-    const finishedSelectedMatch = {
-      ...finishedLiveMatch,
-      inning: Math.max(1, Math.min(finishedLiveMatch.innings?.length || 1, finishedInningIndex + 1))
-    };
-    const finishedSelectedInning = finishedSelectedMatch.innings?.[finishedSelectedMatch.inning - 1];
-    const rawOverHistory = finishedSelectedInning ? getDisplayOverHistory(finishedSelectedInning) : (viewTeam.overHistory || []);
-    const finishedOverHistory = ensureOverHistory(rawOverHistory, viewTeam);
-    const finishedMaxOverRuns = Math.max(12, ...finishedOverHistory.map(over => over.runs || 0));
-    const finishedTeam1Inning = f.sourceMatch?.innings?.[0] || { battingTeam: f.team1, overHistory: ensureOverHistory(f.team1?.overHistory, f.team1) };
-    const finishedTeam2Inning = f.sourceMatch?.innings?.[1] || { battingTeam: f.team2, overHistory: ensureOverHistory(f.team2?.overHistory, f.team2) };
-
-    const keepFinishedTabVisible = (tabIndex, animated = true) => {
-      const tab = FINISHED_MATCH_TABS[tabIndex];
-      const layout = tab ? publicTabLayouts[`finished:${tab.id}`] : null;
-      if (!layout) return;
-      publicTabsRef.current?.scrollTo({
-        x: Math.max(0, layout.x + (layout.width / 2) - (screenWidth / 2)),
-        animated
-      });
-    };
-    const changeFinishedTab = (nextTabId, movePager = true) => {
-      const nextIndex = FINISHED_MATCH_TABS.findIndex(tab => tab.id === nextTabId);
-      if (nextIndex < 0) return;
-      setFinishedTab(nextTabId);
-      keepFinishedTabVisible(nextIndex);
-      if (movePager) finishedSwipeRef.current?.scrollTo({ x: nextIndex * screenWidth, animated: true });
-    };
-    const handleFinishedPagerEnd = (event) => {
-      const nextIndex = Math.max(0, Math.min(
-        FINISHED_MATCH_TABS.length - 1,
-        Math.round(event.nativeEvent.contentOffset.x / screenWidth)
-      ));
-      const nextTab = FINISHED_MATCH_TABS[nextIndex];
-      if (!nextTab) return;
-      keepFinishedTabVisible(nextIndex);
-      if (nextTab.id !== finishedTab) setFinishedTab(nextTab.id);
-    };
-
-    return (
-      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        {/* Top Bar Header */}
-        <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 14, paddingTop: 12, borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
-          <TouchableOpacity onPress={() => setCurrentScreen('home')} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Ionicons name="arrow-back" size={18} color="#E0F2FE" />
-            <Text style={{ flex: 1, color: '#FFFFFF', fontSize: 14, fontFamily: systemFontMedium }} numberOfLines={1}>{f.title || f.matchTitle}</Text>
-          </TouchableOpacity>
-
-          <MatchTabBar
-            tabs={FINISHED_MATCH_TABS}
-            activeTab={finishedTab}
-            layouts={publicTabLayouts}
-            layoutPrefix="finished:"
-            pageWidth={screenWidth}
-            scrollX={publicPagerScrollX}
-            scrollRef={publicTabsRef}
-            onPress={changeFinishedTab}
-            onTabLayout={capturePublicTabLayout}
-            tone="dark"
-          />
-        </View>
-
-        <MatchResultHero
-          teamOne={f.team1}
-          teamTwo={f.team2}
-          winnerTeamName={f.winnerTeamName}
-          resultText={f.winner}
-        />
-
-        <Animated.ScrollView
-          ref={finishedSwipeRef}
-          horizontal
-          pagingEnabled
-          snapToInterval={screenWidth}
-          snapToAlignment="start"
-          disableIntervalMomentum
-          directionalLockEnabled
-          nestedScrollEnabled
-          bounces={false}
-          overScrollMode="never"
-          decelerationRate="fast"
-          showsHorizontalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: publicPagerScrollX } } }],
-            { useNativeDriver: true }
-          )}
-          onMomentumScrollEnd={handleFinishedPagerEnd}
-          onLayout={() => {
-            const activeIndex = Math.max(0, FINISHED_MATCH_TABS.findIndex(tab => tab.id === finishedTab));
-            const offset = activeIndex * screenWidth;
-            finishedSwipeRef.current?.scrollTo({ x: offset, animated: false });
-            publicPagerScrollX.setValue(offset);
-            keepFinishedTabVisible(activeIndex, false);
-          }}
-          style={{ flex: 1 }}
-        >
-          {FINISHED_MATCH_TABS.map(({ id: pageTabId }) => (
-            <View key={pageTabId} style={{ width: screenWidth, flex: 1 }}>
-              <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={{ padding: 14, paddingBottom: 24, gap: 14 }}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled
-                refreshControl={
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={handlePullToRefresh}
-                    colors={['#0284C7']}
-                    tintColor="#0284C7"
-                  />
-                }
-                refreshControl={
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={handlePullToRefresh}
-                    colors={['#0284C7']}
-                    tintColor="#0284C7"
-                  />
-                }
-              >
-                {/* TAB: SUMMARY */}
-                {pageTabId === 'summary' && (
-                  <FinishedMatchSummary match={f} onRematch={handleRematch} onPressPlayer={handleOpenPlayerProfile} />
-                )}
-
-                {/* TAB 1: SCORECARD TAB */}
-                {pageTabId === 'scorecard' && (
-                  <View style={{ gap: 14 }}>
-                    {/* Inning Switcher Pills */}
-                    <View style={{ flexDirection: 'row', gap: 8, padding: 14, backgroundColor: '#F4F6F8', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-                      {[f.team1, f.team2].map((tObj, idx) => {
-                        const hasScore = tObj.score && tObj.score !== 'Yet to bat';
-                        return (
-                          <InningTeamTab
-                            key={idx}
-                            name={tObj.name}
-                            selected={finishedInningIndex === idx}
-                            statusText={hasScore ? '' : 'Yet to bat'}
-                            onPress={() => setFinishedInningIndex(idx)}
-                          />
-                        );
-                      })}
-                    </View>
-
-                    {/* BATTING TABLE */}
-                    <View style={{ backgroundColor: '#FFFFFF', overflow: 'hidden', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-                      <View style={{ minHeight: 50, backgroundColor: '#FFFFFF', paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Text style={{ color: '#1477A8', fontSize: typeScale.body, fontWeight: fontWeights.bold, fontFamily: systemFont }}>BATTER</Text>
-                          <Ionicons name="arrow-down" size={13} color="#1477A8" />
-                        </View>
-                        <Text style={{ color: '#7C8793', fontSize: 12, fontWeight: fontWeights.bold, width: 34, textAlign: 'right', fontFamily: systemFont }}>R</Text>
-                        <Text style={{ color: '#7C8793', fontSize: 12, fontWeight: fontWeights.bold, width: 30, textAlign: 'right', fontFamily: systemFont }}>B</Text>
-                        <Text style={{ color: '#7C8793', fontSize: 12, fontWeight: fontWeights.bold, width: 32, textAlign: 'right', fontFamily: systemFont }}>4s</Text>
-                        <Text style={{ color: '#7C8793', fontSize: 12, fontWeight: fontWeights.bold, width: 32, textAlign: 'right', fontFamily: systemFont }}>6s</Text>
-                        <Text style={{ color: '#7C8793', fontSize: 12, fontWeight: fontWeights.bold, width: 58, textAlign: 'right', fontFamily: systemFont }}>SR</Text>
-                      </View>
-
-                      {finishedBattingRows.map((b, bi) => (
-                        <TouchableOpacity
-                          key={bi}
-                          onPress={() => handleOpenPlayerProfile(b.name)}
-                          activeOpacity={0.7}
-                          style={{ minHeight: 58, paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: bi > 0 ? 1 : 0, borderTopColor: '#E8ECEF' }}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text selectable {...nameFitProps} style={{ flex: 1, minWidth: 0, color: '#111827', fontWeight: fontWeights.bold, fontSize: typeScale.name, fontFamily: systemFont }}>{b.name}</Text>
-                            <Text selectable style={{ color: '#0F172A', fontWeight: fontWeights.bold, fontSize: typeScale.name, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{b.runs}</Text>
-                            <Text selectable style={{ color: '#64748B', fontWeight: fontWeights.bold, fontSize: 12, width: 30, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{b.balls}</Text>
-                            <Text selectable style={{ color: '#64748B', fontWeight: fontWeights.bold, fontSize: 12, width: 32, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{b.fours}</Text>
-                            <Text selectable style={{ color: '#64748B', fontWeight: fontWeights.bold, fontSize: 12, width: 32, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{b.sixes}</Text>
-                            <Text selectable style={{ color: '#0284C7', fontWeight: fontWeights.bold, fontSize: typeScale.label, width: 58, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>
-                              {(() => {
-                                const r = Number(b.runs) || 0;
-                                const bl = Number(b.balls) || 0;
-                                if (bl > 0) return ((r / bl) * 100).toFixed(1);
-                                return (b.sr && b.sr !== '0.0') ? b.sr : '0.0';
-                              })()}
-                            </Text>
-                          </View>
-                          <Text style={{ color: b.dismissal === 'Not out' ? '#0284C7' : '#64748B', fontSize: 10, fontWeight: fontWeights.bold, marginTop: 3, fontFamily: systemFont }} numberOfLines={1}>{b.dismissal}</Text>
-                        </TouchableOpacity>
-                      ))}
-                      <PendingBattersSection title="DID NOT BAT" players={finishedPendingBatters} onPressPlayer={handleOpenPlayerProfile} />
-                    </View>
-
-                    {/* BOWLING TABLE */}
-                    {finishedBowlingRows.length > 0 && (
-                      <View style={{ marginTop: 14, backgroundColor: '#FFFFFF', overflow: 'hidden', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
-                        <View style={{ minHeight: 48, backgroundColor: '#F7F9FA', paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Text style={{ color: '#1477A8', fontSize: typeScale.body, fontWeight: fontWeights.bold, fontFamily: systemFont }}>BOWLER</Text>
-                            <Ionicons name="arrow-down" size={13} color="#1477A8" />
-                          </View>
-                          <Text style={{ color: '#7C8793', fontSize: 11, fontWeight: fontWeights.bold, width: 34, textAlign: 'right', fontFamily: systemFont }}>O</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11, fontWeight: fontWeights.bold, width: 30, textAlign: 'right', fontFamily: systemFont }}>M</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11, fontWeight: fontWeights.bold, width: 34, textAlign: 'right', fontFamily: systemFont }}>R</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11, fontWeight: fontWeights.bold, width: 32, textAlign: 'right', fontFamily: systemFont }}>W</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11, fontWeight: fontWeights.bold, width: 50, textAlign: 'right', fontFamily: systemFont }}>ECO</Text>
-                        </View>
-                        {finishedBowlingRows.map((bw, bwi) => {
-                          const runsNum = Number(bw?.runs ?? bw?.runsConceded ?? 0);
-                          let ballsNum = Number(bw?.balls ?? bw?.legalBalls ?? 0);
-                          if (ballsNum === 0 && bw?.overs) {
-                            const [fullOvers, remBalls] = String(bw.overs).split('.').map(Number);
-                            ballsNum = ((fullOvers || 0) * 6) + (remBalls || 0);
-                          }
-                          const econVal = (bw?.econ && bw.econ !== '0.00' && bw.econ !== '0')
-                            ? String(bw.econ)
-                            : (ballsNum > 0 ? ((runsNum / ballsNum) * 6).toFixed(2) : '0.00');
-                          const maidensVal = bw?.maidens ?? bw?.m ?? 0;
-
-                          return (
-                            <TouchableOpacity
-                              key={bwi}
-                              onPress={() => handleOpenPlayerProfile(bw.name)}
-                              activeOpacity={0.7}
-                              style={{ minHeight: 50, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderTopWidth: bwi > 0 ? 1 : 0, borderTopColor: '#E8ECEF' }}
-                            >
-                              <Text selectable {...nameFitProps} style={{ flex: 1, minWidth: 0, color: '#111827', fontWeight: fontWeights.bold, fontSize: typeScale.name, fontFamily: systemFont }}>{bw.name}</Text>
-                              <Text selectable style={{ color: '#4B5563', fontWeight: fontWeights.bold, fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{bw.overs}</Text>
-                              <Text selectable style={{ color: '#4B5563', fontWeight: fontWeights.bold, fontSize: 12, width: 30, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{maidensVal}</Text>
-                              <Text selectable style={{ color: '#4B5563', fontWeight: fontWeights.bold, fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{runsNum}</Text>
-                              <Text selectable style={{ color: '#111827', fontWeight: fontWeights.bold, fontSize: typeScale.name, width: 32, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{bw.wickets}</Text>
-                              <Text selectable style={{ color: '#1477A8', fontWeight: fontWeights.bold, fontSize: typeScale.body, width: 50, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{econVal}</Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    )}
-                    {/* FALL OF WICKETS */}
-                    <View style={{ marginTop: 14, backgroundColor: '#FFFFFF', overflow: 'hidden', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
-                      <View style={{ minHeight: 46, backgroundColor: '#F7F9FA', paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text style={{ color: '#64748B', fontSize: typeScale.label, fontWeight: fontWeights.bold, fontFamily: systemFont }}>FALL OF WICKETS</Text>
-                        <Text style={{ color: '#64748B', fontSize: typeScale.label, fontWeight: fontWeights.bold, fontFamily: systemFont }}>Score - Over</Text>
-                      </View>
-                      {finishedFallOfWickets.map((fw, fwi) => (
-                        <TouchableOpacity
-                          key={fwi}
-                          onPress={() => handleOpenPlayerProfile(fw.dismissedName)}
-                          activeOpacity={0.7}
-                          style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: '#E8ECEF' }}
-                        >
-                          <Text selectable style={{ flex: 1, color: '#0F172A', fontWeight: fontWeights.bold, fontSize: typeScale.body, fontFamily: systemFont }} numberOfLines={1}>{fw.dismissedName || 'Wicket'}</Text>
-                          <Text selectable style={{ color: '#64748B', fontWeight: fontWeights.bold, fontSize: 12, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{fw.score}{fw.over ? `  (${fw.over} ov)` : ''}</Text>
-                        </TouchableOpacity>
-                      ))}
-                      {finishedFallOfWickets.length === 0 ? <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: fontWeights.bold, padding: 14, textAlign: 'center', fontFamily: systemFont }}>No wicket</Text> : null}
-                    </View>
-
-                    {/* PARTNERSHIPS */}
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
-                      <View style={{ minHeight: 46, backgroundColor: '#F7F9FA', paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={{ color: '#64748B', fontSize: typeScale.label, fontWeight: fontWeights.bold, fontFamily: systemFont }}>INNING PARTNERSHIPS</Text>
-                      </View>
-                      {finishedPartnerships.map((item, idx) => (
-                        <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                          {/* Left Batter */}
-                          <TouchableOpacity onPress={() => handleOpenPlayerProfile(item.p1)} activeOpacity={0.7} style={{ flex: 1, alignItems: 'flex-start' }}>
-                            <Text selectable style={{ fontSize: 12.5, fontWeight: fontWeights.medium, color: '#0F172A', fontFamily: systemFont }} numberOfLines={1}>
-                              {item.p1 || 'Batter'}
-                            </Text>
-                            <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont, marginTop: 1 }}>
-                              {item.r1 || 0} runs
-                            </Text>
-                          </TouchableOpacity>
-
-                          {/* Center Total Partnership Badge */}
-                          <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, minWidth: 86 }}>
-                            <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: '#BAE6FD', alignItems: 'center' }}>
-                              <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#0284C7', fontFamily: systemFont }}>
-                                {item.totalRuns || 0} runs
-                              </Text>
-                              <Text style={{ fontSize: 9.5, color: '#64748B', fontFamily: systemFont }}>
-                                ({item.totalBalls || 0}b)
-                              </Text>
-                            </View>
-                            {item.wkt ? (
-                              <Text style={{ fontSize: 9, color: '#94A3B8', fontFamily: systemFont, marginTop: 2 }}>
-                                {item.wkt}
-                              </Text>
-                            ) : null}
-                          </View>
-
-                          {/* Right Batter */}
-                          <TouchableOpacity onPress={() => handleOpenPlayerProfile(item.p2)} activeOpacity={0.7} style={{ flex: 1, alignItems: 'flex-end' }}>
-                            <Text selectable style={{ fontSize: 12.5, fontWeight: fontWeights.medium, color: '#0F172A', fontFamily: systemFont, textAlign: 'right' }} numberOfLines={1}>
-                              {item.p2 || 'Batter'}
-                            </Text>
-                            <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont, marginTop: 1, textAlign: 'right' }}>
-                              {item.r2 || 0} runs
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                      {finishedPartnerships.length === 0 ? <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: fontWeights.bold, padding: 14, textAlign: 'center', fontFamily: systemFont }}>No partnership data</Text> : null}
-                    </View>
-                  </View>
-                )}
-
-                {/* TAB 2: WORM & MANHATTAN GRAPHS */}
-                {pageTabId === 'graphs' && (
-                  <View style={{ gap: 14 }}>
-                    <WormGraph
-                      match={f.sourceMatch || f}
-                      team1Inning={finishedTeam1Inning}
-                      team2Inning={finishedTeam2Inning}
-                    />
-                    <ManhattanGraph
-                      match={f.sourceMatch || f}
-                      team1Inning={finishedTeam1Inning}
-                      team2Inning={finishedTeam2Inning}
-                    />
-                  </View>
-                )}
-
-                {/* TAB 3: OVERS BREAKDOWN */}
-                {pageTabId === 'overs' && (
-                  <View style={{ gap: 10 }}>
-                    {/* Inning Switcher Pills on Overs Tab */}
-                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
-                      {[f.team1, f.team2].map((tObj, idx) => {
-                        const hasScore = tObj?.score && tObj.score !== 'Yet to bat';
-                        return (
-                          <InningTeamTab
-                            key={idx}
-                            name={tObj?.name || `Team ${idx + 1}`}
-                            selected={finishedInningIndex === idx}
-                            statusText={hasScore ? '' : 'Yet to bat'}
-                            onPress={() => setFinishedInningIndex(idx)}
-                          />
-                        );
-                      })}
-                    </View>
-
-                    <Text style={{ fontSize: 12, fontWeight: fontWeights.bold, color: '#64748B', fontFamily: systemFont, marginHorizontal: 2 }}>
-                      Overs for {viewTeam?.name || 'Team'} ({viewTeam?.score || '0-0'})
-                    </Text>
-
-                    {finishedOverHistory.length === 0 ? (
-                      <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: fontWeights.bold, textAlign: 'center', paddingVertical: 30, fontFamily: systemFont }}>
-                        No overs completed yet.
-                      </Text>
-                    ) : (
-                      finishedOverHistory.map((o, idx) => (
-                        <View key={`${viewTeam.name}-${o.overNum}-${idx}`} style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                            <Text style={{ color: '#0284C7', fontSize: typeScale.body, fontWeight: fontWeights.bold, fontFamily: systemFont }}>Over {o.overNum} - {o.bowlerName || 'Bowler'}</Text>
-                            <Text style={{ color: '#B45309', fontSize: typeScale.body, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{o.runs} Runs {o.wickets > 0 ? `- ${o.wickets} W` : ''}</Text>
-                          </View>
-                          <View style={{ minHeight: 26 }}>
-                            {renderBallTimeline(o.balls, { size: 26, emptyText: 'No balls', contentPaddingRight: 4 })}
-                          </View>
-                        </View>
-                      ))
-                    )}
-                  </View>
-                )}
-
-                {/* TAB: INFO TAB */}
-                {pageTabId === 'info' && (
-                  <MatchInfoPanel
-                    rows={[
-                      { icon: 'trophy-outline', label: 'Match', value: f.title || `${f.team1?.name || 'Team 1'} vs ${f.team2?.name || 'Team 2'}` },
-                      { icon: 'calendar-outline', label: 'Date & time', value: f.date || formatMatchDateTime(f.completedAt || f.startedAt || f.date) },
-                      { icon: 'swap-horizontal-outline', label: 'Toss', value: f.tossResult || (f.tossWinner ? `${f.tossWinner} won the toss and elected to ${(f.tossDecision || 'bat').toUpperCase()}` : `${f.team1?.name || 'Team 1'} won the toss and elected to BAT`), emphasis: true },
-                      { icon: 'location-outline', label: 'Venue', value: (f.venue && f.venue !== 'Venue not added') ? f.venue : 'Local Ground' },
-                      { icon: 'person-outline', label: 'Umpire', value: f.umpireName || 'Cric Scorer' },
-                      { icon: 'partly-sunny-outline', label: 'Conditions', value: f.conditions || '28°C, Clear Sky' },
-                      { icon: 'checkmark-done-outline', label: 'Result', value: f.winner || f.resultText, emphasis: true, accent: true }
-                    ]}
-                    teamOneName={f.team1?.name || 'Team 1'}
-                    teamTwoName={f.team2?.name || 'Team 2'}
-                    playerCount={(f.team1?.batting?.length || 0) + (f.team2?.batting?.length || 0) || (f.sourceMatch?.playingXI ? Object.values(f.sourceMatch.playingXI).flat().length : 4)}
-                    onOpenPlayingXi={() => {
-                      setPlayingXiTeamTab(1);
-                      playingXiPagerScrollX.setValue(0);
-                      setPlayingXiVisible(true);
-                    }}
-                  />
-                )}
-
-                {false && pageTabId === 'info' && (
-                  <View style={{ gap: 14 }}>
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 12 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="information-circle" size={18} color="#0284C7" />
-                        <Text style={{ fontSize: 14, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>MATCH INFORMATION</Text>
-                      </View>
-
-                      <View style={{ gap: 10 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: fontWeights.bold, fontFamily: systemFont }}>Match</Text>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: fontWeights.bold, fontFamily: systemFont }}>{f.title}</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: fontWeights.bold, fontFamily: systemFont }}>Result</Text>
-                          <Text style={{ flex: 1, marginLeft: 16, textAlign: 'right', fontSize: 12, color: '#0F172A', fontWeight: fontWeights.bold, fontFamily: systemFont }}>{f.winner}</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: fontWeights.bold, fontFamily: systemFont }}>Top scorer</Text>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: fontWeights.bold, fontFamily: systemFont }}>{f.topScorer ? `${f.topScorer.name} - ${f.topScorer.runs} (${f.topScorer.balls})` : '-'}</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: fontWeights.bold, fontFamily: systemFont }}>Venue</Text>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: fontWeights.bold, fontFamily: systemFont }}>{f.venue}</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: fontWeights.bold, fontFamily: systemFont }}>Date</Text>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: fontWeights.bold, fontFamily: systemFont }}>{f.date}</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: fontWeights.bold, fontFamily: systemFont }}>Umpire</Text>
-                          <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: fontWeights.bold, fontFamily: systemFont }}>{f.umpireName}</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* PLAYING XI SQUADS ACCORDION */}
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }}>
-                      <TouchableOpacity
-                        onPress={() => setIsInfoSquadsExpanded(!isInfoSquadsExpanded)}
-                        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-                      >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name="people" size={18} color="#0284C7" />
-                          <Text style={{ fontSize: 14, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>Announced Playing XI Squads</Text>
-                        </View>
-                        <Ionicons name={isInfoSquadsExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#64748B" />
-                      </TouchableOpacity>
-
-                      {isInfoSquadsExpanded && (
-                        <View style={{ gap: 12, marginTop: 6 }}>
-                          <View style={{ borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
-                            <Text style={{ paddingVertical: 9, fontSize: 12, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{f.team1.name} Playing XI ({f.team1.batting.length})</Text>
-                            {f.team1.batting.map((p, idx) => (
-                              <View key={idx} style={{ minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 9, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                                <Text style={{ width: 20, fontSize: 10, fontWeight: fontWeights.bold, color: '#94A3B8', fontFamily: systemFont }}>{idx + 1}</Text>
-                                <Text style={{ flex: 1, fontSize: 12, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{p.name}</Text>
-                              </View>
-                            ))}
-                          </View>
-
-                          <View style={{ borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
-                            <Text style={{ paddingVertical: 9, fontSize: 12, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{f.team2.name} Playing XI ({f.team2.batting.length})</Text>
-                            {f.team2.batting.map((p, idx) => (
-                              <View key={idx} style={{ minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 9, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                                <Text style={{ width: 20, fontSize: 10, fontWeight: fontWeights.bold, color: '#94A3B8', fontFamily: systemFont }}>{idx + 1}</Text>
-                                <Text style={{ flex: 1, fontSize: 12, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>{p.name}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* SCORER / MATCH REMATCH ACTION */}
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 10, marginTop: 4 }}>
-                      <Text style={{ fontSize: 13, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont }}>Scorer Actions</Text>
-                      <TouchableOpacity
-                        onPress={() => handleRematch(f.sourceMatch || f)}
-                        style={{
-                          backgroundColor: '#0284C7',
-                          paddingVertical: 12,
-                          paddingHorizontal: 16,
-                          borderRadius: 10,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 8
-                        }}
-                      >
-                        <MaterialCommunityIcons name="refresh" size={18} color="#FFFFFF" />
-                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }}>
-                          START REMATCH (SAME TEAMS)
-                        </Text>
-                      </TouchableOpacity>
-                      <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center', fontFamily: systemFont }}>
-                        Preloads both team squads so you can quickly adjust players, overs, PIN and start the next game.
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-              </ScrollView>
-            </View>
-          ))}
-        </Animated.ScrollView>
-      </View>
-    );
-  };
-
-  const renderScorerConsole = () => {
-    const innIdx = (activeMatch?.inning || 1) - 1;
-    const inn = activeMatch?.innings?.[innIdx] || activeMatch?.innings?.[0];
-    if (!inn?.battingTeam || !inn?.bowlingTeam) {
-      return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F8FAFC' }}>
-          <Ionicons name="alert-circle-outline" size={32} color="#0284C7" />
-          <Text style={{ color: '#0F172A', fontSize: 16, fontWeight: fontWeights.bold, marginTop: 10, textAlign: 'center', fontFamily: systemFont }}>
-            No Active Match Selected
-          </Text>
-          <Text style={{ color: '#64748B', fontSize: 12, fontWeight: fontWeights.semibold, marginTop: 6, textAlign: 'center', fontFamily: systemFont }}>
-            Start a new match setup or unlock an existing match to score.
-          </Text>
-          <TouchableOpacity
-            onPress={handleStartNewMatchSetup}
-            style={{ minHeight: 42, marginTop: 16, paddingHorizontal: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0284C7' }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: fontWeights.bold, fontFamily: systemFont }}>+ START NEW MATCH</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <ScorerConsoleScreen
-        activeMatch={activeMatch}
-        getBattingRoster={getBattingRoster}
-        getBowlingRoster={getBowlingRoster}
-        handleRecordBall={handleRecordBall}
-        handleWicketPress={handleWicketPress}
-        handleUndo={handleUndo}
-        handleRedo={handleRedo}
-        handleSwapStrike={handleSwapStrike}
-        handleRetireBatsman={handleRetireBatsman}
-        handleOpenPlayerProfile={handleOpenPlayerProfile}
-        setExtrasSheetVisible={setExtrasSheetVisible}
-        setIsEditSquadModalOpen={setIsEditSquadModalOpen}
-        setNextBowlerName={setNextBowlerName}
-        setBowlerChangePending={setBowlerChangePending}
-      />
-    );
-  };
-
-  const renderInningBreak = () => (
-    <InningBreakScreen
-      activeMatch={activeMatch}
-      getRosterForTeam={getRosterForTeam}
-      inn2Striker={inn2Striker}
-      inn2NonStriker={inn2NonStriker}
-      inn2Bowler={inn2Bowler}
-      handleSelectInning2Opener={handleSelectInning2Opener}
-      setInn2Bowler={setInn2Bowler}
-      renderSetupPlayerPhoto={renderSetupPlayerPhoto}
-      handleStartInning2={handleStartInning2}
-    />
-  );
 
 
 
@@ -3095,23 +2209,77 @@ export default function App() {
     setCurrentScreen('liveView');
   };
   const liveOversText = activeMatch?.maxOvers || activeMatch?.totalOvers || activeMatch?.overs || 20;
-  const renderActiveMatchListCard = () => (
-    <MatchListScoreCard
-      subtitle={`${liveOversText}-over match${activeMatch?.venue ? ` - ${activeMatch.venue}` : ''}`}
-      teamOne={activeDisplayTeamOne}
-      teamTwo={activeDisplayTeamTwo}
-      teamOneScore={activeDisplayInningOne?.battingTeam ? `${activeDisplayInningOne.battingTeam.runs ?? 0}-${activeDisplayInningOne.battingTeam.wickets ?? 0}` : '0-0'}
-      teamOneOvers={activeDisplayInningOne ? formatOvers(activeDisplayInningOne.totalLegalBalls || 0) : '0.0'}
-      teamTwoScore={activeDisplayInningTwo?.battingTeam ? `${activeDisplayInningTwo.battingTeam.runs ?? 0}-${activeDisplayInningTwo.battingTeam.wickets ?? 0}` : ''}
-      teamTwoOvers={activeDisplayInningTwo ? formatOvers(activeDisplayInningTwo.totalLegalBalls || 0) : ''}
-      activeTeamName={curInning?.battingTeam?.name}
-      statusLabel="Live"
-      statusColor="#E11D48"
-      statusDotColor="#E11D48"
-      footerText={`Toss: ${activeTossWinnerName}, Elected to ${activeTossDecisionText}`}
-      onPress={openLiveMatchCard}
-    />
-  );
+  const searchNeedle = searchQuery.trim().toLowerCase();
+  const isDummyTeamName = (n) => !n || n === 'Team 1' || n === 'Team 2' || n === 'TM' || n === 'Team A' || n === 'Team B';
+
+  const filterLiveMatch = (m) => {
+    if (!m || m.phase === 'result' || m.phase === 'finished' || m.isCompleted) return false;
+    const t1Name = m.teams?.[0]?.name || m.team1?.name || m.innings?.[0]?.battingTeam?.name || m.inn1BattingTeam;
+    const t2Name = m.teams?.[1]?.name || m.team2?.name || m.innings?.[0]?.bowlingTeam?.name || m.inn1BowlingTeam;
+    if (isDummyTeamName(t1Name) || isDummyTeamName(t2Name)) return false;
+    if (searchNeedle && !getSearchBlob(m).includes(searchNeedle)) return false;
+    return true;
+  };
+
+  const visibleLiveMatches = React.useMemo(() => {
+    const list = Array.isArray(liveMatches) ? [...liveMatches] : [];
+    if (activeMatch && filterLiveMatch(activeMatch)) {
+      const exists = list.some(m => (m.id && m.id === activeMatch.id) || (m.supabaseId && m.supabaseId === activeMatch.supabaseId));
+      if (!exists) list.unshift(activeMatch);
+    }
+    return list.filter(filterLiveMatch);
+  }, [liveMatches, activeMatch, searchNeedle]);
+
+  const activeMatchVisible = visibleLiveMatches.length > 0;
+
+  const renderActiveMatchListCard = (targetMatch = null, index = 0) => {
+    const m = targetMatch || activeMatch;
+    if (!m) return null;
+
+    const t1 = m.teams?.[0] || m.team1 || { name: m.innings?.[0]?.battingTeam?.name || m.inn1BattingTeam || 'Team 1' };
+    const t2 = m.teams?.[1] || m.team2 || { name: m.innings?.[0]?.bowlingTeam?.name || m.inn1BowlingTeam || 'Team 2' };
+    const inn1 = m.innings?.[0];
+    const inn2 = m.innings?.[1];
+
+    const oversNum = m.maxOvers || m.totalOvers || 20;
+    const venueText = m.venue ? ` - ${m.venue}` : '';
+    const subtitle = `${oversNum}-over match${venueText}`;
+
+    const t1Score = inn1?.battingTeam ? `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}` : '0-0';
+    const t1Overs = inn1 ? formatOvers(inn1.totalLegalBalls || 0) : '0.0';
+    const t2Score = inn2?.battingTeam ? `${inn2.battingTeam.runs ?? 0}-${inn2.battingTeam.wickets ?? 0}` : '';
+    const t2Overs = inn2 ? formatOvers(inn2.totalLegalBalls || 0) : '';
+
+    const currentInning = m.inning === 2 ? (inn2 || inn1) : (inn1 || inn2);
+    const activeBattingTeamName = currentInning?.battingTeam?.name || t1.name;
+
+    const tossWin = getTossWinnerName(m) || m.tossWinner || t1.name;
+    const tossDec = getTossDecisionText(m, m.tossDecision || 'BAT');
+
+    return (
+      <View key={`${m.id || m.supabaseId || m.matchCode || 'live-card'}-${index}`} style={{ marginBottom: 8 }}>
+        <MatchListScoreCard
+          subtitle={subtitle}
+          teamOne={t1}
+          teamTwo={t2}
+          teamOneScore={t1Score}
+          teamOneOvers={t1Overs}
+          teamTwoScore={t2Score}
+          teamTwoOvers={t2Overs}
+          activeTeamName={activeBattingTeamName}
+          statusLabel="Live"
+          statusColor="#E11D48"
+          statusDotColor="#E11D48"
+          footerText={`Toss: ${tossWin}, Elected to ${tossDec}`}
+          onPress={() => {
+            setActiveMatch(m);
+            openLiveMatchCard();
+          }}
+        />
+      </View>
+    );
+  };
+
   const renderFinishedMatchListCard = (match, index = 0) => {
     const teamOneScore = getFinishedCardScoreParts(match.team1);
     const teamTwoScore = getFinishedCardScoreParts(match.team2);
@@ -3148,20 +2316,6 @@ export default function App() {
       </View>
     );
   };
-  const searchNeedle = searchQuery.trim().toLowerCase();
-  const isDummyTeamName = (n) => !n || n === 'Team 1' || n === 'Team 2' || n === 'TM' || n === 'Team A' || n === 'Team B';
-  const activeMatchVisible = Boolean(
-    activeMatch
-    && activeMatch.phase !== 'result'
-    && !isDummyTeamName(activeMatch.teams?.[0]?.name)
-    && !isDummyTeamName(activeMatch.teams?.[1]?.name)
-    && (
-      (activeMatch.innings?.[0]?.totalLegalBalls || 0) > 0
-      || (activeMatch.innings?.[0]?.currentOverBalls || []).length > 0
-      || activeMatch.phase === 'playing'
-    )
-    && (!searchNeedle || getSearchBlob(activeMatch).includes(searchNeedle))
-  );
   const visibleFinishedMatches = (searchNeedle
     ? finishedMatches.filter(match => getSearchBlob(match).includes(searchNeedle))
     : finishedMatches)
@@ -3216,89 +2370,79 @@ export default function App() {
         <StatusBar barStyle={isDarkMatchScreen ? 'light-content' : 'dark-content'} backgroundColor={shellBackgroundColor} />
         <SafeAreaView style={[styles.safe, { backgroundColor: shellBackgroundColor }]} edges={['top', 'left', 'right']}>
 
-          {/* PUBLIC LIVE & FINISHED SCORECARDS */}
-          {currentScreen === 'liveView' ? (
-            renderLiveView()
-          ) : currentScreen === 'finishedView' ? (
-            renderFinishedView()
-          ) : currentScreen === 'playerProfile' ? (
-            <MyProfileScreen
-              targetPlayer={selectedPlayerProfile}
-              onBack={() => setCurrentScreen('home')}
-              finishedMatches={finishedArchive}
-              onSelectMatch={(m) => {
-                setSelectedMatch(m);
-                setCurrentScreen('finishedView');
-              }}
-            />
-          ) : currentScreen === 'scorerWizard' ? (
-            <View style={styles.fullPage}>
-              {activeMatch ? (
-                activeMatch.phase === 'result' ? renderFinishedView()
-                  : activeMatch.phase === 'inningBreak' ? renderInningBreak()
-                    : renderScorerConsole()
-              ) : (
-                <QuickMatchSetupScreen
-                  savedTeamsList={savedTeamsList}
-                  initialSetup={rematchSetup}
-                  onStartMatch={(setupData) => {
-                    setRematchSetup(null);
-                    handleStartQuickMatch(setupData);
-                  }}
-                  onCancel={() => {
-                    setRematchSetup(null);
-                    setCurrentScreen('home');
-                  }}
-                />
-              )}
-            </View>
-
-          ) : currentScreen === 'tournament' ? (
-            <View style={{ flex: 1 }}>
-              <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
-                <TouchableOpacity onPress={() => setCurrentScreen('home')} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontFamily: systemFontBold }}>Tournaments & Leagues</Text>
-                </TouchableOpacity>
-              </View>
-              <TournamentScreen finishedMatches={finishedMatches} activeMatch={activeMatch} />
-            </View>
-
-          ) : (
-            /* ——— HOME DASHBOARD (POWERED BY HOMESCREEN COMPONENT) ——— */
-            <HomeScreen
-              openScorerScreen={openScorerScreen}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              bottomNavTab={bottomNavTab}
-              setBottomNavTab={setBottomNavTab}
-              matchesSubTab={matchesSubTab}
-              setMatchesSubTab={setMatchesSubTab}
-              statsCategory={statsCategory}
-              setStatsCategory={setStatsCategory}
-              refreshing={refreshing}
-              handlePullToRefresh={handlePullToRefresh}
-              setupPlayerNames={setupPlayerNames}
-              setSelectedPlayerName={setSelectedPlayerName}
-              setCurrentScreen={setCurrentScreen}
-              activeMatchVisible={activeMatchVisible}
-              renderActiveMatchListCard={renderActiveMatchListCard}
-              recentFinishedMatches={recentFinishedMatches}
-              renderFinishedMatchListCard={renderFinishedMatchListCard}
-              visibleFinishedMatches={visibleFinishedMatches}
-              finishedArchive={finishedArchive}
-              setSelectedMatch={setSelectedMatch}
-              activeMatch={activeMatch}
-              TOP_BATTERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBatters}
-              TOP_BOWLERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBowlers}
-              TOP_ALLROUNDERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topAllRounders}
-              localPlayersList={localPlayersList}
-              MASTER_PLAYERS_DB={MASTER_PLAYERS_DB}
-              getSetupPlayerProfile={getSetupPlayerProfile}
-              setSelectedPlayerProfile={setSelectedPlayerProfile}
-              onJoinMatchByCode={handleJoinMatchByCode}
-            />
-          )}
+          <AppNavigator
+            currentScreen={currentScreen}
+            setCurrentScreen={setCurrentScreen}
+            activeMatch={activeMatch}
+            publicLiveTab={publicLiveTab}
+            setPublicLiveTab={setPublicLiveTab}
+            liveViewReturnScreen={liveViewReturnScreen}
+            onJoinMatchByCode={handleJoinMatchByCode}
+            setPlayingXiTeamTab={setPlayingXiTeamTab}
+            setPlayingXiVisible={setPlayingXiVisible}
+            selectedMatch={selectedMatch}
+            finishedMatches={finishedMatches}
+            finishedArchive={finishedArchive}
+            setSelectedMatch={setSelectedMatch}
+            finishedTab={finishedTab}
+            setFinishedTab={setFinishedTab}
+            finishedInningIndex={finishedInningIndex}
+            setFinishedInningIndex={setFinishedInningIndex}
+            selectedPlayerProfile={selectedPlayerProfile}
+            setSelectedPlayerProfile={setSelectedPlayerProfile}
+            savedTeamsList={savedTeamsList}
+            rematchSetup={rematchSetup}
+            setRematchSetup={setRematchSetup}
+            handleStartQuickMatch={handleStartQuickMatch}
+            handleRematch={handleRematch}
+            getBattingRoster={getBattingRoster}
+            getBowlingRoster={getBowlingRoster}
+            handleRecordBall={handleRecordBall}
+            handleWicketPress={handleWicketPress}
+            handleUndo={handleUndo}
+            handleRedo={handleRedo}
+            handleSwapStrike={handleSwapStrike}
+            handleRetireBatsman={handleRetireBatsman}
+            handleOpenPlayerProfile={handleOpenPlayerProfile}
+            setExtrasSheetVisible={setExtrasSheetVisible}
+            setIsEditSquadModalOpen={setIsEditSquadModalOpen}
+            setNextBowlerName={setNextBowlerName}
+            setBowlerChangePending={setBowlerChangePending}
+            handleStartNewMatchSetup={handleStartNewMatchSetup}
+            getRosterForTeam={getRosterForTeam}
+            inn2Striker={inn2Striker}
+            inn2NonStriker={inn2NonStriker}
+            inn2Bowler={inn2Bowler}
+            handleSelectInning2Opener={handleSelectInning2Opener}
+            setInn2Bowler={setInn2Bowler}
+            renderSetupPlayerPhoto={renderSetupPlayerPhoto}
+            handleStartInning2={handleStartInning2}
+            refreshing={refreshing}
+            handlePullToRefresh={handlePullToRefresh}
+            openScorerScreen={openScorerScreen}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            bottomNavTab={bottomNavTab}
+            setBottomNavTab={setBottomNavTab}
+            matchesSubTab={matchesSubTab}
+            setMatchesSubTab={setMatchesSubTab}
+            statsCategory={statsCategory}
+            setStatsCategory={setStatsCategory}
+            setupPlayerNames={setupPlayerNames}
+            setSelectedPlayerName={setSelectedPlayerName}
+            activeMatchVisible={activeMatchVisible}
+            visibleLiveMatches={visibleLiveMatches}
+            renderActiveMatchListCard={renderActiveMatchListCard}
+            recentFinishedMatches={recentFinishedMatches}
+            renderFinishedMatchListCard={renderFinishedMatchListCard}
+            visibleFinishedMatches={visibleFinishedMatches}
+            TOP_BATTERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBatters}
+            TOP_BOWLERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topBowlers}
+            TOP_ALLROUNDERS={computeLeaderboardRankings(finishedArchive, localPlayersList).topAllRounders}
+            localPlayersList={localPlayersList}
+            MASTER_PLAYERS_DB={MASTER_PLAYERS_DB}
+            getSetupPlayerProfile={getSetupPlayerProfile}
+          />
 
         </SafeAreaView>
 
@@ -3310,210 +2454,34 @@ export default function App() {
           handleRecordBall={handleRecordBall}
         />
 
-        <Modal
+        <PlayingXiModal
           visible={playingXiVisible}
-          animationType="slide"
-          presentationStyle="fullScreen"
-          transparent={false}
-          statusBarTranslucent
-          navigationBarTranslucent
-          onRequestClose={() => setPlayingXiVisible(false)}
-        >
-          <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-            <View style={{ minHeight: 60, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
-              <TouchableOpacity
-                onPress={() => setPlayingXiVisible(false)}
-                style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Ionicons name="arrow-back" size={22} color="#0F172A" />
-              </TouchableOpacity>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#0F172A', fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, fontFamily: systemFont }}>PLAYING XI</Text>
-                <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
-                  {playingXiMatchTitle}
-                </Text>
-              </View>
-            </View>
+          onClose={() => setPlayingXiVisible(false)}
+          playingXiMatchTitle={playingXiMatchTitle}
+          playingXiTabs={playingXiTabs}
+          playingXiTeamTab={playingXiTeamTab}
+          changePlayingXiTeam={changePlayingXiTeam}
+          capturePlayingXiTabLayout={capturePlayingXiTabLayout}
+          playingXiTabsMeasured={playingXiTabsMeasured}
+          playingXiIndicatorTranslateX={playingXiIndicatorTranslateX}
+          playingXiIndicatorScaleX={playingXiIndicatorScaleX}
+          playingXiPagerRef={playingXiPagerRef}
+          playingXiPagerScrollX={playingXiPagerScrollX}
+          handlePlayingXiPagerEnd={handlePlayingXiPagerEnd}
+          screenWidth={screenWidth}
+        />
 
-            <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-              <View style={{ position: 'relative', minHeight: 48, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-evenly' }}>
-                {playingXiTabs.map(team => {
-                  const active = playingXiTeamTab === team.id;
-                  return (
-                    <TouchableOpacity
-                      key={team.id}
-                      onLayout={(event) => capturePlayingXiTabLayout(team.id, event)}
-                      onPress={() => changePlayingXiTeam(team.id)}
-                      style={{ maxWidth: (screenWidth - 48) / 2, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                    >
-                      <MaterialCommunityIcons name="account-group" size={17} color={active ? '#0284C7' : '#94A3B8'} />
-                      <Text style={{ flexShrink: 1, color: active ? '#0284C7' : '#64748B', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
-                        {team.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-                {playingXiTabsMeasured ? (
-                  <Animated.View
-                    pointerEvents="none"
-                    style={{ position: 'absolute', left: 0, bottom: 0, width: 100, height: 3, transform: [{ translateX: playingXiIndicatorTranslateX }] }}
-                  >
-                    <Animated.View style={{ flex: 1, borderRadius: 2, backgroundColor: '#0284C7', transform: [{ scaleX: playingXiIndicatorScaleX }] }} />
-                  </Animated.View>
-                ) : null}
-              </View>
-            </View>
-
-            <Animated.ScrollView
-              ref={playingXiPagerRef}
-              horizontal
-              pagingEnabled
-              snapToInterval={screenWidth}
-              snapToAlignment="start"
-              disableIntervalMomentum
-              directionalLockEnabled
-              nestedScrollEnabled
-              bounces={false}
-              overScrollMode="never"
-              decelerationRate="fast"
-              showsHorizontalScrollIndicator={false}
-              scrollEventThrottle={16}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { x: playingXiPagerScrollX } } }],
-                { useNativeDriver: true }
-              )}
-              onMomentumScrollEnd={handlePlayingXiPagerEnd}
-              onLayout={() => {
-                const offset = (playingXiTeamTab - 1) * screenWidth;
-                playingXiPagerRef.current?.scrollTo({ x: offset, animated: false });
-                playingXiPagerScrollX.setValue(offset);
-              }}
-              style={{ flex: 1 }}
-            >
-              {playingXiTabs.map(team => (
-                <View key={team.id} style={{ width: screenWidth, flex: 1 }}>
-                  <ScrollView
-                    style={{ flex: 1 }}
-                    contentInsetAdjustmentBehavior="automatic"
-                    contentContainerStyle={{ paddingBottom: 24, backgroundColor: '#FFFFFF' }}
-                    showsVerticalScrollIndicator={false}
-                    nestedScrollEnabled
-                  >
-                    <View style={{ minHeight: 42, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-                      <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>SQUAD</Text>
-                      <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{team.roster.length} PLAYERS</Text>
-                    </View>
-
-                    {team.roster.map((playerName) => {
-                      const playerProfile = MASTER_PLAYERS_DB.find(player => player.name === playerName);
-                      return (
-                        <View
-                          key={`${team.id}-${playerName}`}
-                          style={{
-                            minHeight: 68,
-                            paddingHorizontal: 16,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 12,
-                            backgroundColor: '#FFFFFF',
-                            borderBottomWidth: 1,
-                            borderBottomColor: '#E8ECEF'
-                          }}
-                        >
-                          <PlayerAvatar name={playerName} size={44} />
-                          <Text
-                            selectable
-                            {...nameFitProps}
-                            style={{ flex: 1, minWidth: 0, color: '#0F172A', fontSize: 14, lineHeight: 19, fontWeight: fontWeights.bold, fontFamily: systemFont }}
-                          >
-                            {playerName}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              ))}
-            </Animated.ScrollView>
-          </SafeAreaView>
-        </Modal>
-
-        <Modal
+        <WicketDismissalModal
           visible={wicketEntryPending}
-          animationType="slide"
           onRequestClose={() => pendingFielderDismissal ? setPendingFielderDismissal('') : cancelWicketEntry()}
-        >
-          <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-            <View style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
-              <TouchableOpacity
-                onPress={() => pendingFielderDismissal ? setPendingFielderDismissal('') : cancelWicketEntry()}
-                style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Ionicons name={pendingFielderDismissal ? 'arrow-back' : 'close'} size={22} color="#0F172A" />
-              </TouchableOpacity>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: systemFontBold }}>
-                  {pendingFielderDismissal === 'caught'
-                    ? 'WHO TOOK THE CATCH?'
-                    : pendingFielderDismissal === 'stumped'
-                      ? 'WHO COMPLETED THE STUMPING?'
-                      : 'HOW WAS THE BATTER OUT?'}
-                </Text>
-                <Text style={{ color: '#64748B', fontSize: 11.5, fontFamily: systemFontMedium, marginTop: 2 }} numberOfLines={1}>
-                  {pendingFielderDismissal
-                    ? `${curInning?.bowlingTeam?.name || 'Bowling team'} fielders`
-                    : curInning?.striker?.name || 'Striker'}
-                </Text>
-              </View>
-            </View>
-
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-              {pendingFielderDismissal ? (
-                <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
-                  <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
-                    <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }}>
-                      {pendingFielderDismissal === 'caught' ? 'SELECT FIELDER' : 'SELECT WICKETKEEPER / FIELDER'}
-                    </Text>
-                  </View>
-                  {getBowlingRoster().map((name, index) => (
-                    <TouchableOpacity
-                      key={name}
-                      onPress={() => handleSelectDismissalFielder(name)}
-                      activeOpacity={0.7}
-                      style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}
-                    >
-                      <Text style={{ width: 22, color: '#94A3B8', fontSize: 11, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>{index + 1}</Text>
-                      <PlayerAvatar name={name} size={36} />
-                      <Text selectable {...nameFitProps} style={{ flex: 1, minWidth: 0, color: '#0F172A', fontSize: 13.5, fontFamily: systemFontMedium }}>{name}</Text>
-                      {name === curInning?.bowler?.name ? (
-                        <Text style={{ color: '#0284C7', fontSize: 10, fontFamily: systemFontMedium }}>BOWLER</Text>
-                      ) : null}
-                      <Ionicons name="chevron-forward" size={17} color="#94A3B8" />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
-                  <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
-                    <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }}>SELECT DISMISSAL TYPE</Text>
-                  </View>
-                  {WICKET_TYPES.map((type) => (
-                    <TouchableOpacity
-                      key={type.id}
-                      onPress={() => handleSelectWicketType(type.id)}
-                      activeOpacity={0.7}
-                      style={{ minHeight: 54, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}
-                    >
-                      <Ionicons name={type.icon} size={19} color={type.id === 'runOut' ? '#E11D48' : '#475569'} />
-                      <Text style={{ flex: 1, color: '#0F172A', fontSize: 13.5, fontFamily: systemFontMedium }}>{type.label}</Text>
-                      <Ionicons name="chevron-forward" size={17} color="#94A3B8" />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </ScrollView>
-          </SafeAreaView>
-        </Modal>
+          pendingFielderDismissal={pendingFielderDismissal}
+          setPendingFielderDismissal={setPendingFielderDismissal}
+          cancelWicketEntry={cancelWicketEntry}
+          curInning={curInning}
+          getBowlingRoster={getBowlingRoster}
+          handleSelectDismissalFielder={handleSelectDismissalFielder}
+          handleSelectWicketType={handleSelectWicketType}
+        />
 
         {/* RUN OUT MODAL */}
         <RunOutModal
@@ -3568,8 +2536,8 @@ export default function App() {
           localPlayersDb={localPlayersList}
           onMoveToTeam={handleMidMatchMoveToTeam}
           onOpenAddPlayerModal={() => setIsAddPlayerModalOpen(true)}
-          onOpenSquadPreview={() => {}}
-          onEditPlayerPhoto={() => {}}
+          onOpenSquadPreview={() => { }}
+          onEditPlayerPhoto={() => { }}
         />
 
         {/* SHARED OFFICIAL ADD PLAYER MODAL (MID-MATCH REGISTER) */}

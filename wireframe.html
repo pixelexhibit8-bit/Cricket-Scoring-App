@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,324 +20,540 @@
       --red: #DC2626;
       --amber: #D97706;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    body { background-color: #0F172A; color: var(--text); padding: 24px; line-height: 1.5; }
-    .container { max-width: 1200px; margin: 0 auto; background: var(--bg); border-radius: 20px; padding: 36px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
-    
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #0F172A;
+      color: var(--text);
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: var(--bg);
+      border-radius: 20px;
+      padding: 36px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
     /* Header */
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 28px; }
-    .header h1 { font-size: 28px; color: var(--navy); display: flex; align-items: center; gap: 10px; }
-    .header p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
-    .print-btn { background: var(--primary); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; }
-    .print-btn:hover { background: var(--primary-dark); }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 28px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      color: var(--navy);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .print-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .print-btn:hover {
+      background: var(--primary-dark);
+    }
 
     /* Section Styles */
-    .section { margin-bottom: 36px; }
-    .section-title { font-size: 20px; color: var(--navy); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; border-left: 4px solid var(--primary); padding-left: 12px; }
+    .section {
+      margin-bottom: 36px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      color: var(--navy);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-left: 4px solid var(--primary);
+      padding-left: 12px;
+    }
 
     /* Grid of screens */
-    .screen-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
-    .screen-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .screen-header { background: var(--navy); color: #fff; padding: 12px 16px; font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-    .screen-body { padding: 16px; font-size: 13px; color: var(--text); }
-    .screen-badge { background: rgba(56, 189, 248, 0.2); color: #38BDF8; padding: 2px 8px; border-radius: 12px; font-size: 11px; }
+    .screen-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .screen-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .screen-header {
+      background: var(--navy);
+      color: #fff;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .screen-body {
+      padding: 16px;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .screen-badge {
+      background: rgba(56, 189, 248, 0.2);
+      color: #38BDF8;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+    }
 
     /* Flow Step List */
-    .flow-steps { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .flow-step { display: flex; align-items: flex-start; gap: 10px; background: #F1F5F9; padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--primary); font-size: 12.5px; }
-    .flow-num { background: var(--primary); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; flex-shrink: 0; }
+    .flow-steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #F1F5F9;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border-left: 3px solid var(--primary);
+      font-size: 12.5px;
+    }
+
+    .flow-num {
+      background: var(--primary);
+      color: #fff;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
 
     /* Wireframe Screen Simulation */
-    .mobile-mockup { background: #071B2C; border-radius: 18px; border: 2px solid #1E293B; color: #fff; overflow: hidden; font-size: 12px; }
-    .mock-top { background: #0B2A42; padding: 10px; text-align: center; font-weight: 600; border-bottom: 1px solid #1E3A56; }
-    .mock-tabs { display: flex; background: #071B2C; border-bottom: 1px solid #1E3A56; font-size: 11px; color: #7EAAC2; }
-    .mock-tab { flex: 1; padding: 8px 4px; text-align: center; border-bottom: 2px solid transparent; }
-    .mock-tab.active { color: #38BDF8; border-bottom: 2px solid #38BDF8; font-weight: 700; }
-    .mock-content { padding: 14px; background: #F8FAFC; color: #0F172A; min-height: 140px; }
+    .mobile-mockup {
+      background: #071B2C;
+      border-radius: 18px;
+      border: 2px solid #1E293B;
+      color: #fff;
+      overflow: hidden;
+      font-size: 12px;
+    }
+
+    .mock-top {
+      background: #0B2A42;
+      padding: 10px;
+      text-align: center;
+      font-weight: 600;
+      border-bottom: 1px solid #1E3A56;
+    }
+
+    .mock-tabs {
+      display: flex;
+      background: #071B2C;
+      border-bottom: 1px solid #1E3A56;
+      font-size: 11px;
+      color: #7EAAC2;
+    }
+
+    .mock-tab {
+      flex: 1;
+      padding: 8px 4px;
+      text-align: center;
+      border-bottom: 2px solid transparent;
+    }
+
+    .mock-tab.active {
+      color: #38BDF8;
+      border-bottom: 2px solid #38BDF8;
+      font-weight: 700;
+    }
+
+    .mock-content {
+      padding: 14px;
+      background: #F8FAFC;
+      color: #0F172A;
+      min-height: 140px;
+    }
 
     /* Table for Modals */
-    table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
-    th { background: #F1F5F9; text-align: left; padding: 12px 14px; font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
-    td { padding: 12px 14px; font-size: 13px; border-top: 1px solid var(--border); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    th {
+      background: #F1F5F9;
+      text-align: left;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    td {
+      padding: 12px 14px;
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+    }
 
     /* Print Styles */
     @media print {
-      body { background: #fff; padding: 0; }
-      .container { box-shadow: none; padding: 0; }
-      .print-btn { display: none; }
+      body {
+        background: #fff;
+        padding: 0;
+      }
+
+      .container {
+        box-shadow: none;
+        padding: 0;
+      }
+
+      .print-btn {
+        display: none;
+      }
     }
   </style>
 </head>
+
 <body>
 
-<div class="container">
-  <!-- Top Action Header -->
-  <div class="header">
-    <div>
-      <h1>🏏 CricFlow Mobile Architecture Wireframe</h1>
-      <p>Official Interactive Navigation Flow & Screen Blueprint</p>
+  <div class="container">
+    <!-- Top Action Header -->
+    <div class="header">
+      <div>
+        <h1>🏏 CricFlow Mobile Architecture Wireframe</h1>
+        <p>Official Interactive Navigation Flow & Screen Blueprint</p>
+      </div>
+      <button class="print-btn" onclick="window.print()">🖨️ Export to PDF / Print</button>
     </div>
-    <button class="print-btn" onclick="window.print()">🖨️ Export to PDF / Print</button>
-  </div>
 
-  <!-- 1. Global Bottom Navigation -->
-  <div class="section">
-    <div class="section-title">1. Main App Navigation Architecture (4 Core Footers)</div>
-    <div class="screen-grid">
-      <div class="screen-card">
-        <div class="screen-header"><span>🏠 Home Screen</span><span class="screen-badge">Search & Hub</span></div>
-        <div class="screen-body">
-          <ul class="flow-steps">
-            <li class="flow-step"><span class="flow-num">1</span>Brand Header with CricFlow Logo & instant player/match search</li>
-            <li class="flow-step"><span class="flow-num">2</span>Clean canvas with fast 4-tab bottom navigation</li>
-            <li class="flow-step"><span class="flow-num">3</span>Matches & Profile tabs host ⚡ Quick Match Scoring & archives</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="screen-card">
-        <div class="screen-header"><span>🏏 Matches Screen</span><span class="screen-badge">Archive</span></div>
-        <div class="screen-body">
-          <ul class="flow-steps">
-            <li class="flow-step"><span class="flow-num">1</span><b>Live Filter:</b> Ongoing matches with auto-refresh</li>
-            <li class="flow-step"><span class="flow-num">2</span><b>Upcoming Filter:</b> Scheduled local matches</li>
-            <li class="flow-step"><span class="flow-num">3</span><b>Finished Filter:</b> Past scorecards with MVP & Result</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="screen-card">
-        <div class="screen-header"><span>🏆 Rankings Screen</span><span class="screen-badge">Leaderboard</span></div>
-        <div class="screen-body">
-          <ul class="flow-steps">
-            <li class="flow-step"><span class="flow-num">1</span><b>Batters Tab:</b> Runs, Avg, Strike Rate, 50s, 100s</li>
-            <li class="flow-step"><span class="flow-num">2</span><b>Bowlers Tab:</b> Wickets, Economy, 3W, 5W hauls</li>
-            <li class="flow-step"><span class="flow-num">3</span><b>All-Rounders:</b> Combined MVP Points table</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="screen-card">
-        <div class="screen-header"><span>👤 My Profile</span><span class="screen-badge">Career</span></div>
-        <div class="screen-body">
-          <ul class="flow-steps">
-            <li class="flow-step"><span class="flow-num">1</span>Career Overview (Total matches, runs, wickets)</li>
-            <li class="flow-step"><span class="flow-num">2</span>Performance Badges (Century, 5-Wkt haul)</li>
-            <li class="flow-step"><span class="flow-num">3</span>Match History linking to individual scorecards</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 2. Quick Match Scoring Step Flow -->
-  <div class="section">
-    <div class="section-title">2. Quick Match Scorer Flow (Step 1 -> 2 -> 3 -> Live Pad)</div>
-    <div class="screen-grid">
-      <div class="screen-card">
-        <div class="screen-header"><span>Step 1: Match Setup</span><span class="screen-badge">Form</span></div>
-        <div class="screen-body">
-          <ul class="flow-steps">
-            <li class="flow-step"><span class="flow-num">1</span>Team 1 & 2 Names + Logo Picker (10 IPL Presets)</li>
-            <li class="flow-step"><span class="flow-num">2</span>Overs Selector (2 to 20 Overs slider/chips)</li>
-            <li class="flow-step"><span class="flow-num">3</span>Pitch Type, Ball Type & 6-Digit Scorer PIN</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="screen-card">
-        <div class="screen-header"><span>Step 2: Interactive Toss</span><span class="screen-badge">Coin Flip</span></div>
-        <div class="screen-body">
-          <ul class="flow-steps">
-            <li class="flow-step"><span class="flow-num">1</span>Choose Call (Head / Tail)</li>
-            <li class="flow-step"><span class="flow-num">2</span>3D Spinning Coin Physics Animation</li>
-            <li class="flow-step"><span class="flow-num">3</span>Winner selects <b>Elected to BAT</b> or <b>BOWL</b></li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="screen-card">
-        <div class="screen-header"><span>Step 3: Openers Selector</span><span class="screen-badge">Roster</span></div>
-        <div class="screen-body">
-          <ul class="flow-steps">
-            <li class="flow-step"><span class="flow-num">1</span>Pick Striker (*) & Non-Striker</li>
-            <li class="flow-step"><span class="flow-num">2</span>Pick Opening Bowler</li>
-            <li class="flow-step"><span class="flow-num">3</span>Add new local ground player on-the-fly</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="screen-card">
-        <div class="screen-header"><span>🎮 Scorer Console</span><span class="screen-badge">Keypad</span></div>
-        <div class="screen-body">
-          <ul class="flow-steps">
-            <li class="flow-step"><span class="flow-num">1</span>0, 1, 2, 3, 4, 6 Calculator Touchpad + Hindi Voice</li>
-            <li class="flow-step"><span class="flow-num">2</span>OUT & RUN OUT specific modals</li>
-            <li class="flow-step"><span class="flow-num">3</span>Wide, No Ball, Bye Extras & Bowler Change</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 3. Public Live View CREX Standard Tabs Wireframe -->
-  <div class="section">
-    <div class="section-title">3. Public Live Match View (5-Tab Swipeable Architecture)</div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
-      
-      <!-- Tab 1 -->
-      <div class="mobile-mockup">
-        <div class="mock-top">CSK vs RCB (T20)</div>
-        <div class="mock-tabs">
-          <div class="mock-tab active">Info</div>
-          <div class="mock-tab">Live</div>
-          <div class="mock-tab">Scorecard</div>
-          <div class="mock-tab">Overs</div>
-          <div class="mock-tab">Graphs</div>
-        </div>
-        <div class="mock-content">
-          <b>ℹ️ INFO TAB</b>
-          <p style="margin-top:6px; font-size:11px; color:#64748B;">• Ground: Sadokan Turf</p>
-          <p style="font-size:11px; color:#64748B;">• Toss: CSK won & chose to BAT</p>
-          <p style="font-size:11px; color:#64748B;">• Umpires: Cric Scorer</p>
-          <div style="background:#0284C7; color:#fff; padding:6px; border-radius:6px; text-align:center; margin-top:8px; font-weight:600;">PLAYING XI (22 Players)</div>
-        </div>
-      </div>
-
-      <!-- Tab 2 -->
-      <div class="mobile-mockup">
-        <div class="mock-top">CSK vs RCB (T20)</div>
-        <div class="mock-tabs">
-          <div class="mock-tab">Info</div>
-          <div class="mock-tab active">Live</div>
-          <div class="mock-tab">Scorecard</div>
-          <div class="mock-tab">Overs</div>
-          <div class="mock-tab">Graphs</div>
-        </div>
-        <div class="mock-content">
-          <b>🔴 LIVE TAB</b>
-          <div style="background:#071B2C; color:#fff; padding:8px; border-radius:8px; margin:6px 0;">
-            <div style="font-size:16px; font-weight:700;">CSK  142-2 <span style="font-size:11px; font-weight:400;">(12.4 Ov)</span></div>
-            <div style="color:#86EFAC; font-weight:bold; font-size:13px;">FOUR</div>
+    <!-- 1. Global Bottom Navigation -->
+    <div class="section">
+      <div class="section-title">1. Main App Navigation Architecture (4 Core Footers)</div>
+      <div class="screen-grid">
+        <div class="screen-card">
+          <div class="screen-header"><span>🏠 Home Screen</span><span class="screen-badge">Main Hub</span></div>
+          <div class="screen-body">
+            <ul class="flow-steps">
+              <li class="flow-step"><span class="flow-num">1</span>Live Matches Card (Direct click opens Public Live
+                View)</li>
+              <li class="flow-step"><span class="flow-num">2</span>⚡ Quick Match Scoring button (Opens Step 1 Setup)
+              </li>
+              <li class="flow-step"><span class="flow-num">3</span>Recent Finished Matches list with final scores</li>
+            </ul>
           </div>
-          <p style="font-size:11px;">• Striker: Bastiram (46* off 24)</p>
-          <p style="font-size:11px;">• Bowler: Rahul (2.4-0-18-1)</p>
         </div>
-      </div>
 
-      <!-- Tab 3 -->
-      <div class="mobile-mockup">
-        <div class="mock-top">CSK vs RCB (T20)</div>
-        <div class="mock-tabs">
-          <div class="mock-tab">Info</div>
-          <div class="mock-tab">Live</div>
-          <div class="mock-tab active">Scorecard</div>
-          <div class="mock-tab">Overs</div>
-          <div class="mock-tab">Graphs</div>
-        </div>
-        <div class="mock-content">
-          <b>📋 SCORECARD TAB</b>
-          <div style="display:flex; gap:6px; margin:6px 0;">
-            <span style="background:#0284C7; color:#fff; padding:3px 8px; border-radius:4px; font-size:10px;">CSK 142-2</span>
-            <span style="background:#E2E8F0; padding:3px 8px; border-radius:4px; font-size:10px;">RCB Yet to bat</span>
+        <div class="screen-card">
+          <div class="screen-header"><span>🏏 Matches Screen</span><span class="screen-badge">Archive</span></div>
+          <div class="screen-body">
+            <ul class="flow-steps">
+              <li class="flow-step"><span class="flow-num">1</span><b>Live Filter:</b> Ongoing matches with auto-refresh
+              </li>
+              <li class="flow-step"><span class="flow-num">2</span><b>Upcoming Filter:</b> Scheduled local matches</li>
+              <li class="flow-step"><span class="flow-num">3</span><b>Finished Filter:</b> Past scorecards with MVP &
+                Result</li>
+            </ul>
           </div>
-          <p style="font-size:11px;">• Complete Batters Table (R, B, 4s, 6s, SR)</p>
-          <p style="font-size:11px;">• Complete Bowlers Table (O, M, R, W, ECO)</p>
+        </div>
+
+        <div class="screen-card">
+          <div class="screen-header"><span>🏆 Rankings Screen</span><span class="screen-badge">Leaderboard</span></div>
+          <div class="screen-body">
+            <ul class="flow-steps">
+              <li class="flow-step"><span class="flow-num">1</span><b>Batters Tab:</b> Runs, Avg, Strike Rate, 50s, 100s
+              </li>
+              <li class="flow-step"><span class="flow-num">2</span><b>Bowlers Tab:</b> Wickets, Economy, 3W, 5W hauls
+              </li>
+              <li class="flow-step"><span class="flow-num">3</span><b>All-Rounders:</b> Combined MVP Points table</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen-card">
+          <div class="screen-header"><span>👤 My Profile</span><span class="screen-badge">Career</span></div>
+          <div class="screen-body">
+            <ul class="flow-steps">
+              <li class="flow-step"><span class="flow-num">1</span>Career Overview (Total matches, runs, wickets)</li>
+              <li class="flow-step"><span class="flow-num">2</span>Performance Badges (Century, 5-Wkt haul)</li>
+              <li class="flow-step"><span class="flow-num">3</span>Match History linking to individual scorecards</li>
+            </ul>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Tab 4 -->
-      <div class="mobile-mockup">
-        <div class="mock-top">CSK vs RCB (T20)</div>
-        <div class="mock-tabs">
-          <div class="mock-tab">Info</div>
-          <div class="mock-tab">Live</div>
-          <div class="mock-tab">Scorecard</div>
-          <div class="mock-tab active">Overs</div>
-          <div class="mock-tab">Graphs</div>
+    <!-- 2. Quick Match Scoring Step Flow -->
+    <div class="section">
+      <div class="section-title">2. Quick Match Scorer Flow (Step 1 -> 2 -> 3 -> Live Pad)</div>
+      <div class="screen-grid">
+        <div class="screen-card">
+          <div class="screen-header"><span>Step 1: Match Setup</span><span class="screen-badge">Form</span></div>
+          <div class="screen-body">
+            <ul class="flow-steps">
+              <li class="flow-step"><span class="flow-num">1</span>Team 1 & 2 Names + Logo Picker (10 IPL Presets)</li>
+              <li class="flow-step"><span class="flow-num">2</span>Overs Selector (2 to 20 Overs slider/chips)</li>
+              <li class="flow-step"><span class="flow-num">3</span>Pitch Type, Ball Type & 6-Digit Scorer PIN</li>
+            </ul>
+          </div>
         </div>
-        <div class="mock-content">
-          <b>⏱️ OVERS TAB</b>
-          <div style="background:#fff; border:1px solid #E2E8F0; padding:6px; border-radius:6px; margin-top:6px;">
-            <div style="font-weight:600; font-size:11px;">Over 1 - Rahul (8 Runs)</div>
-            <div style="display:flex; gap:4px; margin-top:4px;">
-              <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-size:10px;">1</span>
-              <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-size:10px;">0</span>
-              <span style="background:#DC2626; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px;">W</span>
-              <span style="background:#16A34A; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px;">4</span>
-              <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-size:10px;">2</span>
-              <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-size:10px;">1</span>
+
+        <div class="screen-card">
+          <div class="screen-header"><span>Step 2: Interactive Toss</span><span class="screen-badge">Coin Flip</span>
+          </div>
+          <div class="screen-body">
+            <ul class="flow-steps">
+              <li class="flow-step"><span class="flow-num">1</span>Choose Call (Head / Tail)</li>
+              <li class="flow-step"><span class="flow-num">2</span>3D Spinning Coin Physics Animation</li>
+              <li class="flow-step"><span class="flow-num">3</span>Winner selects <b>Elected to BAT</b> or <b>BOWL</b>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen-card">
+          <div class="screen-header"><span>Step 3: Openers Selector</span><span class="screen-badge">Roster</span></div>
+          <div class="screen-body">
+            <ul class="flow-steps">
+              <li class="flow-step"><span class="flow-num">1</span>Pick Striker (*) & Non-Striker</li>
+              <li class="flow-step"><span class="flow-num">2</span>Pick Opening Bowler</li>
+              <li class="flow-step"><span class="flow-num">3</span>Add new local ground player on-the-fly</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="screen-card">
+          <div class="screen-header"><span>🎮 Scorer Console</span><span class="screen-badge">Keypad</span></div>
+          <div class="screen-body">
+            <ul class="flow-steps">
+              <li class="flow-step"><span class="flow-num">1</span>0, 1, 2, 3, 4, 6 Calculator Touchpad + Hindi Voice
+              </li>
+              <li class="flow-step"><span class="flow-num">2</span>OUT & RUN OUT specific modals</li>
+              <li class="flow-step"><span class="flow-num">3</span>Wide, No Ball, Bye Extras & Bowler Change</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Public Live View CREX Standard Tabs Wireframe -->
+    <div class="section">
+      <div class="section-title">3. Public Live Match View (5-Tab Swipeable Architecture)</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+
+        <!-- Tab 1 -->
+        <div class="mobile-mockup">
+          <div class="mock-top">CSK vs RCB (T20)</div>
+          <div class="mock-tabs">
+            <div class="mock-tab active">Info</div>
+            <div class="mock-tab">Live</div>
+            <div class="mock-tab">Scorecard</div>
+            <div class="mock-tab">Overs</div>
+            <div class="mock-tab">Graphs</div>
+          </div>
+          <div class="mock-content">
+            <b>ℹ️ INFO TAB</b>
+            <p style="margin-top:6px; font-size:11px; color:#64748B;">• Ground: Sadokan Turf</p>
+            <p style="font-size:11px; color:#64748B;">• Toss: CSK won & chose to BAT</p>
+            <p style="font-size:11px; color:#64748B;">• Umpires: Cric Scorer</p>
+            <div
+              style="background:#0284C7; color:#fff; padding:6px; border-radius:6px; text-align:center; margin-top:8px; font-weight:600;">
+              PLAYING XI (22 Players)</div>
+          </div>
+        </div>
+
+        <!-- Tab 2 -->
+        <div class="mobile-mockup">
+          <div class="mock-top">CSK vs RCB (T20)</div>
+          <div class="mock-tabs">
+            <div class="mock-tab">Info</div>
+            <div class="mock-tab active">Live</div>
+            <div class="mock-tab">Scorecard</div>
+            <div class="mock-tab">Overs</div>
+            <div class="mock-tab">Graphs</div>
+          </div>
+          <div class="mock-content">
+            <b>🔴 LIVE TAB</b>
+            <div style="background:#071B2C; color:#fff; padding:8px; border-radius:8px; margin:6px 0;">
+              <div style="font-size:16px; font-weight:700;">CSK 142-2 <span
+                  style="font-size:11px; font-weight:400;">(12.4 Ov)</span></div>
+              <div style="color:#86EFAC; font-weight:bold; font-size:13px;">FOUR</div>
+            </div>
+            <p style="font-size:11px;">• Striker: Bastiram (46* off 24)</p>
+            <p style="font-size:11px;">• Bowler: Rahul (2.4-0-18-1)</p>
+          </div>
+        </div>
+
+        <!-- Tab 3 -->
+        <div class="mobile-mockup">
+          <div class="mock-top">CSK vs RCB (T20)</div>
+          <div class="mock-tabs">
+            <div class="mock-tab">Info</div>
+            <div class="mock-tab">Live</div>
+            <div class="mock-tab active">Scorecard</div>
+            <div class="mock-tab">Overs</div>
+            <div class="mock-tab">Graphs</div>
+          </div>
+          <div class="mock-content">
+            <b>📋 SCORECARD TAB</b>
+            <div style="display:flex; gap:6px; margin:6px 0;">
+              <span style="background:#0284C7; color:#fff; padding:3px 8px; border-radius:4px; font-size:10px;">CSK
+                142-2</span>
+              <span style="background:#E2E8F0; padding:3px 8px; border-radius:4px; font-size:10px;">RCB Yet to
+                bat</span>
+            </div>
+            <p style="font-size:11px;">• Complete Batters Table (R, B, 4s, 6s, SR)</p>
+            <p style="font-size:11px;">• Complete Bowlers Table (O, M, R, W, ECO)</p>
+          </div>
+        </div>
+
+        <!-- Tab 4 -->
+        <div class="mobile-mockup">
+          <div class="mock-top">CSK vs RCB (T20)</div>
+          <div class="mock-tabs">
+            <div class="mock-tab">Info</div>
+            <div class="mock-tab">Live</div>
+            <div class="mock-tab">Scorecard</div>
+            <div class="mock-tab active">Overs</div>
+            <div class="mock-tab">Graphs</div>
+          </div>
+          <div class="mock-content">
+            <b>⏱️ OVERS TAB</b>
+            <div style="background:#fff; border:1px solid #E2E8F0; padding:6px; border-radius:6px; margin-top:6px;">
+              <div style="font-weight:600; font-size:11px;">Over 1 - Rahul (8 Runs)</div>
+              <div style="display:flex; gap:4px; margin-top:4px;">
+                <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-size:10px;">1</span>
+                <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-size:10px;">0</span>
+                <span
+                  style="background:#DC2626; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px;">W</span>
+                <span
+                  style="background:#16A34A; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px;">4</span>
+                <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-size:10px;">2</span>
+                <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-size:10px;">1</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Tab 5 -->
-      <div class="mobile-mockup">
-        <div class="mock-top">CSK vs RCB (T20)</div>
-        <div class="mock-tabs">
-          <div class="mock-tab">Info</div>
-          <div class="mock-tab">Live</div>
-          <div class="mock-tab">Scorecard</div>
-          <div class="mock-tab">Overs</div>
-          <div class="mock-tab active">Graphs</div>
+        <!-- Tab 5 -->
+        <div class="mobile-mockup">
+          <div class="mock-top">CSK vs RCB (T20)</div>
+          <div class="mock-tabs">
+            <div class="mock-tab">Info</div>
+            <div class="mock-tab">Live</div>
+            <div class="mock-tab">Scorecard</div>
+            <div class="mock-tab">Overs</div>
+            <div class="mock-tab active">Graphs</div>
+          </div>
+          <div class="mock-content">
+            <b>📈 GRAPHS TAB</b>
+            <p style="font-size:11px; margin-top:6px;">• <b>Worm Graph:</b> Cumulative runs comparison per ball</p>
+            <p style="font-size:11px; margin-top:6px;">• <b>Manhattan Chart:</b> Runs scored in each over with wicket
+              markers</p>
+          </div>
         </div>
-        <div class="mock-content">
-          <b>📈 GRAPHS TAB</b>
-          <p style="font-size:11px; margin-top:6px;">• <b>Worm Graph:</b> Cumulative runs comparison per ball</p>
-          <p style="font-size:11px; margin-top:6px;">• <b>Manhattan Chart:</b> Runs scored in each over with wicket markers</p>
-        </div>
-      </div>
 
+      </div>
+    </div>
+
+    <!-- 4. Global Modals Reference -->
+    <div class="section">
+      <div class="section-title">4. Ground Modals & Overlays Reference</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Modal Name</th>
+            <th>Trigger Button</th>
+            <th>Functionality</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>WicketPendingModal</b></td>
+            <td>OUT button (Scorer Pad)</td>
+            <td>Select dismissal type: Bowled, Caught, LBW, Stumped, Hit Wicket & assign fielder.</td>
+          </tr>
+          <tr>
+            <td><b>RunOutModal</b></td>
+            <td>RUN OUT button</td>
+            <td>Select who was dismissed (Striker / Non-Striker), completed runs & throwing fielder.</td>
+          </tr>
+          <tr>
+            <td><b>ExtrasModal</b></td>
+            <td>EXTRAS button</td>
+            <td>Record Wide, No-ball, Bye, Leg-bye or Penalty runs without breaking ball sequence.</td>
+          </tr>
+          <tr>
+            <td><b>BowlerChangeModal</b></td>
+            <td>Over Completion (6 legal balls)</td>
+            <td>Select new bowler from squad (blocks consecutive overs by same bowler).</td>
+          </tr>
+          <tr>
+            <td><b>SquadSelectorModal</b></td>
+            <td>Pre-match Setup</td>
+            <td>Select 11-15 players for both teams or add custom local ground players.</td>
+          </tr>
+          <tr>
+            <td><b>TeamLogoPickerModal</b></td>
+            <td>Setup Screen Logo Tap</td>
+            <td>Select from 10 Cloudinary HD IPL logos (CSK, MI, RCB, GT, SRH, KKR, etc.).</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- 4. Global Modals Reference -->
-  <div class="section">
-    <div class="section-title">4. Ground Modals & Overlays Reference</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Modal Name</th>
-          <th>Trigger Button</th>
-          <th>Functionality</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><b>WicketPendingModal</b></td>
-          <td>OUT button (Scorer Pad)</td>
-          <td>Select dismissal type: Bowled, Caught, LBW, Stumped, Hit Wicket & assign fielder.</td>
-        </tr>
-        <tr>
-          <td><b>RunOutModal</b></td>
-          <td>RUN OUT button</td>
-          <td>Select who was dismissed (Striker / Non-Striker), completed runs & throwing fielder.</td>
-        </tr>
-        <tr>
-          <td><b>ExtrasModal</b></td>
-          <td>EXTRAS button</td>
-          <td>Record Wide, No-ball, Bye, Leg-bye or Penalty runs without breaking ball sequence.</td>
-        </tr>
-        <tr>
-          <td><b>BowlerChangeModal</b></td>
-          <td>Over Completion (6 legal balls)</td>
-          <td>Select new bowler from squad (blocks consecutive overs by same bowler).</td>
-        </tr>
-        <tr>
-          <td><b>SquadSelectorModal</b></td>
-          <td>Pre-match Setup</td>
-          <td>Select 11-15 players for both teams or add custom local ground players.</td>
-        </tr>
-        <tr>
-          <td><b>TeamLogoPickerModal</b></td>
-          <td>Setup Screen Logo Tap</td>
-          <td>Select from 10 Cloudinary HD IPL logos (CSK, MI, RCB, GT, SRH, KKR, etc.).</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
 </body>
+
 </html>
