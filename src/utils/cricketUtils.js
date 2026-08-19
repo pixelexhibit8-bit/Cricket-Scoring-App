@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import * as Speech from 'expo-speech';
 import { systemFont, systemFontBold, fontWeights } from '../theme.js';
+import { MASTER_PLAYERS_DB } from '../../mockData.js';
 
 // ── Voice Announcements (Indian Female Voice Engine) ──────────────────────────
 export const speakBall = (runs, extraType, isWicket) => {
@@ -959,3 +960,24 @@ export const buildFinishedLiveSnapshot = (finishedMatch) => {
     winnerTeamName: finishedMatch?.winnerTeamName || ''
   };
 };
+
+export const getPlayerPreview = (name) => {
+  const profile = MASTER_PLAYERS_DB.find(player => player.name === name);
+  return {
+    name,
+    avg: profile?.avg != null ? Number(profile.avg).toFixed(2) : '-',
+    sr: profile?.sr != null ? Number(profile.sr).toFixed(2) : '-'
+  };
+};
+
+export const getUnplayedBatters = (roster = [], recordedBatters = []) => {
+  const recordedNames = new Set(
+    (recordedBatters || [])
+      .map(player => String(player?.name || player || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+  return getCleanPlayerNames(roster)
+    .filter(name => !recordedNames.has(name.toLowerCase()))
+    .map(getPlayerPreview);
+};
+

@@ -133,21 +133,27 @@ export function OpeningPlayersSelector({
             </Text>
           </View>
 
-          {battingRoster.map(name => {
-            const isStriker = striker === name;
-            const isNonStriker = nonStriker === name;
-            const active = isStriker || isNonStriker;
-            const roleLabel = isStriker ? 'STRIKER' : isNonStriker ? 'NON-STRIKER' : '';
+          {battingRoster && battingRoster.length > 0 ? (
+            battingRoster.map(name => {
+              const isStriker = striker === name;
+              const isNonStriker = nonStriker === name;
+              const active = isStriker || isNonStriker;
+              const roleLabel = isStriker ? 'STRIKER' : isNonStriker ? 'NON-STRIKER' : '';
 
-            return renderOpeningRow({
-              name,
-              active,
-              accent: '#0284C7',
-              iconName: 'cricket',
-              roleLabel,
-              onPress: () => onSelectBatter && onSelectBatter(name)
-            });
-          })}
+              return renderOpeningRow({
+                name,
+                active,
+                accent: '#0284C7',
+                iconName: 'cricket',
+                roleLabel,
+                onPress: () => onSelectBatter && onSelectBatter(name)
+              });
+            })
+          ) : (
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Text style={{ color: '#94A3B8', fontSize: 12, fontFamily: systemFontMedium }}>No players in {battingTeamName} squad</Text>
+            </View>
+          )}
         </View>
 
         {/* OPENING BOWLER SELECTION */}
@@ -164,18 +170,24 @@ export function OpeningPlayersSelector({
             ) : null}
           </View>
 
-          {bowlingRoster.map(name => {
-            const active = bowler === name;
+          {bowlingRoster && bowlingRoster.length > 0 ? (
+            bowlingRoster.map(name => {
+              const active = bowler === name;
 
-            return renderOpeningRow({
-              name,
-              active,
-              accent: '#E11D48',
-              iconName: 'baseball',
-              roleLabel: active ? 'OPENING BOWLER' : '',
-              onPress: () => onSelectBowler && onSelectBowler(active ? '' : name)
-            });
-          })}
+              return renderOpeningRow({
+                name,
+                active,
+                accent: '#E11D48',
+                iconName: 'baseball',
+                roleLabel: active ? 'OPENING BOWLER' : '',
+                onPress: () => onSelectBowler && onSelectBowler(active ? '' : name)
+              });
+            })
+          ) : (
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Text style={{ color: '#94A3B8', fontSize: 12, fontFamily: systemFontMedium }}>No players in {bowlingTeamName} squad</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 

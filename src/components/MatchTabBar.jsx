@@ -45,7 +45,7 @@ export const MatchTabBar = ({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ marginTop: 8 }}
     >
-      <View style={{ position: 'relative', flexDirection: 'row', gap: 24, paddingLeft: 12, paddingRight: 16 }}>
+      <View style={{ position: 'relative', flexDirection: 'row', gap: 24, paddingLeft: 14, paddingRight: 18 }}>
         {tabs.map(tab => {
           const isActive = activeTab === tab.id;
           return (
@@ -53,11 +53,13 @@ export const MatchTabBar = ({
               key={tab.id}
               onLayout={event => onTabLayout && onTabLayout(getLayoutKey(tab.id), event)}
               onPress={() => onPress && onPress(tab.id)}
+              activeOpacity={0.7}
               style={{
-                paddingVertical: 10,
+                paddingVertical: 12,
+                paddingHorizontal: 2,
                 flexDirection: 'column',
                 alignItems: 'center',
-                justify: 'center',
+                justifyContent: 'center',
                 position: 'relative'
               }}
             >
@@ -65,7 +67,7 @@ export const MatchTabBar = ({
                 {tab.icon ? (
                   <Ionicons
                     name={tab.icon}
-                    size={15}
+                    size={16}
                     color={
                       isActive
                         ? isDark
@@ -79,7 +81,7 @@ export const MatchTabBar = ({
                 ) : null}
                 <Text
                   style={{
-                    fontSize: 14,
+                    fontSize: 15,
                     color:
                       isActive
                         ? isDark
@@ -88,7 +90,8 @@ export const MatchTabBar = ({
                         : isDark
                         ? '#8FB7CD'
                         : '#64748B',
-                    fontFamily: systemFontMedium
+                    fontFamily: systemFontMedium,
+                    letterSpacing: -0.1
                   }}
                 >
                   {tab.label}
