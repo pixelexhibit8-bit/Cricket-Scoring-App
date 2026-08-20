@@ -3,10 +3,10 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Animated,
-  Easing,
   Vibration,
-  StyleSheet
+  StyleSheet,
+  Animated,
+  Easing
 } from 'react-native';
 import { systemFontBold } from '../theme.js';
 
@@ -35,7 +35,7 @@ export function InteractiveCoin({
   const [isFlipping, setIsFlipping] = useState(false);
   const [currentFace, setCurrentFace] = useState('H'); // 'H' or 'T'
 
-  // Master animated values
+  // Standard React Native Animated values (100% native driver supported)
   const flipAngle = useRef(new Animated.Value(0)).current;
   const jumpAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -63,7 +63,14 @@ export function InteractiveCoin({
     return res;
   };
 
-  // Track current angle to toggle between H and T in lockstep with rotation
+  const handleFlipEnd = (outcome) => {
+    setCurrentFace(outcome);
+    setIsFlipping(false);
+    if (onFlipEnd) {
+      onFlipEnd(outcome === 'H' ? 'HEADS' : 'TAILS');
+    }
+  };
+
   const flipCoin = () => {
     if (isFlipping) return;
 
@@ -84,85 +91,42 @@ export function InteractiveCoin({
     const turns = spinVariations[Math.floor(Math.random() * spinVariations.length)];
     const targetDegrees = turns * 360;
 
-    // Reset values
+    // Reset values for new toss cycle
     flipAngle.setValue(0);
     jumpAnim.setValue(0);
     scaleAnim.setValue(1);
 
-    // Track rotation angle to swap H / T instantly during rotation
-    const listenerId = flipAngle.addListener(({ value }) => {
-      const normalized = value % 360;
-      if (normalized > 90 && normalized < 270) {
-        setCurrentFace('T');
-      } else {
-        setCurrentFace('H');
-      }
+    // 1. Rotation animation with completion callback
+    const rotateAnimation = Animated.timing(flipAngle, {
+      toValue: targetDegrees,
+      duration: 1750,
+      easing: Easing.bezier(0.2, 0.9, 0.3, 1),
+      useNativeDriver: true
     });
 
-    Animated.parallel([
-      // 1. Rotation Animation
-      Animated.timing(flipAngle, {
-        toValue: targetDegrees,
-        duration: 1750,
-        easing: Easing.bezier(0.2, 0.9, 0.3, 1),
-        useNativeDriver: true
-      }),
+    // 2. Parabolic vertical jump in air with realistic ground bounces
+    const jumpAnimation = Animated.sequence([
+      Animated.timing(jumpAnim, { toValue: -110, duration: 720, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(jumpAnim, { toValue: 0, duration: 600, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.timing(jumpAnim, { toValue: -14, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(jumpAnim, { toValue: 0, duration: 210, easing: Easing.bounce, useNativeDriver: true })
+    ]);
 
-      // 2. Jump in air with realistic ground bounces
-      Animated.sequence([
-        Animated.timing(jumpAnim, {
-          toValue: -110,
-          duration: 720,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true
-        }),
-        Animated.timing(jumpAnim, {
-          toValue: 0,
-          duration: 600,
-          easing: Easing.in(Easing.quad),
-          useNativeDriver: true
-        }),
-        Animated.timing(jumpAnim, {
-          toValue: -14,
-          duration: 220,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true
-        }),
-        Animated.timing(jumpAnim, {
-          toValue: 0,
-          duration: 210,
-          easing: Easing.bounce,
-          useNativeDriver: true
-        })
-      ]),
+    // 3. Perspective scaling (gets closer in air, settles on ground)
+    const scaleAnimation = Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 1.28, duration: 720, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 1030, easing: Easing.inOut(Easing.quad), useNativeDriver: true })
+    ]);
 
-      // 3. Perspective Scale
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.28,
-          duration: 720,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 1030,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true
-        })
-      ])
-    ]).start(() => {
-      flipAngle.removeListener(listenerId);
-      setCurrentFace(nextOutcome);
-      setIsFlipping(false);
-
-      if (onFlipEnd) {
-        onFlipEnd(nextOutcome === 'H' ? 'HEADS' : 'TAILS');
+    Animated.parallel([rotateAnimation, jumpAnimation, scaleAnimation]).start(({ finished }) => {
+      if (finished) {
+        handleFlipEnd(nextOutcome);
       }
     });
   };
 
-  const rotateX = flipAngle.interpolate({
+  // Interpolated rotation string
+  const rotateXInterpolated = flipAngle.interpolate({
     inputRange: [0, 3600],
     outputRange: ['0deg', '3600deg']
   });
@@ -182,7 +146,7 @@ export function InteractiveCoin({
               transform: [
                 { translateY: jumpAnim },
                 { scale: scaleAnim },
-                { rotateX }
+                { rotateX: rotateXInterpolated }
               ]
             }
           ]}

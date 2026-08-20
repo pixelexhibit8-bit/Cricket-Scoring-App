@@ -51,10 +51,9 @@ export function useScorerWorkflow({
     }
 
     const target = matchToScore || activeMatch;
-    const isUserOwned = target && (target.creatorId === user.id || target.isCoScorer || !target.creatorId);
-    const isLive = target && (target.phase === 'playing' || target.phase === 'inningBreak');
+    const isLive = target && (target.phase === 'playing' || target.phase === 'inningBreak' || (!target.phase && target.innings?.length > 0));
 
-    if (isLive && isUserOwned) {
+    if (isLive) {
       if (setActiveMatch) setActiveMatch(target);
       setIsScorerUnlocked(true);
       setScorerPinModalVisible(false);
@@ -80,7 +79,7 @@ export function useScorerWorkflow({
     if (setActiveMatch) setActiveMatch(null);
     setIsScorerUnlocked(true);
     setScorerPinModalVisible(false);
-    if (setCurrentScreen) setCurrentScreen('scorerWizard');
+    if (setCurrentScreen) setCurrentScreen('quickMatchSetup');
   };
 
   const handleStartQuickMatch = (config) => {

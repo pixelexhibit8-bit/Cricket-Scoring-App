@@ -17,21 +17,21 @@ LogBox.ignoreLogs([
   'Realtime Warning'
 ]);
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     'SFProDisplay-Regular': require('./assets/fonts/SFProDisplay-Regular.otf'),
     'SFProDisplay-Medium': require('./assets/fonts/SFProDisplay-Medium.otf')
   });
 
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded || fontError) {
       SplashScreen.hideAsync().catch(() => { });
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <ErrorBoundary>

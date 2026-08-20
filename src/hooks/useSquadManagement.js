@@ -31,8 +31,8 @@ export function useSquadManagement({ activeMatch, setActiveMatch }) {
   }, []);
 
   const allMidMatchPlayersPool = [...new Set([
-    ...(localPlayersList || []).map(p => p.name),
-    ...((activeMatch?.playingXI && Object.values(activeMatch.playingXI).flat()) || [])
+    ...(localPlayersList || []).map(p => p?.name).filter(Boolean),
+    ...((activeMatch?.playingXI && typeof activeMatch.playingXI === 'object' ? Object.values(activeMatch.playingXI).flat().filter(Boolean) : []))
   ])].filter(Boolean);
 
   const handleMidMatchMoveToTeam = (playerName, targetTeam) => {

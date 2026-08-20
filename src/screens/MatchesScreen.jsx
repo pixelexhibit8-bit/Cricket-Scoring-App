@@ -73,7 +73,8 @@ export function MatchesScreen({
   setSelectedPlayerProfile,
   finishedArchive = [],
   setSelectedMatch,
-  onJoinMatchByCode
+  onJoinMatchByCode,
+  hideBottomNav = false
 }) {
   const { width: screenWidth } = useWindowDimensions();
   const homePagerRef = useRef(null);
@@ -82,7 +83,7 @@ export function MatchesScreen({
   const handlePlayerPress = (name, extraProps = {}) => {
     const dbFound = localPlayersList.find(p => p && p.name && p.name.trim().toLowerCase() === String(name).trim().toLowerCase());
     const profile = dbFound || (getSetupPlayerProfile ? getSetupPlayerProfile(name) : { name, role: extraProps.role || 'Local Player', photoUrl: extraProps.photoUrl, city: extraProps.city });
-    
+
     if (setSelectedPlayerName) setSelectedPlayerName(name);
     if (setSelectedPlayerProfile) setSelectedPlayerProfile(profile);
     if (setCurrentScreen) setCurrentScreen('playerProfile');
@@ -413,7 +414,7 @@ export function MatchesScreen({
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 2 }}>
                       <Ionicons name="trophy-outline" size={15} color="#0284C7" />
                       <Text style={[styles.sectionLabel, { marginBottom: 0 }]}>
-                        MATCHES ({ matchedLive.length + matchedFinished.length })
+                        MATCHES ({matchedLive.length + matchedFinished.length})
                       </Text>
                     </View>
                     {matchedLive.map((m, idx) => (renderActiveMatchListCard || renderActiveCard)(m, idx))}
@@ -519,14 +520,6 @@ export function MatchesScreen({
               overScrollMode="never"
               decelerationRate="normal"
               nestedScrollEnabled={true}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handlePullToRefresh}
-                  colors={['#0284C7']}
-                  tintColor="#0284C7"
-                />
-              }
             >
               {/* Top Featured / Live Match Banner */}
               {visibleLiveMatches.length > 0 && (
@@ -589,14 +582,6 @@ export function MatchesScreen({
               overScrollMode="never"
               decelerationRate="normal"
               nestedScrollEnabled={true}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handlePullToRefresh}
-                  colors={['#0284C7']}
-                  tintColor="#0284C7"
-                />
-              }
             >
 
               {visibleLiveMatches.length > 0 ? (
@@ -661,14 +646,6 @@ export function MatchesScreen({
               overScrollMode="never"
               decelerationRate="normal"
               nestedScrollEnabled={true}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handlePullToRefresh}
-                  colors={['#0284C7']}
-                  tintColor="#0284C7"
-                />
-              }
             >
               {(!upcomingMatches || upcomingMatches.length === 0) ? (
                 <View style={styles.liteEmptyState}>
@@ -797,14 +774,6 @@ export function MatchesScreen({
               overScrollMode="never"
               decelerationRate="normal"
               nestedScrollEnabled={true}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handlePullToRefresh}
-                  colors={['#0284C7']}
-                  tintColor="#0284C7"
-                />
-              }
             >
               {(() => {
                 if (!visibleFinishedMatches || visibleFinishedMatches.length === 0) {
@@ -848,12 +817,14 @@ export function MatchesScreen({
       )}
 
       {/* INDUSTRIAL STANDARD BOTTOM NAVIGATION BAR */}
-      <AppBottomNav
-        activeTab={bottomNavTab}
-        onTabChange={(tabId) => {
-          if (setBottomNavTab) setBottomNavTab(tabId);
-        }}
-      />
+      {!hideBottomNav && (
+        <AppBottomNav
+          activeTab={bottomNavTab}
+          onTabChange={(tabId) => {
+            if (setBottomNavTab) setBottomNavTab(tabId);
+          }}
+        />
+      )}
     </View>
   );
 }

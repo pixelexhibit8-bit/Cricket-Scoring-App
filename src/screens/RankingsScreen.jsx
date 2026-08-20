@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   StyleSheet
 } from 'react-native';
+import PagerView from 'react-native-pager-view';
 import { Ionicons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, themeColors } from '../theme.js';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
@@ -32,7 +33,7 @@ export function RankingsScreen({
   ];
 
   const activeTabIndex = Math.max(0, rankingTabs.findIndex(t => t.id === activeCategory));
-  const pagerScrollX = useRef(new Animated.Value(activeTabIndex * screenWidth)).current;
+  const pagerPosition = useRef(new Animated.Value(activeTabIndex)).current;
   const pagerRef = useRef(null);
 
   const [tabLayouts, setTabLayouts] = useState({});
@@ -45,42 +46,42 @@ export function RankingsScreen({
     });
   };
 
-  const animatedUnderlineX = pagerScrollX.interpolate({
-    inputRange: [0, screenWidth, screenWidth * 2],
+  const animatedUnderlineX = pagerPosition.interpolate({
+    inputRange: [0, 1, 2],
     outputRange: rankingTabs.map((t, index) => tabLayouts[t.id]?.x != null ? tabLayouts[t.id].x : (index * 95 + 16)),
     extrapolate: 'clamp'
   });
 
-  const animatedUnderlineWidth = pagerScrollX.interpolate({
-    inputRange: [0, screenWidth, screenWidth * 2],
+  const animatedUnderlineWidth = pagerPosition.interpolate({
+    inputRange: [0, 1, 2],
     outputRange: rankingTabs.map(t => tabLayouts[t.id]?.width != null ? tabLayouts[t.id].width : 65),
     extrapolate: 'clamp'
   });
 
-  const isDraggingPager = useRef(false);
-
   const onTabPress = (tabId, index) => {
     setActiveCategory(tabId);
-    isDraggingPager.current = true;
-    pagerRef.current?.scrollTo({ x: index * screenWidth, animated: true });
-    setTimeout(() => { isDraggingPager.current = false; }, 300);
+    pagerRef.current?.setPage(index);
   };
 
-  const handlePagerEnd = (e) => {
-    const offset = e.nativeEvent.contentOffset.x;
-    const index = Math.round(offset / screenWidth);
-    if (rankingTabs[index] && activeCategory !== rankingTabs[index].id) {
-      setActiveCategory(rankingTabs[index].id);
+  const handlePageSelected = (e) => {
+    const nextIndex = e.nativeEvent.position;
+    if (rankingTabs[nextIndex] && activeCategory !== rankingTabs[nextIndex].id) {
+      setActiveCategory(rankingTabs[nextIndex].id);
     }
+  };
+
+  const handlePageScroll = (e) => {
+    const { position, offset } = e.nativeEvent;
+    pagerPosition.setValue(position + offset);
   };
 
   useEffect(() => {
-    if (!isDraggingPager.current) {
-      const targetOffset = activeTabIndex * screenWidth;
-      pagerRef.current?.scrollTo({ x: targetOffset, animated: false });
-      pagerScrollX.setValue(targetOffset);
+    const idx = rankingTabs.findIndex(t => t.id === activeCategory);
+    if (idx !== -1) {
+      pagerRef.current?.setPage(idx);
+      pagerPosition.setValue(idx);
     }
-  }, [activeCategory, screenWidth]);
+  }, [activeCategory]);
 
   // Helper to render table for a category
   const renderRankingList = (list, categoryKey) => {
@@ -89,16 +90,7 @@ export function RankingsScreen({
         <ScrollView
           style={styles.pageScrollView}
           contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            onRefresh ? (
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={['#18181B']}
-                tintColor="#18181B"
-              />
-            ) : undefined
-          }
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.emptyCard}>
             <Ionicons name="trophy-outline" size={36} color="#94A3B8" />
@@ -116,16 +108,6 @@ export function RankingsScreen({
         style={styles.pageScrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#0284C7']}
-              tintColor="#0284C7"
-            />
-          ) : undefined
-        }
       >
         <View style={styles.tableCard}>
           {/* TABLE HEADER */}
@@ -247,37 +229,29 @@ export function RankingsScreen({
         </ScrollView>
       </View>
 
-      {/* ─── HORIZONTAL SWIPEABLE PAGER (BATTERS / BOWLERS / ALL-ROUNDERS) ─── */}
-      <Animated.ScrollView
+      {/* ─── NATIVE HORIZONTAL SWIPEABLE PAGER (BATTERS / BOWLERS / ALL-ROUNDERS) ─── */}
+      <PagerView
         ref={pagerRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        overScrollMode="never"
-        bounces={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: pagerScrollX } } }],
-          { useNativeDriver: false }
-        )}
-        onMomentumScrollEnd={handlePagerEnd}
         style={{ flex: 1 }}
+        initialPage={activeTabIndex}
+        onPageSelected={handlePageSelected}
+        onPageScroll={handlePageScroll}
       >
         {/* 1. BATTERS PAGE */}
-        <View style={{ width: screenWidth, flex: 1 }}>
+        <View key="batters" style={{ flex: 1 }}>
           {renderRankingList(topBatters, 'batters')}
         </View>
 
         {/* 2. BOWLERS PAGE */}
-        <View style={{ width: screenWidth, flex: 1 }}>
+        <View key="bowlers" style={{ flex: 1 }}>
           {renderRankingList(topBowlers, 'bowlers')}
         </View>
 
         {/* 3. ALL-ROUNDERS PAGE */}
-        <View style={{ width: screenWidth, flex: 1 }}>
+        <View key="allrounders" style={{ flex: 1 }}>
           {renderRankingList(topAllRounders, 'allrounders')}
         </View>
-      </Animated.ScrollView>
+      </PagerView>
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   StyleSheet
 } from 'react-native';
+import PagerView from 'react-native-pager-view';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   systemFont,
@@ -72,8 +73,8 @@ export function PublicLiveViewScreen({
 
   const publicTabsRef = useRef(null);
   const publicPagerRef = useRef(null);
-  const publicPagerScrollX = useRef(new Animated.Value(
-    PUBLIC_LIVE_TABS.findIndex(tab => tab.id === publicLiveTab) * screenWidth
+  const publicPagerPosition = useRef(new Animated.Value(
+    Math.max(0, PUBLIC_LIVE_TABS.findIndex(tab => tab.id === publicLiveTab))
   )).current;
 
   if (!activeMatch || !activeMatch.innings || !activeMatch.innings.length) {
@@ -215,21 +216,32 @@ export function PublicLiveViewScreen({
 
     keepPublicTabVisible(nextIndex);
     if (movePager) {
-      publicPagerRef.current?.scrollTo({ x: nextIndex * screenWidth, animated: true });
+      publicPagerRef.current?.setPage(nextIndex);
     }
     if (nextTabId !== publicLiveTab) setPublicLiveTab(nextTabId);
   };
 
-  const handlePublicPagerEnd = (event) => {
-    const nextIndex = Math.max(
-      0,
-      Math.min(PUBLIC_LIVE_TABS.length - 1, Math.round(event.nativeEvent.contentOffset.x / screenWidth))
-    );
+  const handlePublicPageSelected = (event) => {
+    const nextIndex = event.nativeEvent.position;
     const nextTab = PUBLIC_LIVE_TABS[nextIndex];
     if (!nextTab) return;
     keepPublicTabVisible(nextIndex);
     if (nextTab.id !== publicLiveTab) setPublicLiveTab(nextTab.id);
   };
+
+  const handlePublicPageScroll = (event) => {
+    const { position, offset } = event.nativeEvent;
+    publicPagerPosition.setValue(position + offset);
+  };
+
+  useEffect(() => {
+    const idx = PUBLIC_LIVE_TABS.findIndex(t => t.id === publicLiveTab);
+    if (idx !== -1) {
+      publicPagerRef.current?.setPage(idx);
+      publicPagerPosition.setValue(idx);
+      keepPublicTabVisible(idx, false);
+    }
+  }, [publicLiveTab]);
 
   // Overs Tab data (Inning 1 & Inning 2)
   const oversViewInning = oversInningIndex === 1 ? inn2 : inn1;
@@ -254,8 +266,8 @@ export function PublicLiveViewScreen({
           tabs={PUBLIC_LIVE_TABS}
           activeTab={publicLiveTab}
           layouts={publicTabLayouts}
-          pageWidth={screenWidth}
-          scrollX={publicPagerScrollX}
+          pageWidth={1}
+          scrollX={publicPagerPosition}
           scrollRef={publicTabsRef}
           onPress={changePublicLiveTab}
           onTabLayout={capturePublicTabLayout}
@@ -334,50 +346,21 @@ export function PublicLiveViewScreen({
         </View>
       </View>
 
-      {/* ─── HORIZONTAL SWIPEABLE PAGER (INFO | LIVE | SCORECARD | OVERS | GRAPHS) ─── */}
-      <Animated.ScrollView
+      {/* ─── NATIVE HORIZONTAL SWIPEABLE PAGER (INFO | LIVE | SCORECARD | OVERS | GRAPHS) ─── */}
+      <PagerView
         ref={publicPagerRef}
-        horizontal
-        pagingEnabled
-        snapToInterval={screenWidth}
-        snapToAlignment="start"
-        disableIntervalMomentum
-        directionalLockEnabled
-        nestedScrollEnabled
-        bounces={false}
-        overScrollMode="never"
-        decelerationRate="fast"
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: publicPagerScrollX } } }],
-          { useNativeDriver: true }
-        )}
-        onMomentumScrollEnd={handlePublicPagerEnd}
-        onLayout={() => {
-          const activeIndex = Math.max(0, PUBLIC_LIVE_TABS.findIndex(tab => tab.id === publicLiveTab));
-          const offset = activeIndex * screenWidth;
-          publicPagerRef.current?.scrollTo({ x: offset, animated: false });
-          publicPagerScrollX.setValue(offset);
-          keepPublicTabVisible(activeIndex, false);
-        }}
         style={{ flex: 1 }}
+        initialPage={Math.max(0, PUBLIC_LIVE_TABS.findIndex(tab => tab.id === publicLiveTab))}
+        onPageSelected={handlePublicPageSelected}
+        onPageScroll={handlePublicPageScroll}
       >
         {PUBLIC_LIVE_TABS.map(({ id: pageTabId }) => (
-          <View key={pageTabId} style={{ width: screenWidth, flex: 1 }}>
+          <View key={pageTabId} style={{ flex: 1 }}>
             <ScrollView
               style={{ flex: 1 }}
               contentContainerStyle={{ padding: 14, paddingBottom: 28, gap: 12 }}
               showsVerticalScrollIndicator={false}
               nestedScrollEnabled
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handlePullToRefresh}
-                  colors={['#18181B']}
-                  tintColor="#18181B"
-                />
-              }
             >
               {/* ─── TAB 1: INFO TAB ─── */}
               {pageTabId === 'info' && (
@@ -739,7 +722,7 @@ export function PublicLiveViewScreen({
             </ScrollView>
           </View>
         ))}
-      </Animated.ScrollView>
+      </PagerView>
     </View>
   );
 }

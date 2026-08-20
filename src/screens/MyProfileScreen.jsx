@@ -17,6 +17,7 @@ import {
   useWindowDimensions
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import PagerView from 'react-native-pager-view';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import {
@@ -49,6 +50,7 @@ import { LocationPickerModal } from '../components/modals/LocationPickerModal.js
 import { showToast } from '../services/toastService.js';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
 import { fetchFinishedMatchesFromSupabase } from '../services/matchService.js';
+import { formatOvers } from '../utils/cricketUtils.js';
 
 export function MyProfileScreen({
   finishedMatches = [],
@@ -154,8 +156,9 @@ export function MyProfileScreen({
   ], [stats.participatedMatches.length, isPublicView]);
 
   const activeTabIndex = Math.max(0, profileTabs.findIndex(t => t.id === profileTab));
-  const pagerScrollX = useRef(new Animated.Value(activeTabIndex * screenWidth)).current;
+  const pagerPosition = useRef(new Animated.Value(activeTabIndex)).current;
   const pagerRef = useRef(null);
+  const tabsScrollRef = useRef(null);
 
   const [tabLayouts, setTabLayouts] = useState({});
   const onTabLayout = (id, e) => {
@@ -167,42 +170,52 @@ export function MyProfileScreen({
     });
   };
 
-  const animatedUnderlineX = pagerScrollX.interpolate({
-    inputRange: profileTabs.map((_, i) => i * screenWidth),
+  const animatedUnderlineX = pagerPosition.interpolate({
+    inputRange: profileTabs.map((_, i) => i),
     outputRange: profileTabs.map((t, index) => tabLayouts[t.id]?.x != null ? tabLayouts[t.id].x : (index * 85 + 16)),
     extrapolate: 'clamp'
   });
 
-  const animatedUnderlineWidth = pagerScrollX.interpolate({
-    inputRange: profileTabs.map((_, i) => i * screenWidth),
+  const animatedUnderlineWidth = pagerPosition.interpolate({
+    inputRange: profileTabs.map((_, i) => i),
     outputRange: profileTabs.map(t => tabLayouts[t.id]?.width != null ? tabLayouts[t.id].width : 60),
     extrapolate: 'clamp'
   });
 
-  const isDraggingPager = useRef(false);
-
   const onTabPress = (tabId, index) => {
     setProfileTab(tabId);
-    isDraggingPager.current = true;
-    pagerRef.current?.scrollTo({ x: index * screenWidth, animated: true });
-    setTimeout(() => { isDraggingPager.current = false; }, 300);
+    pagerRef.current?.setPage(index);
+    if (tabLayouts[tabId]?.x != null) {
+      tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[tabId].x - 60), animated: true });
+    }
   };
 
-  const handlePagerEnd = (e) => {
-    const offset = e.nativeEvent.contentOffset.x;
-    const index = Math.round(offset / screenWidth);
-    if (profileTabs[index] && profileTab !== profileTabs[index].id) {
-      setProfileTab(profileTabs[index].id);
+  const handlePageSelected = (e) => {
+    const pos = e.nativeEvent.position;
+    const selectedTab = profileTabs[pos];
+    if (selectedTab && selectedTab.id !== profileTab) {
+      setProfileTab(selectedTab.id);
+      if (tabLayouts[selectedTab.id]?.x != null) {
+        tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[selectedTab.id].x - 60), animated: true });
+      }
     }
+  };
+
+  const handlePageScroll = (e) => {
+    const { position, offset } = e.nativeEvent;
+    pagerPosition.setValue(position + offset);
   };
 
   useEffect(() => {
-    if (!isDraggingPager.current) {
-      const targetOffset = activeTabIndex * screenWidth;
-      pagerRef.current?.scrollTo({ x: targetOffset, animated: false });
-      pagerScrollX.setValue(targetOffset);
+    const idx = profileTabs.findIndex(t => t.id === profileTab);
+    if (idx !== -1) {
+      pagerRef.current?.setPage(idx);
+      pagerPosition.setValue(idx);
+      if (tabLayouts[profileTab]?.x != null) {
+        tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[profileTab].x - 60), animated: true });
+      }
     }
-  }, [profileTab, screenWidth]);
+  }, [profileTab]);
 
   // Quick Google Sign-In Input
   const [quickPlayerName, setQuickPlayerName] = useState('');
@@ -332,9 +345,9 @@ export function MyProfileScreen({
       const pName = typeof targetPlayer === 'string'
         ? targetPlayer
         : (targetPlayer.name || targetPlayer.fullName || targetPlayer.playerName || 'Cricket Player');
-      
+
       const directPhoto = targetPlayer.photoUrl || targetPlayer.avatar || targetPlayer.photo_url || '';
-      
+
       // Fetch rich profile from Supabase local_players table
       try {
         let dbP = null;
@@ -432,7 +445,6 @@ export function MyProfileScreen({
         loadMatchesForCareer(),
         loadUserSession()
       ]);
-      showToast('Profile refreshed', 'success');
     } catch (e) {
       console.warn('Refresh error:', e);
     } finally {
@@ -888,6 +900,7 @@ export function MyProfileScreen({
       {/* ─── CREX / RANKINGS STYLE CLEAN TEXT-ONLY UNDERLINE TABS BAR ─── */}
       <View style={styles.tabsBarWrapper}>
         <ScrollView
+          ref={tabsScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsScrollContent}
@@ -925,29 +938,20 @@ export function MyProfileScreen({
         </ScrollView>
       </View>
 
-      {/* ─── HORIZONTAL SWIPEABLE PAGER ─── */}
-      <Animated.ScrollView
+      {/* ─── NATIVE HORIZONTAL SWIPEABLE PAGER (ViewPager2) ─── */}
+      <PagerView
         ref={pagerRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        overScrollMode="never"
-        bounces={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: pagerScrollX } } }],
-          { useNativeDriver: false }
-        )}
-        onMomentumScrollEnd={handlePagerEnd}
         style={{ flex: 1 }}
+        initialPage={activeTabIndex}
+        onPageSelected={handlePageSelected}
+        onPageScroll={handlePageScroll}
       >
         {/* 1. OVERVIEW PAGE */}
-        <View style={{ width: screenWidth, flex: 1 }}>
+        <View key="overview" style={{ flex: 1 }}>
           <ScrollView
             style={styles.pageScrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
           >
             <View style={{ gap: 14 }}>
               <View style={styles.summaryGrid}>
@@ -1012,12 +1016,11 @@ export function MyProfileScreen({
         </View>
 
         {/* 2. BATTING PAGE */}
-        <View style={{ width: screenWidth, flex: 1 }}>
+        <View key="batting" style={{ flex: 1 }}>
           <ScrollView
             style={styles.pageScrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
           >
             <View style={styles.statsCard}>
               <MaterialCommunityIcons
@@ -1061,12 +1064,11 @@ export function MyProfileScreen({
         </View>
 
         {/* 3. BOWLING PAGE */}
-        <View style={{ width: screenWidth, flex: 1 }}>
+        <View key="bowling" style={{ flex: 1 }}>
           <ScrollView
             style={styles.pageScrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
           >
             <View style={styles.statsCard}>
               <MaterialCommunityIcons
@@ -1110,12 +1112,11 @@ export function MyProfileScreen({
         </View>
 
         {/* 4. MATCHES PAGE */}
-        <View style={{ width: screenWidth, flex: 1 }}>
+        <View key="matches" style={{ flex: 1 }}>
           <ScrollView
             style={styles.pageScrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
           >
             <View style={{ gap: 10 }}>
               {stats.participatedMatches.length === 0 ? (
@@ -1159,13 +1160,12 @@ export function MyProfileScreen({
         </View>
 
         {/* 5. SCORER HUB PAGE (OWNER ONLY) */}
-        {!isPublicView && (
-          <View style={{ width: screenWidth, flex: 1 }}>
+        {!isPublicView ? (
+          <View key="scorer" style={{ flex: 1 }}>
             <ScrollView
               style={styles.pageScrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#18181B']} tintColor="#18181B" />}
             >
               <View style={{
                 backgroundColor: '#FFFFFF',
@@ -1187,38 +1187,133 @@ export function MyProfileScreen({
                   </View>
                 </View>
 
-                {/* Primary Action: Start Quick Match */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    if (onStartQuickMatch) onStartQuickMatch();
-                  }}
-                  style={{
-                    backgroundColor: '#18181B',
+                {/* IF THERE IS AN ONGOING ACTIVE MATCH */}
+                {activeMatch && activeMatch.phase !== 'result' && activeMatch.phase !== 'finished' && !activeMatch.isCompleted ? (
+                  <View style={{
+                    backgroundColor: '#F8F8FA',
                     borderRadius: 12,
-                    height: 44,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: '#EEEEF0',
                     gap: 8
-                  }}
-                >
-                  <MaterialCommunityIcons name="cricket" size={18} color="#FFFFFF" />
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>
-                    START NEW QUICK MATCH
-                  </Text>
-                </TouchableOpacity>
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#E11D48' }} />
+                        <Text style={{ fontSize: 11, color: '#E11D48', fontFamily: systemFontBold }}>MATCH IN PROGRESS</Text>
+                      </View>
+                      {activeMatch.matchCode ? (
+                        <View style={{ backgroundColor: '#EEEEF0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 10, color: '#333333', fontFamily: systemFontMedium }}>Code: {activeMatch.matchCode}</Text>
+                        </View>
+                      ) : null}
+                    </View>
 
-                {/* Secondary Co-Scorer Actions */}
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <Text style={{ fontSize: 14, color: '#0F172A', fontFamily: systemFontBold }}>
+                      {activeMatch.matchTitle || `${activeMatch.team1?.name || 'Team 1'} vs ${activeMatch.team2?.name || 'Team 2'}`}
+                    </Text>
+
+                    <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }}>
+                      Inning {activeMatch.inning || 1} • {activeMatch.innings?.[(activeMatch.inning || 1) - 1]?.battingTeam?.runs ?? 0}/{activeMatch.innings?.[(activeMatch.inning || 1) - 1]?.battingTeam?.wickets ?? 0} ({formatOvers(activeMatch.innings?.[(activeMatch.inning || 1) - 1]?.totalLegalBalls || 0)} Ov)
+                    </Text>
+
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        if (onStartQuickMatch) onStartQuickMatch(activeMatch);
+                      }}
+                      style={{
+                        backgroundColor: '#18181B',
+                        borderRadius: 10,
+                        height: 42,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        marginTop: 4
+                      }}
+                    >
+                      <MaterialCommunityIcons name="play-circle-outline" size={18} color="#FFFFFF" />
+                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>
+                        RESUME SCORING
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  /* Primary Action: Start Quick Match */
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      if (onStartQuickMatch) onStartQuickMatch();
+                    }}
+                    style={{
+                      backgroundColor: '#18181B',
+                      borderRadius: 12,
+                      height: 44,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <MaterialCommunityIcons name="cricket" size={18} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>
+                      START NEW QUICK MATCH
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Co-Scorer / Join Actions (Conditional on Match Active state) */}
+                {activeMatch && activeMatch.phase !== 'result' && activeMatch.phase !== 'finished' && !activeMatch.isCompleted ? (
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => setShareModalVisible(true)}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#F8F8FA',
+                        borderRadius: 10,
+                        paddingVertical: 9,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        gap: 6,
+                        borderWidth: 1,
+                        borderColor: '#EEEEF0'
+                      }}
+                    >
+                      <Ionicons name="share-social-outline" size={14} color="#18181B" />
+                      <Text style={{ color: '#333333', fontSize: 11.5, fontFamily: systemFontMedium }}>Share Access</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => setJoinModalVisible(true)}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#F8F8FA',
+                        borderRadius: 10,
+                        paddingVertical: 9,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        gap: 6,
+                        borderWidth: 1,
+                        borderColor: '#EEEEF0'
+                      }}
+                    >
+                      <Ionicons name="enter-outline" size={14} color="#18181B" />
+                      <Text style={{ color: '#333333', fontSize: 11.5, fontFamily: systemFontMedium }}>Join Match</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
                   <TouchableOpacity
                     activeOpacity={0.7}
                     onPress={() => setJoinModalVisible(true)}
                     style={{
-                      flex: 1,
                       backgroundColor: '#F8F8FA',
                       borderRadius: 10,
-                      paddingVertical: 9,
+                      paddingVertical: 10,
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexDirection: 'row',
@@ -1227,35 +1322,17 @@ export function MyProfileScreen({
                       borderColor: '#EEEEF0'
                     }}
                   >
-                    <Ionicons name="key-outline" size={14} color="#18181B" />
-                    <Text style={{ color: '#333333', fontSize: 11.5, fontFamily: systemFontMedium }}>Enter Match Code</Text>
+                    <Ionicons name="enter-outline" size={15} color="#18181B" />
+                    <Text style={{ color: '#333333', fontSize: 12, fontFamily: systemFontMedium }}>Join Match with Code</Text>
                   </TouchableOpacity>
-
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => setShareModalVisible(true)}
-                    style={{
-                      flex: 1,
-                      backgroundColor: '#F8F8FA',
-                      borderRadius: 10,
-                      paddingVertical: 9,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexDirection: 'row',
-                      gap: 6,
-                      borderWidth: 1,
-                      borderColor: '#EEEEF0'
-                    }}
-                  >
-                    <Ionicons name="share-social-outline" size={14} color="#18181B" />
-                    <Text style={{ color: '#333333', fontSize: 11.5, fontFamily: systemFontMedium }}>Share Access</Text>
-                  </TouchableOpacity>
-                </View>
+                )}
               </View>
             </ScrollView>
           </View>
+        ) : (
+          <View key="scorer-disabled" style={{ display: 'none' }} />
         )}
-      </Animated.ScrollView>
+      </PagerView>
 
       {/* EDIT PROFILE MODAL */}
       <Modal visible={isEditing} animationType="slide" transparent onRequestClose={() => setIsEditing(false)}>

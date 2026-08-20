@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   StyleSheet
 } from 'react-native';
+import PagerView from 'react-native-pager-view';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   systemFont,
@@ -168,8 +169,8 @@ export function FinishedMatchViewScreen({
 
   const finishedSwipeRef = useRef(null);
   const publicTabsRef = useRef(null);
-  const publicPagerScrollX = useRef(new Animated.Value(
-    FINISHED_MATCH_TABS.findIndex(tab => tab.id === finishedTab) * screenWidth
+  const finishedPagerPosition = useRef(new Animated.Value(
+    Math.max(0, FINISHED_MATCH_TABS.findIndex(tab => tab.id === finishedTab))
   )).current;
 
   if (!match) {
@@ -232,19 +233,30 @@ export function FinishedMatchViewScreen({
     if (nextIndex < 0) return;
     if (setFinishedTab) setFinishedTab(nextTabId);
     keepFinishedTabVisible(nextIndex);
-    if (movePager) finishedSwipeRef.current?.scrollTo({ x: nextIndex * screenWidth, animated: true });
+    if (movePager) finishedSwipeRef.current?.setPage(nextIndex);
   };
 
-  const handleFinishedPagerEnd = (event) => {
-    const nextIndex = Math.max(0, Math.min(
-      FINISHED_MATCH_TABS.length - 1,
-      Math.round(event.nativeEvent.contentOffset.x / screenWidth)
-    ));
+  const handleFinishedPageSelected = (event) => {
+    const nextIndex = event.nativeEvent.position;
     const nextTab = FINISHED_MATCH_TABS[nextIndex];
     if (!nextTab) return;
     keepFinishedTabVisible(nextIndex);
     if (nextTab.id !== finishedTab && setFinishedTab) setFinishedTab(nextTab.id);
   };
+
+  const handleFinishedPageScroll = (event) => {
+    const { position, offset } = event.nativeEvent;
+    finishedPagerPosition.setValue(position + offset);
+  };
+
+  useEffect(() => {
+    const idx = FINISHED_MATCH_TABS.findIndex(t => t.id === finishedTab);
+    if (idx !== -1) {
+      finishedSwipeRef.current?.setPage(idx);
+      finishedPagerPosition.setValue(idx);
+      keepFinishedTabVisible(idx, false);
+    }
+  }, [finishedTab]);
 
   const team1Name = f.team1?.name || 'Team 1';
   const team2Name = f.team2?.name || 'Team 2';
@@ -269,8 +281,8 @@ export function FinishedMatchViewScreen({
           activeTab={finishedTab}
           layouts={publicTabLayouts}
           layoutPrefix="finished:"
-          pageWidth={screenWidth}
-          scrollX={publicPagerScrollX}
+          pageWidth={1}
+          scrollX={finishedPagerPosition}
           scrollRef={publicTabsRef}
           onPress={changeFinishedTab}
           onTabLayout={captureTabLayout}
@@ -286,50 +298,21 @@ export function FinishedMatchViewScreen({
         />
       </View>
 
-      {/* ─── HORIZONTAL SWIPEABLE PAGER ─── */}
-      <Animated.ScrollView
+      {/* ─── NATIVE HORIZONTAL SWIPEABLE PAGER (SUMMARY | SCORECARD | OVERS | GRAPHS | INFO) ─── */}
+      <PagerView
         ref={finishedSwipeRef}
-        horizontal
-        pagingEnabled
-        snapToInterval={screenWidth}
-        snapToAlignment="start"
-        disableIntervalMomentum
-        directionalLockEnabled
-        nestedScrollEnabled
-        bounces={false}
-        overScrollMode="never"
-        decelerationRate="fast"
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: publicPagerScrollX } } }],
-          { useNativeDriver: true }
-        )}
-        onMomentumScrollEnd={handleFinishedPagerEnd}
-        onLayout={() => {
-          const activeIndex = Math.max(0, FINISHED_MATCH_TABS.findIndex(tab => tab.id === finishedTab));
-          const offset = activeIndex * screenWidth;
-          finishedSwipeRef.current?.scrollTo({ x: offset, animated: false });
-          publicPagerScrollX?.setValue(offset);
-          keepFinishedTabVisible(activeIndex, false);
-        }}
         style={{ flex: 1 }}
+        initialPage={Math.max(0, FINISHED_MATCH_TABS.findIndex(tab => tab.id === finishedTab))}
+        onPageSelected={handleFinishedPageSelected}
+        onPageScroll={handleFinishedPageScroll}
       >
         {FINISHED_MATCH_TABS.map(({ id: pageTabId }) => (
-          <View key={pageTabId} style={{ width: screenWidth, flex: 1 }}>
+          <View key={pageTabId} style={{ flex: 1 }}>
             <ScrollView
               style={{ flex: 1 }}
               contentContainerStyle={{ padding: 14, paddingBottom: 28, gap: 12 }}
               showsVerticalScrollIndicator={false}
               nestedScrollEnabled
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handlePullToRefresh}
-                  colors={['#18181B']}
-                  tintColor="#18181B"
-                />
-              }
             >
               {/* TAB 1: INFO */}
               {pageTabId === 'info' && (() => {
@@ -589,7 +572,7 @@ export function FinishedMatchViewScreen({
             </ScrollView>
           </View>
         ))}
-      </Animated.ScrollView>
+      </PagerView>
     </View>
   );
 }

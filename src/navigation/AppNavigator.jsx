@@ -503,26 +503,6 @@ export function AppNavigator(props) {
           <Stack.Screen
             name="PlayerProfile"
             component={PlayerProfileScreenRoute}
-            options={({ navigation }) => ({
-              headerShown: true,
-              headerTitle: selectedPlayerProfile?.name || 'Player Career Profile',
-              headerTitleStyle: { fontFamily: systemFontBold, fontSize: 16, color: '#FFFFFF' },
-              headerStyle: { backgroundColor: '#071B2C' },
-              headerTintColor: '#FFFFFF',
-              headerShadowVisible: false,
-              headerLeft: () => (
-                <TouchableOpacity
-                  onPress={() => {
-                    if (setCurrentScreen) setCurrentScreen('home');
-                    else if (navigation.canGoBack()) navigation.goBack();
-                  }}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  style={{ marginRight: 12, paddingVertical: 4 }}
-                >
-                  <Ionicons name="arrow-back" size={22} color="#E0F2FE" />
-                </TouchableOpacity>
-              )
-            })}
           />
           <Stack.Screen name="InningBreak" component={InningBreakScreenRoute} />
           <Stack.Screen name="Matches" component={MatchesScreenRoute} />
