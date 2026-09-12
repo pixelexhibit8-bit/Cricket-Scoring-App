@@ -4,6 +4,11 @@ import { getCurrentUser } from '../services/authService.js';
 import { syncMatchToSupabase } from '../services/matchService.js';
 import { showToast } from '../services/toastService.js';
 import {
+  markMatchAsCreatedByMe,
+  getMyCreatedMatchIds,
+  isUserMatchCreator
+} from '../services/matchOwnership.js';
+import {
   DEFAULT_UMPIRE_NAME,
   makeTeamCode,
   makeInning,
@@ -54,6 +59,12 @@ export function useScorerWorkflow({
     const isLive = target && (target.phase === 'playing' || target.phase === 'inningBreak' || (!target.phase && target.innings?.length > 0));
 
     if (isLive) {
+      const myCreatedIds = await getMyCreatedMatchIds();
+      const isCreator = isUserMatchCreator(target, user, myCreatedIds);
+      if (!isCreator) {
+        showToast('Only the match creator has scoring access for this match.', 'warning', 'Scorer Access Restricted');
+        return;
+      }
       if (setActiveMatch) setActiveMatch(target);
       setIsScorerUnlocked(true);
       setScorerPinModalVisible(false);
@@ -127,11 +138,13 @@ export function useScorerWorkflow({
     getCurrentUser().then(user => {
       const creatorId = user?.id || 'local_scorer';
       const creatorName = user?.name || 'Local Scorer';
+      markMatchAsCreatedByMe(matchUUID);
       const newMatch = {
         id: matchUUID,
         supabaseId: matchUUID,
         creatorId,
         creatorName,
+        _isLocalCreator: true,
         matchCode: autoMatchCode,
         matchTitle: `${t1} vs ${t2}`,
         maxOvers: oversNum,

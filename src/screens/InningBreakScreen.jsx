@@ -2,21 +2,24 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { systemFontMedium, themeColors } from '../theme.js';
+import { useMatch } from '../context/MatchContext.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { OpeningPlayersSelector } from '../components/OpeningPlayersSelector.jsx';
 import { formatOvers } from '../utils/cricketUtils.js';
 
-export function InningBreakScreen({
-  activeMatch,
-  getRosterForTeam,
-  inn2Striker,
-  inn2NonStriker,
-  inn2Bowler,
-  handleSelectInning2Opener,
-  setInn2Bowler,
-  renderSetupPlayerPhoto,
-  handleStartInning2
-}) {
+export function InningBreakScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    activeMatch = matchCtx.activeMatch,
+    getRosterForTeam = matchCtx.getRosterForTeam,
+    inn2Striker = matchCtx.inn2Striker,
+    inn2NonStriker = matchCtx.inn2NonStriker,
+    inn2Bowler = matchCtx.inn2Bowler,
+    handleSelectInning2Opener = matchCtx.handleSelectInning2Opener,
+    setInn2Bowler = matchCtx.setInn2Bowler,
+    renderSetupPlayerPhoto = matchCtx.renderSetupPlayerPhoto,
+    handleStartInning2 = matchCtx.handleStartInning2
+  } = props;
   if (!activeMatch || !activeMatch.innings || !activeMatch.innings[0]) return null;
 
   const inn1 = activeMatch.innings[0];

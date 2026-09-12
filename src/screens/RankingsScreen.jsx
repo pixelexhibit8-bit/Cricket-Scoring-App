@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,25 +7,145 @@ import {
   Animated,
   RefreshControl,
   useWindowDimensions,
-  SafeAreaView,
   StyleSheet
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import PagerView from 'react-native-pager-view';
 import { Ionicons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, themeColors } from '../theme.js';
+import { useMatch } from '../context/MatchContext.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
-import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
-
-export function RankingsScreen({
-  navigation,
-  onBack,
-  topBatters = [],
-  topBowlers = [],
-  topAllRounders = [],
-  onSelectPlayer,
-  refreshing = false,
-  onRefresh = null
+const RankingCategoryTable = React.memo(function RankingCategoryTable({
+  list = [],
+  categoryKey = 'batters',
+  onSelectPlayer
 }) {
+  if (!list || list.length === 0) {
+    return (
+      <ScrollView
+        style={styles.pageScrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.emptyCard}>
+          <Ionicons name="trophy-outline" size={36} color="#94A3B8" />
+          <Text style={styles.emptyTitle}>No Rankings Data Found</Text>
+          <Text style={styles.emptySub}>
+            Scores and wickets from completed ground matches will rank players here
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.pageScrollView}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.tableCard}>
+        {/* TABLE HEADER */}
+        <View style={styles.tableHeader}>
+          <Text style={styles.tableColRank}>#</Text>
+          <Text style={styles.tableColPlayer}>PLAYER</Text>
+          <Text style={styles.tableColStats}>
+            {categoryKey === 'batters' ? 'RUNS (SR)' : categoryKey === 'bowlers' ? 'WKTS (ECO)' : 'MVP PTS'}
+          </Text>
+        </View>
+
+        {/* TABLE ROWS */}
+        {list.map((player, idx) => {
+          const isTop3 = idx < 3;
+          const isLast = idx === list.length - 1;
+          const rankNum = player.rank || (idx + 1);
+
+          return (
+            <TouchableOpacity
+              key={player.id || player.name || idx}
+              activeOpacity={0.7}
+              onPress={() => {
+                if (onSelectPlayer) {
+                  onSelectPlayer(player.name, {
+                    role: player.role || (categoryKey === 'batters' ? 'Batter' : categoryKey === 'bowlers' ? 'Bowler' : 'All-Rounder'),
+                    photoUrl: player.photoUrl,
+                    city: player.city
+                  });
+                }
+              }}
+              style={[
+                styles.tableRow,
+                isLast && { borderBottomWidth: 0 }
+              ]}
+            >
+              {/* Rank Badge */}
+              <View style={[
+                styles.rankBadge,
+                rankNum === 1 ? styles.rankBadgeGold : rankNum === 2 ? styles.rankBadgeSilver : rankNum === 3 ? styles.rankBadgeBronze : styles.rankBadgeNormal
+              ]}>
+                <Text style={[
+                  styles.rankNumText,
+                  isTop3 && { color: '#FFFFFF' }
+                ]}>
+                  {rankNum}
+                </Text>
+              </View>
+
+              {/* Avatar */}
+              <PlayerAvatar name={player.name} photoUrl={player.photoUrl} size={40} />
+
+              {/* Info */}
+              <View style={styles.playerInfo}>
+                <Text style={styles.playerName} numberOfLines={1}>
+                  {player.name}
+                </Text>
+                <Text style={styles.playerCity} numberOfLines={1}>
+                  {player.city || 'Sadokan Ground'} • {player.matches || 1} Matches
+                </Text>
+              </View>
+
+              {/* Primary Stat */}
+              <View style={styles.playerStats}>
+                <Text style={styles.primaryStatText}>
+                  {categoryKey === 'batters' ? player.runs : categoryKey === 'bowlers' ? player.wickets : player.pts || player.runs}
+                </Text>
+                <Text style={styles.secondaryStatText}>
+                  {categoryKey === 'batters' ? `SR ${player.sr || '0.0'}` : categoryKey === 'bowlers' ? `Eco ${player.econ || '0.0'}` : `${player.runs || 0}R • ${player.wickets || 0}W`}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+});
+
+export function RankingsScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    navigation = props.navigation,
+    topBatters = props.topBatters || matchCtx.TOP_BATTERS || [],
+    topBowlers = props.topBowlers || matchCtx.TOP_BOWLERS || [],
+    topAllRounders = props.topAllRounders || matchCtx.TOP_ALLROUNDERS || [],
+    onSelectPlayer = props.onSelectPlayer || ((playerName, meta) => {
+      if (matchCtx.setSelectedPlayerProfile) {
+        matchCtx.setSelectedPlayerProfile({ name: playerName, ...meta });
+      }
+      if (matchCtx.setCurrentScreen) {
+        matchCtx.setCurrentScreen('playerProfile');
+      }
+    }),
+    refreshing = props.refreshing !== undefined ? props.refreshing : (matchCtx.refreshing || false),
+    onRefresh = props.onRefresh || matchCtx.handlePullToRefresh || null,
+    onBack = props.onBack || (() => {
+      if (props.navigation && props.navigation.canGoBack()) {
+        props.navigation.goBack();
+      } else if (matchCtx.setCurrentScreen) {
+        matchCtx.setCurrentScreen('home');
+      }
+    })
+  } = props;
   const handleGoBack = () => {
     if (onBack) {
       onBack();
@@ -37,170 +157,100 @@ export function RankingsScreen({
   const { width: screenWidth } = useWindowDimensions();
   const [activeCategory, setActiveCategory] = useState('batters'); // 'batters' | 'bowlers' | 'allrounders'
 
-  const rankingTabs = [
+  const rankingTabs = useMemo(() => [
     { id: 'batters', label: 'Batters' },
     { id: 'bowlers', label: 'Bowlers' },
     { id: 'allrounders', label: 'All-Rounders' }
-  ];
+  ], []);
 
-  const activeTabIndex = Math.max(0, rankingTabs.findIndex(t => t.id === activeCategory));
+  const activeTabIndex = useMemo(() => {
+    return Math.max(0, rankingTabs.findIndex(t => t.id === activeCategory));
+  }, [rankingTabs, activeCategory]);
+
   const pagerPosition = useRef(new Animated.Value(activeTabIndex)).current;
   const pagerRef = useRef(null);
+  const tabsScrollRef = useRef(null);
+  const isTabPressingRef = useRef(false);
 
   const [tabLayouts, setTabLayouts] = useState({});
-  const onTabLayout = (id, e) => {
+  const onTabLayout = useCallback((id, e) => {
     const { x, width } = e.nativeEvent.layout;
     setTabLayouts(prev => {
       const cur = prev[id];
       if (cur && Math.abs(cur.x - x) < 0.5 && Math.abs(cur.width - width) < 0.5) return prev;
       return { ...prev, [id]: { x, width } };
     });
-  };
+  }, []);
 
-  const animatedUnderlineX = pagerPosition.interpolate({
-    inputRange: [0, 1, 2],
-    outputRange: rankingTabs.map((t, index) => tabLayouts[t.id]?.x != null ? tabLayouts[t.id].x : (index * 95 + 16)),
-    extrapolate: 'clamp'
-  });
+  const animatedUnderlineTranslateX = useMemo(() => {
+    return pagerPosition.interpolate({
+      inputRange: [0, 1, 2],
+      outputRange: rankingTabs.map((t, index) => {
+        const layout = tabLayouts[t.id];
+        return layout?.x != null
+          ? layout.x + layout.width / 2 - 50
+          : (index * 95 + 16 + 32.5 - 50);
+      }),
+      extrapolate: 'clamp'
+    });
+  }, [pagerPosition, rankingTabs, tabLayouts]);
 
-  const animatedUnderlineWidth = pagerPosition.interpolate({
-    inputRange: [0, 1, 2],
-    outputRange: rankingTabs.map(t => tabLayouts[t.id]?.width != null ? tabLayouts[t.id].width : 65),
-    extrapolate: 'clamp'
-  });
+  const animatedUnderlineScaleX = useMemo(() => {
+    return pagerPosition.interpolate({
+      inputRange: [0, 1, 2],
+      outputRange: rankingTabs.map(t => {
+        const layout = tabLayouts[t.id];
+        return (layout?.width != null ? layout.width : 65) / 100;
+      }),
+      extrapolate: 'clamp'
+    });
+  }, [pagerPosition, rankingTabs, tabLayouts]);
 
-  const onTabPress = (tabId, index) => {
+  const onTabPress = useCallback((tabId, index) => {
+    if (activeCategory === tabId) return;
+    isTabPressingRef.current = true;
     setActiveCategory(tabId);
     pagerRef.current?.setPage(index);
-  };
 
-  const handlePageSelected = (e) => {
-    const nextIndex = e.nativeEvent.position;
-    if (rankingTabs[nextIndex] && activeCategory !== rankingTabs[nextIndex].id) {
-      setActiveCategory(rankingTabs[nextIndex].id);
+    if (tabLayouts[tabId]?.x != null) {
+      tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[tabId].x - 60), animated: true });
     }
-  };
 
-  const handlePageScroll = (e) => {
+    Animated.spring(pagerPosition, {
+      toValue: index,
+      friction: 8,
+      tension: 65,
+      useNativeDriver: false
+    }).start(() => {
+      isTabPressingRef.current = false;
+    });
+  }, [activeCategory, tabLayouts, pagerPosition]);
+
+  const handlePageSelected = useCallback((e) => {
+    const nextIndex = e.nativeEvent.position;
+    const selectedTab = rankingTabs[nextIndex];
+    if (selectedTab && activeCategory !== selectedTab.id) {
+      setActiveCategory(selectedTab.id);
+      if (tabLayouts[selectedTab.id]?.x != null) {
+        tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[selectedTab.id].x - 60), animated: true });
+      }
+    }
+  }, [rankingTabs, activeCategory, tabLayouts]);
+
+  const handlePageScroll = useCallback((e) => {
+    if (isTabPressingRef.current) return;
     const { position, offset } = e.nativeEvent;
     pagerPosition.setValue(position + offset);
-  };
+  }, [pagerPosition]);
 
   useEffect(() => {
-    const idx = rankingTabs.findIndex(t => t.id === activeCategory);
-    if (idx !== -1) {
-      pagerRef.current?.setPage(idx);
-      pagerPosition.setValue(idx);
+    if (tabLayouts[activeCategory]?.x != null) {
+      tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[activeCategory].x - 60), animated: true });
     }
-  }, [activeCategory]);
-
-  // Helper to render table for a category
-  const renderRankingList = (list, categoryKey) => {
-    if (!list || list.length === 0) {
-      return (
-        <ScrollView
-          style={styles.pageScrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.emptyCard}>
-            <Ionicons name="trophy-outline" size={36} color="#94A3B8" />
-            <Text style={styles.emptyTitle}>No Rankings Data Found</Text>
-            <Text style={styles.emptySub}>
-              Scores and wickets from completed ground matches will rank players here
-            </Text>
-          </View>
-        </ScrollView>
-      );
-    }
-
-    return (
-      <ScrollView
-        style={styles.pageScrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.tableCard}>
-          {/* TABLE HEADER */}
-          <View style={styles.tableHeader}>
-            <Text style={styles.tableColRank}>#</Text>
-            <Text style={styles.tableColPlayer}>PLAYER</Text>
-            <Text style={styles.tableColStats}>
-              {categoryKey === 'batters' ? 'RUNS (SR)' : categoryKey === 'bowlers' ? 'WKTS (ECO)' : 'MVP PTS'}
-            </Text>
-          </View>
-
-          {/* TABLE ROWS */}
-          {list.map((player, idx) => {
-            const isTop3 = idx < 3;
-            const isLast = idx === list.length - 1;
-            const rankNum = player.rank || (idx + 1);
-            const rankBadgeColor = idx === 0 ? '#D97706' : idx === 1 ? '#64748B' : idx === 2 ? '#B45309' : '#94A3B8';
-
-            return (
-              <FadeSlideIn key={player.id || player.name || idx} index={idx}>
-                <ScalePressable
-                  activeScale={0.985}
-                  onPress={() => {
-                    if (onSelectPlayer) {
-                      onSelectPlayer(player.name, {
-                        role: player.role || (categoryKey === 'batters' ? 'Batter' : categoryKey === 'bowlers' ? 'Bowler' : 'All-Rounder'),
-                        photoUrl: player.photoUrl,
-                        city: player.city
-                      });
-                    }
-                  }}
-                  style={[
-                    styles.tableRow,
-                    isLast && { borderBottomWidth: 0 }
-                  ]}
-                >
-                  {/* Rank Badge */}
-                  <View style={[
-                    styles.rankBadge,
-                    rankNum === 1 ? styles.rankBadgeGold : rankNum === 2 ? styles.rankBadgeSilver : rankNum === 3 ? styles.rankBadgeBronze : styles.rankBadgeNormal
-                  ]}>
-                    <Text style={[
-                      styles.rankNumText,
-                      isTop3 && { color: '#FFFFFF' }
-                    ]}>
-                      {rankNum}
-                    </Text>
-                  </View>
-
-                  {/* Avatar */}
-                  <PlayerAvatar name={player.name} photoUrl={player.photoUrl} size={40} />
-
-                  {/* Info */}
-                  <View style={styles.playerInfo}>
-                    <Text style={styles.playerName} numberOfLines={1}>
-                      {player.name}
-                    </Text>
-                    <Text style={styles.playerCity} numberOfLines={1}>
-                      {player.city || 'Sadokan Ground'} • {player.matches || 1} Matches
-                    </Text>
-                  </View>
-
-                  {/* Primary Stat */}
-                  <View style={styles.playerStats}>
-                    <Text style={styles.primaryStatText}>
-                      {categoryKey === 'batters' ? player.runs : categoryKey === 'bowlers' ? player.wickets : player.pts || player.runs}
-                    </Text>
-                    <Text style={styles.secondaryStatText}>
-                      {categoryKey === 'batters' ? `SR ${player.sr || '0.0'}` : categoryKey === 'bowlers' ? `Eco ${player.econ || '0.0'}` : `${player.runs || 0}R • ${player.wickets || 0}W`}
-                    </Text>
-                  </View>
-                </ScalePressable>
-              </FadeSlideIn>
-            );
-          })}
-        </View>
-      </ScrollView>
-    );
-  };
+  }, [activeCategory, tabLayouts]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       {/* ─── TOP HEADER BAR WITH BACK BUTTON ─── */}
       <View style={styles.topHeaderBar}>
         <TouchableOpacity
@@ -218,6 +268,7 @@ export function RankingsScreen({
       {/* ─── CREX STYLE CLEAN TEXT-ONLY UNDERLINE TABS BAR ─── */}
       <View style={styles.tabsBarWrapper}>
         <ScrollView
+          ref={tabsScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsScrollContent}
@@ -242,16 +293,25 @@ export function RankingsScreen({
             );
           })}
 
-          {/* Smooth Finger-Tracking Animated Underline Indicator */}
+          {/* Smooth Finger-Tracking Animated Underline Indicator (GPU Transforms) */}
           <Animated.View
+            pointerEvents="none"
             style={[
-              styles.animatedUnderline,
+              styles.animatedUnderlineOuter,
               {
-                left: animatedUnderlineX,
-                width: animatedUnderlineWidth
+                transform: [{ translateX: animatedUnderlineTranslateX }]
               }
             ]}
-          />
+          >
+            <Animated.View
+              style={[
+                styles.animatedUnderlineInner,
+                {
+                  transform: [{ scaleX: animatedUnderlineScaleX }]
+                }
+              ]}
+            />
+          </Animated.View>
         </ScrollView>
       </View>
 
@@ -265,17 +325,29 @@ export function RankingsScreen({
       >
         {/* 1. BATTERS PAGE */}
         <View key="batters" style={{ flex: 1 }}>
-          {renderRankingList(topBatters, 'batters')}
+          <RankingCategoryTable
+            list={topBatters}
+            categoryKey="batters"
+            onSelectPlayer={onSelectPlayer}
+          />
         </View>
 
         {/* 2. BOWLERS PAGE */}
         <View key="bowlers" style={{ flex: 1 }}>
-          {renderRankingList(topBowlers, 'bowlers')}
+          <RankingCategoryTable
+            list={topBowlers}
+            categoryKey="bowlers"
+            onSelectPlayer={onSelectPlayer}
+          />
         </View>
 
         {/* 3. ALL-ROUNDERS PAGE */}
         <View key="allrounders" style={{ flex: 1 }}>
-          {renderRankingList(topAllRounders, 'allrounders')}
+          <RankingCategoryTable
+            list={topAllRounders}
+            categoryKey="allrounders"
+            onSelectPlayer={onSelectPlayer}
+          />
         </View>
       </PagerView>
     </SafeAreaView>
@@ -331,11 +403,18 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1
   },
   tabButtonTextActive: {
-    color: '#18181B'
+    color: '#18181B',
+    fontFamily: systemFontBold
   },
-  animatedUnderline: {
+  animatedUnderlineOuter: {
     position: 'absolute',
     bottom: 0,
+    left: 0,
+    width: 100,
+    height: 2.5
+  },
+  animatedUnderlineInner: {
+    flex: 1,
     height: 2.5,
     backgroundColor: '#18181B',
     borderRadius: 2

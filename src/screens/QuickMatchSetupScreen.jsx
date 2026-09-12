@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium, typeScale, fontWeights, theme } from '../theme.js';
+import { useMatch } from '../context/MatchContext.jsx';
 import { TeamPickerModal } from '../components/TeamPickerModal.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { PRESET_TEAM_LOGOS, getTeamLogoSource } from '../utils/teamUtils.js';
@@ -45,12 +46,20 @@ const nameFitProps = {
   minimumFontScale: 0.82
 };
 
-export function QuickMatchSetupScreen({
-  savedTeamsList = [],
-  initialSetup = null,
-  onStartMatch,
-  onCancel
-}) {
+export function QuickMatchSetupScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    savedTeamsList = matchCtx.savedTeamsList || [],
+    initialSetup = props.initialSetup !== undefined ? props.initialSetup : (matchCtx.rematchSetup || null),
+    onStartMatch = (setupData) => {
+      if (matchCtx.setRematchSetup) matchCtx.setRematchSetup(null);
+      if (matchCtx.handleStartQuickMatch) matchCtx.handleStartQuickMatch(setupData);
+    },
+    onCancel = () => {
+      if (matchCtx.setRematchSetup) matchCtx.setRematchSetup(null);
+      if (matchCtx.setCurrentScreen) matchCtx.setCurrentScreen('home');
+    }
+  } = props;
   const step1ScrollRef = useRef(null);
   // Wizard Step: 1 = Build Teams & Setup, 2 = Coin Toss, 3 = Select Openers
   const [wizardStep, setWizardStep] = useState(initialSetup?.startAtStep || 1);

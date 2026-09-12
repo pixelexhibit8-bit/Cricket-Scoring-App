@@ -95,10 +95,10 @@ export function useMatchSync({
         }).catch(() => { });
       }
 
-      // Update activeMatch if viewing (read latest screen from ref)
+      // Update activeMatch only if already tracking this specific match
       if (currentScreenRef.current !== 'scorerWizard') {
         setActiveMatch(prev => {
-          if (!prev) return matchData;
+          if (!prev) return null;
           if ((prev.id && prev.id === matchId) || (prev.supabaseId && prev.supabaseId === matchId)) {
             return { ...prev, ...matchData };
           }
@@ -112,7 +112,6 @@ export function useMatchSync({
     fetchLiveMatchesFromSupabase().then(liveList => {
       if (Array.isArray(liveList) && liveList.length > 0) {
         setLiveMatches(liveList);
-        setActiveMatch(prev => prev || liveList[0]);
       }
     }).catch(() => { });
 

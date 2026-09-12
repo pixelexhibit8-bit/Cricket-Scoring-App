@@ -22,6 +22,7 @@ import {
   spacing,
   radius
 } from '../theme.js';
+import { useMatch } from '../context/MatchContext.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { MatchTabBar } from '../components/MatchTabBar.jsx';
 import { RealtimeWinBar } from '../components/RealtimeWinBar.jsx';
@@ -30,6 +31,7 @@ import { WormGraph } from '../components/WormGraph.jsx';
 import { ManhattanGraph } from '../components/ManhattanGraph.jsx';
 import { MatchInfoPanel } from '../components/MatchInfoPanel.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
+import { PlayingXiModal } from '../components/modals/PlayingXiModal.jsx';
 import {
   formatOvers,
   formatScoreTokenForPublic,
@@ -55,17 +57,24 @@ const PUBLIC_LIVE_TABS = [
   { id: 'graphs', label: 'Graphs' }
 ];
 
-export function PublicLiveViewScreen({
-  activeMatch,
-  publicLiveTab = 'live',
-  setPublicLiveTab,
-  liveViewReturnScreen = 'home',
-  setCurrentScreen,
-  handleOpenPlayerProfile,
-  refreshing = false,
-  handlePullToRefresh,
-  setPlayingXiVisible
-}) {
+export function PublicLiveViewScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    activeMatch = matchCtx.activeMatch,
+    publicLiveTab = props.publicLiveTab || matchCtx.publicLiveTab || 'live',
+    setPublicLiveTab = matchCtx.setPublicLiveTab,
+    liveViewReturnScreen = props.liveViewReturnScreen || matchCtx.liveViewReturnScreen || 'home',
+    setCurrentScreen = matchCtx.setCurrentScreen,
+    handleOpenPlayerProfile = (profile) => {
+      if (matchCtx.setSelectedPlayerProfile) matchCtx.setSelectedPlayerProfile(profile);
+      if (matchCtx.setCurrentScreen) matchCtx.setCurrentScreen('playerProfile');
+    },
+    refreshing = matchCtx.refreshing || false,
+    handlePullToRefresh = matchCtx.handlePullToRefresh,
+    playingXiVisible = matchCtx.playingXiVisible || false,
+    setPlayingXiVisible = matchCtx.setPlayingXiVisible,
+    selectedMatch = matchCtx.selectedMatch
+  } = props;
   const { width: screenWidth } = useWindowDimensions();
   const [publicTabLayouts, setPublicTabLayouts] = useState({});
   const [scorecardInningIndex, setScorecardInningIndex] = useState(0);
@@ -723,6 +732,13 @@ export function PublicLiveViewScreen({
           </View>
         ))}
       </PagerView>
+
+      {/* Playing XI Modal */}
+      <PlayingXiModal
+        visible={Boolean(playingXiVisible)}
+        onClose={() => setPlayingXiVisible && setPlayingXiVisible(false)}
+        match={activeMatch || selectedMatch}
+      />
     </View>
   );
 }

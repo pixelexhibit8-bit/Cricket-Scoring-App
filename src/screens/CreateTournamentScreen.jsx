@@ -8,10 +8,10 @@ import {
   Switch,
   Image,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -21,8 +21,32 @@ import {
   systemFontBold
 } from '../theme.js';
 import { saveTournament } from '../services/tournamentService.js';
+import { useMatch } from '../context/MatchContext.jsx';
 
-export function CreateTournamentScreen({ navigation, onBack, onComplete }) {
+export function CreateTournamentScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    navigation = props.navigation,
+    onBack = props.onBack || props.onCancel || (() => {
+      if (props.navigation && props.navigation.canGoBack()) {
+        props.navigation.goBack();
+      } else if (matchCtx.setCurrentScreen) {
+        matchCtx.setCurrentScreen('home');
+      }
+    }),
+    onComplete = props.onComplete || ((tournamentData) => {
+      if (props.navigation) {
+        props.navigation.replace('PublicSeriesView', {
+          seriesData: tournamentData,
+          isOrganiser: true
+        });
+      } else if (props.navigation && props.navigation.canGoBack()) {
+        props.navigation.goBack();
+      } else if (matchCtx.setCurrentScreen) {
+        matchCtx.setCurrentScreen('home');
+      }
+    })
+  } = props;
   // Stepper State (1 | 2 | 3)
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -219,11 +243,16 @@ export function CreateTournamentScreen({ navigation, onBack, onComplete }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
       <View style={styles.container}>
         {/* ── 1. HEADER BAR ── */}
         <View style={styles.headerBar}>
+          {/* Centered Title (absolute positioned so it never gets skewed) */}
+          <View style={styles.headerTitleWrap} pointerEvents="none">
+            <Text style={styles.headerTitle}>Host a Tournament</Text>
+          </View>
+
           <TouchableOpacity
             style={styles.backBtn}
             onPress={handleBack}
@@ -232,10 +261,6 @@ export function CreateTournamentScreen({ navigation, onBack, onComplete }) {
           >
             <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
           </TouchableOpacity>
-
-          <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle}>Host a Tournament</Text>
-          </View>
 
           <View style={styles.stepCounterBadge}>
             <Text style={styles.stepCounterText}>Step {currentStep}/3</Text>
@@ -746,25 +771,35 @@ const styles = StyleSheet.create({
     backgroundColor: themeColors.appBackground
   },
   headerBar: {
-    height: 54,
+    height: 52,
     backgroundColor: themeColors.surface,
     borderBottomWidth: 1,
     borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16
+    paddingHorizontal: 16,
+    position: 'relative'
   },
   backBtn: {
-    padding: 4,
-    marginLeft: -4
+    width: 36,
+    height: 36,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    zIndex: 1
   },
   headerTitleWrap: {
-    alignItems: 'center'
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: systemFontBold,
+    fontFamily: systemFontMedium,
     color: themeColors.textPrimary,
     letterSpacing: -0.2
   },
@@ -779,11 +814,12 @@ const styles = StyleSheet.create({
     borderColor: themeColors.border,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6
+    borderRadius: 6,
+    zIndex: 1
   },
   stepCounterText: {
     fontSize: 11,
-    fontFamily: systemFontBold,
+    fontFamily: systemFontMedium,
     color: themeColors.primary
   },
   stepperWrap: {

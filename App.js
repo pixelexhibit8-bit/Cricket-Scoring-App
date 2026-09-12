@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, StatusBar, LogBox } from 'react-native';
+import { View, StatusBar, LogBox, useColorScheme } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -8,7 +8,7 @@ import { useFonts } from 'expo-font';
 import { AppNavigator } from './src/navigation/AppNavigator.jsx';
 import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
 import { ErrorBoundary } from './src/components/ErrorBoundary.jsx';
-import { MatchProvider, useMatch } from './src/context/MatchContext.jsx';
+import { MatchProvider } from './src/context/MatchContext.jsx';
 import { theme, themeColors } from './src/theme.js';
 
 LogBox.ignoreLogs([
@@ -45,14 +45,14 @@ export default function App() {
 }
 
 function AppShell() {
-  const { currentScreen } = useMatch();
-  const isDarkMatchScreen = currentScreen === 'scorerWizard' || currentScreen === 'finishedView' || currentScreen === 'liveView' || currentScreen === 'playerProfile';
-  const shellBackgroundColor = isDarkMatchScreen ? theme.hero.bg : themeColors.appBackground;
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  const shellBackgroundColor = isDarkMode ? theme.hero.bg : themeColors.appBackground;
 
   return (
-    <View style={[styles.root, { backgroundColor: shellBackgroundColor }]}>
-      <StatusBar barStyle={isDarkMatchScreen ? 'light-content' : 'dark-content'} backgroundColor={shellBackgroundColor} />
-      <SafeAreaView style={[styles.safe, { backgroundColor: shellBackgroundColor }]} edges={['top', 'left', 'right']}>
+    <View style={{ flex: 1, backgroundColor: shellBackgroundColor }}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={shellBackgroundColor} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: shellBackgroundColor }} edges={['top', 'left', 'right']}>
         {/* CENTRAL APP NAVIGATOR & ROUTER */}
         <AppNavigator />
       </SafeAreaView>
@@ -62,8 +62,3 @@ function AppShell() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.hero.bg },
-  safe: { flex: 1, backgroundColor: theme.hero.bg }
-});

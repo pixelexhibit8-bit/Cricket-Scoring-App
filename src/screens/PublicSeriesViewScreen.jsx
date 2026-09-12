@@ -7,7 +7,6 @@ import {
   TextInput,
   Image,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Animated,
   Modal,
@@ -16,6 +15,7 @@ import {
   Share,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import PagerView from 'react-native-pager-view';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
@@ -33,8 +33,25 @@ import {
 } from '../services/tournamentService.js';
 import { navigate } from '../navigation/navigationService.js';
 import { AddTeamHubModal } from '../components/modals/AddTeamHubModal.jsx';
+import { useMatch } from '../context/MatchContext.jsx';
 
-export function PublicSeriesViewScreen({ navigation, onBack, seriesData, isOrganiser = false, isTab = false }) {
+export function PublicSeriesViewScreen(props = {}) {
+  const matchCtx = useMatch();
+  const routeParams = props.route?.params || {};
+  const {
+    navigation = props.navigation,
+    onBack = props.onBack || (() => {
+      if (props.navigation && props.navigation.canGoBack()) {
+        props.navigation.goBack();
+      } else {
+        if (matchCtx.setBottomNavTab) matchCtx.setBottomNavTab('home');
+        if (matchCtx.setCurrentScreen) matchCtx.setCurrentScreen('home');
+      }
+    }),
+    seriesData = props.seriesData || routeParams.seriesData,
+    isOrganiser = props.isOrganiser !== undefined ? props.isOrganiser : (routeParams.isOrganiser ?? Boolean(routeParams.seriesData?.isOrganiser)),
+    isTab = props.isTab || false
+  } = props;
   const { width: windowWidth } = useWindowDimensions();
   const pagerRef = useRef(null);
 
@@ -287,7 +304,7 @@ export function PublicSeriesViewScreen({ navigation, onBack, seriesData, isOrgan
   }, [rawMatches, matchSubFilter]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
       <View style={styles.container}>
 
@@ -1120,7 +1137,7 @@ const styles = StyleSheet.create({
     backgroundColor: themeColors.appBackground
   },
   headerBar: {
-    height: 54,
+    height: 52,
     backgroundColor: themeColors.surface,
     borderBottomWidth: 1,
     borderBottomColor: themeColors.border,
@@ -1130,8 +1147,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16
   },
   backBtn: {
-    padding: 4,
-    marginLeft: -4
+    width: 36,
+    height: 36,
+    alignItems: 'flex-start',
+    justifyContent: 'center'
   },
   headerTitleWrap: {
     flex: 1,
@@ -1139,8 +1158,8 @@ const styles = StyleSheet.create({
     marginRight: 8
   },
   headerTitle: {
-    fontSize: 15,
-    fontFamily: systemFontBold,
+    fontSize: 15.5,
+    fontFamily: systemFontMedium,
     color: themeColors.textPrimary,
     letterSpacing: -0.2
   },
@@ -1161,10 +1180,13 @@ const styles = StyleSheet.create({
   organiserPillText: {
     color: '#FFFFFF',
     fontSize: 10.5,
-    fontFamily: systemFontBold
+    fontFamily: systemFontMedium
   },
   shareHeaderBtn: {
-    padding: 6
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   tabStripContainer: {
     backgroundColor: themeColors.surface,

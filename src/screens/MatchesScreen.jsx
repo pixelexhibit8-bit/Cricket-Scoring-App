@@ -30,6 +30,7 @@ import {
 import { AppHeader } from '../components/navigation/AppHeader.jsx';
 import { AppBottomNav } from '../components/navigation/AppBottomNav.jsx';
 import { navigate } from '../navigation/navigationService.js';
+import { useMatch } from '../context/MatchContext.jsx';
 import { MyProfileScreen } from './MyProfileScreen.jsx';
 import { RankingsScreen } from './RankingsScreen.jsx';
 import { AllSeriesDirectoryScreen } from './AllSeriesDirectoryScreen.jsx';
@@ -43,42 +44,50 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
 import { showToast } from '../services/toastService.js';
 
-export function MatchesScreen({
-  openScorerScreen,
-  searchQuery,
-  setSearchQuery,
-  bottomNavTab = 'matches',
-  setBottomNavTab,
-  matchesSubTab = 'home',
-  setMatchesSubTab,
-  statsCategory,
-  setStatsCategory,
-  refreshing,
-  handlePullToRefresh,
-  setupPlayerNames = [],
-  setSelectedPlayerName,
-  setCurrentScreen,
-  activeMatchVisible,
-  visibleLiveMatches = [],
-  renderActiveMatchListCard,
-  recentFinishedMatches = [],
-  renderFinishedMatchListCard,
-  visibleFinishedMatches = [],
-  activeMatch,
-  setActiveMatch,
-  upcomingMatches = [],
-  onStartUpcomingMatch = null,
-  TOP_BATTERS = [],
-  TOP_BOWLERS = [],
-  TOP_ALLROUNDERS = [],
-  localPlayersList = [],
-  getSetupPlayerProfile,
-  setSelectedPlayerProfile,
-  finishedArchive = [],
-  setSelectedMatch,
-  onJoinMatchByCode,
-  hideBottomNav = false
-}) {
+export function MatchesScreen(props = {}) {
+  const matchCtx = useMatch();
+  const mergedProps = {
+    ...matchCtx,
+    ...props,
+    onJoinMatchByCode: props.onJoinMatchByCode || matchCtx.handleJoinMatchByCode
+  };
+
+  const {
+    openScorerScreen,
+    searchQuery,
+    setSearchQuery,
+    bottomNavTab = 'matches',
+    setBottomNavTab,
+    matchesSubTab = 'home',
+    setMatchesSubTab,
+    statsCategory,
+    setStatsCategory,
+    refreshing,
+    handlePullToRefresh,
+    setupPlayerNames = [],
+    setSelectedPlayerName,
+    setCurrentScreen,
+    activeMatchVisible,
+    visibleLiveMatches = [],
+    renderActiveMatchListCard,
+    recentFinishedMatches = [],
+    renderFinishedMatchListCard,
+    visibleFinishedMatches = [],
+    activeMatch,
+    setActiveMatch,
+    upcomingMatches = [],
+    onStartUpcomingMatch = null,
+    TOP_BATTERS = [],
+    TOP_BOWLERS = [],
+    TOP_ALLROUNDERS = [],
+    localPlayersList = [],
+    getSetupPlayerProfile,
+    setSelectedPlayerProfile,
+    finishedArchive = [],
+    setSelectedMatch,
+    onJoinMatchByCode,
+    hideBottomNav = false
+  } = mergedProps;
   const { width: screenWidth } = useWindowDimensions();
   const homePagerRef = useRef(null);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);

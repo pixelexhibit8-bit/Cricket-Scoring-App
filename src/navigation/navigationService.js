@@ -2,8 +2,20 @@ import { createNavigationContainerRef, CommonActions } from '@react-navigation/n
 
 export const navigationRef = createNavigationContainerRef();
 
+export const TAB_ROUTES = {
+  home: 'Home',
+  Home: 'Home',
+  matches: 'Matches',
+  Matches: 'Matches',
+  series: 'Series',
+  Series: 'Series',
+  mainTabs: 'Home',
+  MainTabs: 'Home'
+};
+
 export const SCREEN_ROUTE_MAP = {
   home: 'Home',
+  mainTabs: 'Home',
   scorerWizard: 'ScorerConsole',
   quickMatchSetup: 'QuickMatchSetup',
   liveView: 'PublicLiveView',
@@ -16,10 +28,12 @@ export const SCREEN_ROUTE_MAP = {
   createTournament: 'CreateTournament',
   tournamentHub: 'TournamentHub',
   publicSeriesView: 'PublicSeriesView',
-  allSeriesDirectory: 'AllSeriesDirectory'
+  allSeriesDirectory: 'AllSeriesDirectory',
+  series: 'Series'
 };
 
 export const ROUTE_SCREEN_MAP = {
+  MainTabs: 'home',
   Home: 'home',
   ScorerConsole: 'scorerWizard',
   QuickMatchSetup: 'quickMatchSetup',
@@ -33,11 +47,18 @@ export const ROUTE_SCREEN_MAP = {
   CreateTournament: 'createTournament',
   TournamentHub: 'tournamentHub',
   PublicSeriesView: 'publicSeriesView',
-  AllSeriesDirectory: 'allSeriesDirectory'
+  AllSeriesDirectory: 'allSeriesDirectory',
+  Series: 'series'
 };
 
 export function navigate(name, params) {
   if (navigationRef.isReady()) {
+    const tabTarget = TAB_ROUTES[name] || TAB_ROUTES[SCREEN_ROUTE_MAP[name]];
+    if (tabTarget) {
+      navigationRef.navigate('MainTabs', { screen: tabTarget, params });
+      return;
+    }
+
     const targetRoute = SCREEN_ROUTE_MAP[name] || name;
     navigationRef.navigate(targetRoute, params);
   }
@@ -54,7 +75,7 @@ export function resetToHome() {
     navigationRef.dispatch(
       CommonActions.reset({
         index: 0,
-        routes: [{ name: 'Home' }]
+        routes: [{ name: 'MainTabs' }]
       })
     );
   }

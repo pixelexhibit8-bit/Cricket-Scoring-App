@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Linking } from 'react-native';
-import { systemFontMedium, systemFontBold, themeColors } from '../theme.js';
+import { systemFontMedium, systemFontBold, themeColors } from '../../theme.js';
 
 export function SocialConnectCard({
   instagramHandle = 'cricflow.live_',
@@ -33,7 +33,7 @@ export function SocialConnectCard({
           activeOpacity={0.75}
         >
           <Image
-            source={require('../../assets/icons/instagram.png')}
+            source={require('../../../assets/icons/instagram.png')}
             style={styles.socialIcon}
             resizeMode="contain"
           />
@@ -47,7 +47,7 @@ export function SocialConnectCard({
           activeOpacity={0.75}
         >
           <Image
-            source={require('../../assets/icons/x_twitter.png')}
+            source={require('../../../assets/icons/x_twitter.png')}
             style={styles.socialIcon}
             resizeMode="contain"
           />
@@ -101,3 +101,5 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1
   }
 });
+
+export default SocialConnectCard;

@@ -22,6 +22,7 @@ import {
   spacing,
   radius
 } from '../theme.js';
+import { useMatch } from '../context/MatchContext.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { MatchTabBar } from '../components/MatchTabBar.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
@@ -30,6 +31,8 @@ import { WormGraph } from '../components/WormGraph.jsx';
 import { ManhattanGraph } from '../components/ManhattanGraph.jsx';
 import { MatchInfoPanel } from '../components/MatchInfoPanel.jsx';
 import { FinishedMatchSummary } from '../components/FinishedMatchSummary.jsx';
+import { PlayingXiModal } from '../components/modals/PlayingXiModal.jsx';
+import { MatchCompleteModal } from '../components/modals/MatchCompleteModal.jsx';
 import {
   formatOvers,
   formatScoreTokenForPublic,
@@ -44,6 +47,7 @@ import {
   getInningBowlingRows,
   getUnplayedBatters,
   buildFinishedLiveSnapshot,
+  buildFinishedMatch,
   getDisplayOverHistory,
   getScorePartsFromText
 } from '../utils/cricketUtils.js';
@@ -144,19 +148,51 @@ const MatchResultHero = ({ teamOne, teamTwo, winnerTeamName, resultText }) => (
   </View>
 );
 
-export function FinishedMatchViewScreen({
-  match,
-  finishedTab: externalFinishedTab,
-  setFinishedTab: externalSetFinishedTab,
-  finishedInningIndex: externalFinishedInningIndex,
-  setFinishedInningIndex: externalSetFinishedInningIndex,
-  setCurrentScreen,
-  handleOpenPlayerProfile,
-  handleRematch,
-  refreshing = false,
-  handlePullToRefresh,
-  setPlayingXiVisible
-}) {
+export function FinishedMatchViewScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    selectedMatch,
+    activeMatch,
+    finishedMatches = [],
+    handleRematch: ctxHandleRematch,
+    refreshing: ctxRefreshing,
+    handlePullToRefresh: ctxHandlePullToRefresh,
+    setPlayingXiVisible: ctxSetPlayingXiVisible,
+    setCurrentScreen: ctxSetCurrentScreen,
+    setSelectedPlayerProfile: ctxSetSelectedPlayerProfile
+  } = matchCtx;
+
+  const defaultMatch =
+    (selectedMatch?.id ? selectedMatch : null) ||
+    (activeMatch && (activeMatch.phase === 'result' || activeMatch.resultText)
+      ? buildFinishedMatch(activeMatch)
+      : null) ||
+    selectedMatch ||
+    finishedMatches[0];
+
+  const {
+    match = defaultMatch,
+    finishedTab: externalFinishedTab,
+    setFinishedTab: externalSetFinishedTab,
+    finishedInningIndex: externalFinishedInningIndex,
+    setFinishedInningIndex: externalSetFinishedInningIndex,
+    setCurrentScreen = ctxSetCurrentScreen,
+    handleOpenPlayerProfile = (profile) => {
+      if (ctxSetSelectedPlayerProfile) ctxSetSelectedPlayerProfile(profile);
+      if (ctxSetCurrentScreen) ctxSetCurrentScreen('playerProfile');
+    },
+    handleRematch = ctxHandleRematch,
+    refreshing = ctxRefreshing || false,
+    handlePullToRefresh = ctxHandlePullToRefresh,
+    setPlayingXiVisible = ctxSetPlayingXiVisible,
+    playingXiVisible = matchCtx.playingXiVisible || false,
+    matchCompleteModalVisible = matchCtx.matchCompleteModalVisible || false,
+    setMatchCompleteModalVisible = matchCtx.setMatchCompleteModalVisible,
+    setSelectedMatch = matchCtx.setSelectedMatch,
+    setBottomNavTab = matchCtx.setBottomNavTab,
+    setMatchesSubTab = matchCtx.setMatchesSubTab,
+    handleStartNewMatchSetup = matchCtx.handleStartNewMatchSetup
+  } = props;
   const { width: screenWidth } = useWindowDimensions();
   const [internalFinishedTab, setInternalFinishedTab] = useState('summary');
   const [internalInningIndex, setInternalInningIndex] = useState(0);
@@ -573,6 +609,35 @@ export function FinishedMatchViewScreen({
           </View>
         ))}
       </PagerView>
+
+      {/* Playing XI Modal */}
+      <PlayingXiModal
+        visible={Boolean(playingXiVisible)}
+        onClose={() => setPlayingXiVisible && setPlayingXiVisible(false)}
+        match={activeMatch || selectedMatch || f}
+      />
+
+      {/* Match Complete Modal */}
+      <MatchCompleteModal
+        visible={Boolean(matchCompleteModalVisible)}
+        match={activeMatch || selectedMatch || f}
+        onClose={() => setMatchCompleteModalVisible && setMatchCompleteModalVisible(false)}
+        onViewScorecard={() => {
+          if (setMatchCompleteModalVisible) setMatchCompleteModalVisible(false);
+          if (setSelectedMatch && activeMatch) setSelectedMatch(buildFinishedMatch(activeMatch));
+          if (setBottomNavTab) setBottomNavTab('matches');
+          if (setMatchesSubTab) setMatchesSubTab('finished');
+          if (setCurrentScreen) setCurrentScreen('finishedView');
+        }}
+        onNewMatch={() => {
+          if (setMatchCompleteModalVisible) setMatchCompleteModalVisible(false);
+          if (handleStartNewMatchSetup) handleStartNewMatchSetup();
+        }}
+        onStartRematch={() => {
+          if (setMatchCompleteModalVisible) setMatchCompleteModalVisible(false);
+          if (handleRematch) handleRematch();
+        }}
+      />
     </View>
   );
 }

@@ -1,20 +1,16 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Image,
   Alert,
-  Modal,
   ActivityIndicator,
   Linking,
   AppState,
-  RefreshControl,
-  Animated,
-  useWindowDimensions
+  Animated
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PagerView from 'react-native-pager-view';
@@ -24,52 +20,66 @@ import {
   systemFont,
   systemFontMedium,
   systemFontBold,
-  themeColors,
-  typeScale,
-  fontWeights
+  themeColors
 } from '../theme.js';
-import { capitalizeWords } from '../utils/textUtils.js';
+import { useMatch } from '../context/MatchContext.jsx';
 import {
   getCurrentUser,
   getPlayerProfile,
   savePlayerProfile,
   signInWithGoogleOAuth,
-  signInWithGoogle,
-  signInWithGoogleMock,
   signOutUser,
-  sendPhoneOtp,
-  verifyPhoneOtp,
   calculatePlayerCareerStats,
   isPlayerNameMatch
 } from '../services/authService.js';
 import { supabase } from '../services/supabaseClient.js';
 import { registerPlayerPhoto } from '../services/playerPhotoStore.js';
-import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
-import { DobPickerModal } from '../components/modals/DobPickerModal.jsx';
-import { LocationPickerModal } from '../components/modals/LocationPickerModal.jsx';
 import { showToast } from '../services/toastService.js';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
 import { fetchFinishedMatchesFromSupabase } from '../services/matchService.js';
-import { formatOvers } from '../utils/cricketUtils.js';
+import { ScorerHubCard } from '../components/home/ScorerHubCard.jsx';
+import {
+  ProfileOverviewTab,
+  ProfileBattingTab,
+  ProfileBowlingTab,
+  ProfileMatchesTab,
+  ProfileHeroCard,
+  ProfileEditModal,
+  PhotoPreviewModal,
+  OptionsMenuModal,
+  JoinMatchModal,
+  ShareAccessModal,
+  PhotoSourcePickerModal
+} from '../components/profile/index.js';
 
-export function MyProfileScreen({
-  finishedMatches = [],
-  activeMatch = null,
-  onSelectMatch,
-  onStartQuickMatch = null,
-  onJoinMatchByCode = null,
-  targetPlayer = null,
-  onBack = null,
-  readOnly = false
-}) {
+export function MyProfileScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    finishedMatches = props.finishedMatches || matchCtx.finishedArchive || [],
+    activeMatch = props.activeMatch !== undefined ? props.activeMatch : matchCtx.activeMatch,
+    onSelectMatch = props.onSelectMatch || ((m) => {
+      if (matchCtx.setSelectedMatch) matchCtx.setSelectedMatch(m);
+      if (matchCtx.setCurrentScreen) matchCtx.setCurrentScreen('finishedView');
+    }),
+    onStartQuickMatch = props.onStartQuickMatch || matchCtx.openScorerScreen,
+    onJoinMatchByCode = props.onJoinMatchByCode || matchCtx.handleJoinMatchByCode,
+    targetPlayer = props.targetPlayer !== undefined ? props.targetPlayer : matchCtx.selectedPlayerProfile,
+    onBack = props.onBack || (() => {
+      if (props.navigation && props.navigation.canGoBack()) {
+        props.navigation.goBack();
+      } else if (matchCtx.setCurrentScreen) {
+        matchCtx.setCurrentScreen('home');
+      }
+    }),
+    readOnly = props.readOnly || false
+  } = props;
+
   const targetPlayerName = typeof targetPlayer === 'string'
     ? targetPlayer
     : (targetPlayer?.name || targetPlayer?.fullName || targetPlayer?.playerName || '');
   const isPublicView = Boolean(targetPlayer) || readOnly;
+
   const [currentUser, setCurrentUser] = useState(null);
-  const [joinModalVisible, setJoinModalVisible] = useState(false);
-  const [shareModalVisible, setShareModalVisible] = useState(false);
-  const [inputMatchCode, setInputMatchCode] = useState('');
   const [profile, setProfile] = useState(targetPlayer ? {
     name: targetPlayerName || 'Cricket Player',
     role: targetPlayer?.role || 'All-Rounder',
@@ -84,7 +94,132 @@ export function MyProfileScreen({
   const [matchesList, setMatchesList] = useState(Array.isArray(finishedMatches) ? finishedMatches : []);
   const [profileTab, setProfileTab] = useState('overview');
 
-  const loadMatchesForCareer = async () => {
+  // Modals visibility state
+  const [isEditing, setIsEditing] = useState(false);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [optionsMenuVisible, setOptionsMenuVisible] = useState(false);
+  const [photoSourcePickerVisible, setPhotoSourcePickerVisible] = useState(false);
+
+  // Quick Google Sign-In Input
+  const [quickPlayerName, setQuickPlayerName] = useState('');
+  const quickPlayerNameRef = useRef(quickPlayerName);
+  quickPlayerNameRef.current = quickPlayerName;
+
+  const playerName = targetPlayerName || profile?.name || currentUser?.name || 'Local Player';
+
+  // 1. MEMOIZE MATCHES POOL & CAREER STATS CALCULATION (Critical Performance Hook)
+  const careerMatchesPool = useMemo(() => {
+    return matchesList.length > 0 ? matchesList : (Array.isArray(finishedMatches) ? finishedMatches : []);
+  }, [matchesList, finishedMatches]);
+
+  const stats = useMemo(() => {
+    return calculatePlayerCareerStats(playerName, careerMatchesPool);
+  }, [playerName, careerMatchesPool]);
+
+  // 2. MEMOIZE TABS CONFIGURATION
+  const profileTabs = useMemo(() => [
+    { id: 'overview', label: 'Overview' },
+    { id: 'batting', label: 'Batting' },
+    { id: 'bowling', label: 'Bowling' },
+    { id: 'matches', label: `Matches (${stats.participatedMatches?.length || 0})` },
+    ...(!isPublicView ? [{ id: 'scorer', label: 'Scorer Hub' }] : [])
+  ], [stats.participatedMatches?.length, isPublicView]);
+
+  const activeTabIndex = useMemo(() => {
+    const idx = profileTabs.findIndex(t => t.id === profileTab);
+    return Math.max(0, idx);
+  }, [profileTabs, profileTab]);
+
+  const pagerPosition = useRef(new Animated.Value(activeTabIndex)).current;
+  const pagerRef = useRef(null);
+  const tabsScrollRef = useRef(null);
+  const [tabLayouts, setTabLayouts] = useState({});
+
+  // 3. MEMOIZE TAB LAYOUT & ANIMATION NODES (GPU TRANSFORMS)
+  const isTabPressingRef = useRef(false);
+
+  const onTabLayout = useCallback((id, e) => {
+    const { x, width } = e.nativeEvent.layout;
+    setTabLayouts(prev => {
+      const cur = prev[id];
+      if (cur && Math.abs(cur.x - x) < 0.5 && Math.abs(cur.width - width) < 0.5) return prev;
+      return { ...prev, [id]: { x, width } };
+    });
+  }, []);
+
+  const animatedUnderlineTranslateX = useMemo(() => {
+    return pagerPosition.interpolate({
+      inputRange: profileTabs.map((_, i) => i),
+      outputRange: profileTabs.map((t, index) => {
+        const layout = tabLayouts[t.id];
+        return layout?.x != null
+          ? layout.x + layout.width / 2 - 50
+          : (index * 85 + 16 + 30 - 50);
+      }),
+      extrapolate: 'clamp'
+    });
+  }, [pagerPosition, profileTabs, tabLayouts]);
+
+  const animatedUnderlineScaleX = useMemo(() => {
+    return pagerPosition.interpolate({
+      inputRange: profileTabs.map((_, i) => i),
+      outputRange: profileTabs.map(t => {
+        const layout = tabLayouts[t.id];
+        return (layout?.width != null ? layout.width : 60) / 100;
+      }),
+      extrapolate: 'clamp'
+    });
+  }, [pagerPosition, profileTabs, tabLayouts]);
+
+  // 4. MEMOIZE EVENT HANDLERS & CALLBACKS (FLUID SWIPE + ZERO-LAG SPRING PRESS)
+  const onTabPress = useCallback((tabId, index) => {
+    if (profileTab === tabId) return;
+    isTabPressingRef.current = true;
+    setProfileTab(tabId);
+    pagerRef.current?.setPage(index);
+
+    if (tabLayouts[tabId]?.x != null) {
+      tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[tabId].x - 60), animated: true });
+    }
+
+    Animated.spring(pagerPosition, {
+      toValue: index,
+      friction: 8,
+      tension: 65,
+      useNativeDriver: false
+    }).start(() => {
+      isTabPressingRef.current = false;
+    });
+  }, [profileTab, tabLayouts, pagerPosition]);
+
+  const handlePageSelected = useCallback((e) => {
+    isTabPressingRef.current = false;
+    const pos = e.nativeEvent.position;
+    const selectedTab = profileTabs[pos];
+    if (selectedTab && selectedTab.id !== profileTab) {
+      setProfileTab(selectedTab.id);
+      if (tabLayouts[selectedTab.id]?.x != null) {
+        tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[selectedTab.id].x - 60), animated: true });
+      }
+    }
+  }, [profileTabs, profileTab, tabLayouts]);
+
+  const handlePageScroll = useCallback((e) => {
+    if (isTabPressingRef.current) return;
+    const { position, offset } = e.nativeEvent;
+    pagerPosition.setValue(position + offset);
+  }, [pagerPosition]);
+
+  useEffect(() => {
+    if (tabLayouts[profileTab]?.x != null) {
+      tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[profileTab].x - 60), animated: true });
+    }
+  }, [profileTab, tabLayouts]);
+
+  // 5. ASYNC DATA LOADERS (MEMOIZED)
+  const loadMatchesForCareer = useCallback(async () => {
     try {
       let combined = Array.isArray(finishedMatches) ? [...finishedMatches] : [];
       try {
@@ -121,110 +256,12 @@ export function MyProfileScreen({
     } catch (err) {
       console.warn('Failed to load matches for career:', err);
     }
-  };
+  }, [finishedMatches]);
 
-  useEffect(() => {
-    loadMatchesForCareer();
-  }, [finishedMatches, targetPlayer]);
-
-  // Edit Modal State
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editRole, setEditRole] = useState('All-Rounder');
-  const [editBatting, setEditBatting] = useState('Right Hand Bat');
-  const [editBowling, setEditBowling] = useState('Right Arm Medium');
-  const [editCity, setEditCity] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editJerseyNumber, setEditJerseyNumber] = useState('');
-  const [editDob, setEditDob] = useState('');
-  const [dobPickerVisible, setDobPickerVisible] = useState(false);
-  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
-  const [photoModalVisible, setPhotoModalVisible] = useState(false);
-  const [optionsMenuVisible, setOptionsMenuVisible] = useState(false);
-
-  // Layout & Animated Tabs Hooks (Must be top level before any early return)
-  const { width: screenWidth } = useWindowDimensions();
-  const playerName = targetPlayerName || profile?.name || currentUser?.name || 'Local Player';
-  const stats = calculatePlayerCareerStats(playerName, matchesList.length > 0 ? matchesList : finishedMatches);
-
-  const profileTabs = useMemo(() => [
-    { id: 'overview', label: 'Overview' },
-    { id: 'batting', label: 'Batting' },
-    { id: 'bowling', label: 'Bowling' },
-    { id: 'matches', label: `Matches (${stats.participatedMatches.length})` },
-    ...(!isPublicView ? [{ id: 'scorer', label: 'Scorer Hub' }] : [])
-  ], [stats.participatedMatches.length, isPublicView]);
-
-  const activeTabIndex = Math.max(0, profileTabs.findIndex(t => t.id === profileTab));
-  const pagerPosition = useRef(new Animated.Value(activeTabIndex)).current;
-  const pagerRef = useRef(null);
-  const tabsScrollRef = useRef(null);
-
-  const [tabLayouts, setTabLayouts] = useState({});
-  const onTabLayout = (id, e) => {
-    const { x, width } = e.nativeEvent.layout;
-    setTabLayouts(prev => {
-      const cur = prev[id];
-      if (cur && Math.abs(cur.x - x) < 0.5 && Math.abs(cur.width - width) < 0.5) return prev;
-      return { ...prev, [id]: { x, width } };
-    });
-  };
-
-  const animatedUnderlineX = pagerPosition.interpolate({
-    inputRange: profileTabs.map((_, i) => i),
-    outputRange: profileTabs.map((t, index) => tabLayouts[t.id]?.x != null ? tabLayouts[t.id].x : (index * 85 + 16)),
-    extrapolate: 'clamp'
-  });
-
-  const animatedUnderlineWidth = pagerPosition.interpolate({
-    inputRange: profileTabs.map((_, i) => i),
-    outputRange: profileTabs.map(t => tabLayouts[t.id]?.width != null ? tabLayouts[t.id].width : 60),
-    extrapolate: 'clamp'
-  });
-
-  const onTabPress = (tabId, index) => {
-    setProfileTab(tabId);
-    pagerRef.current?.setPage(index);
-    if (tabLayouts[tabId]?.x != null) {
-      tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[tabId].x - 60), animated: true });
-    }
-  };
-
-  const handlePageSelected = (e) => {
-    const pos = e.nativeEvent.position;
-    const selectedTab = profileTabs[pos];
-    if (selectedTab && selectedTab.id !== profileTab) {
-      setProfileTab(selectedTab.id);
-      if (tabLayouts[selectedTab.id]?.x != null) {
-        tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[selectedTab.id].x - 60), animated: true });
-      }
-    }
-  };
-
-  const handlePageScroll = (e) => {
-    const { position, offset } = e.nativeEvent;
-    pagerPosition.setValue(position + offset);
-  };
-
-  useEffect(() => {
-    const idx = profileTabs.findIndex(t => t.id === profileTab);
-    if (idx !== -1) {
-      pagerRef.current?.setPage(idx);
-      pagerPosition.setValue(idx);
-      if (tabLayouts[profileTab]?.x != null) {
-        tabsScrollRef.current?.scrollTo({ x: Math.max(0, tabLayouts[profileTab].x - 60), animated: true });
-      }
-    }
-  }, [profileTab]);
-
-  // Quick Google Sign-In Input
-  const [quickPlayerName, setQuickPlayerName] = useState('');
-  const [quickPhone, setQuickPhone] = useState('');
-
-  const handleAuthenticatedUser = async (authUser) => {
+  const handleAuthenticatedUser = useCallback(async (authUser) => {
     if (!authUser) return;
     try {
-      const name = authUser.user_metadata?.full_name || authUser.user_metadata?.name || quickPlayerName.trim() || 'Cricket Player';
+      const name = authUser.user_metadata?.full_name || authUser.user_metadata?.name || quickPlayerNameRef.current.trim() || 'Cricket Player';
       const email = authUser.email || '';
       const photoUrl = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null;
 
@@ -248,21 +285,12 @@ export function MyProfileScreen({
           name: userObj.name,
           auth_user_id: userObj.id,
           photoUrl: userObj.photoUrl,
-          phone: quickPhone.trim(),
-          isProfileComplete: Boolean(quickPhone.trim())
+          phone: '',
+          isProfileComplete: false
         });
       }
 
       setProfile(p);
-      setEditName(p.name || userObj.name);
-      setEditRole(p.role || 'All-Rounder');
-      setEditBatting(p.battingStyle || 'Right Hand Bat');
-      setEditBowling(p.bowlingStyle || 'Right Arm Medium');
-      setEditCity(p.city || '');
-      setEditPhone(p.phone || quickPhone.trim() || '');
-      setEditJerseyNumber(p.jerseyNumber || '');
-
-      // Only open Edit drawer for 1st-time user if mobile number / profile is missing
       if (isNewAccount && !p.phone) {
         setIsEditing(true);
       } else {
@@ -271,9 +299,9 @@ export function MyProfileScreen({
     } catch (err) {
       console.warn('Error handling authenticated user:', err);
     }
-  };
+  }, []);
 
-  const checkSupabaseAuthSession = async () => {
+  const checkSupabaseAuthSession = useCallback(async () => {
     if (supabase && supabase.auth) {
       try {
         const { data } = await supabase.auth.getSession();
@@ -284,63 +312,9 @@ export function MyProfileScreen({
         console.warn('Session check error:', err);
       }
     }
-  };
+  }, [handleAuthenticatedUser]);
 
-  useEffect(() => {
-    loadUserSession();
-    loadMatchesForCareer();
-
-    // 1. Listen for Supabase OAuth state change
-    let authListener;
-    if (supabase && supabase.auth) {
-      const res = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (session?.user) {
-          await handleAuthenticatedUser(session.user);
-        }
-      });
-      authListener = res?.data?.subscription;
-    }
-
-    // 2. Listen for app foregrounding (when user returns from browser)
-    const appStateSub = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        checkSupabaseAuthSession();
-      }
-    });
-
-    // 3. Listen for deep link URL
-    const linkSub = Linking.addEventListener('url', async (event) => {
-      if (event?.url && event.url.includes('access_token=') && supabase) {
-        try {
-          const hash = event.url.split('#')[1];
-          if (hash) {
-            const params = new URLSearchParams(hash);
-            const accessToken = params.get('access_token');
-            const refreshToken = params.get('refresh_token');
-            if (accessToken) {
-              const { data } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken || ''
-              });
-              if (data?.user) {
-                await handleAuthenticatedUser(data.user);
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Deep link parse error:', e);
-        }
-      }
-    });
-
-    return () => {
-      authListener?.unsubscribe?.();
-      appStateSub.remove();
-      linkSub.remove();
-    };
-  }, [targetPlayer, quickPlayerName, quickPhone]);
-
-  const loadUserSession = async () => {
+  const loadUserSession = useCallback(async () => {
     if (targetPlayer) {
       const pName = typeof targetPlayer === 'string'
         ? targetPlayer
@@ -348,7 +322,6 @@ export function MyProfileScreen({
 
       const directPhoto = targetPlayer.photoUrl || targetPlayer.avatar || targetPlayer.photo_url || '';
 
-      // Fetch rich profile from Supabase local_players table
       try {
         let dbP = null;
         if (supabase) {
@@ -361,7 +334,6 @@ export function MyProfileScreen({
           if (data) {
             dbP = data;
           } else {
-            // Fallback smart name match
             const { data: allPlayers } = await supabase
               .from('local_players')
               .select('*')
@@ -409,6 +381,7 @@ export function MyProfileScreen({
       setLoading(false);
       return;
     }
+
     setLoading(true);
     try {
       const user = await getCurrentUser();
@@ -416,18 +389,8 @@ export function MyProfileScreen({
       if (user) {
         const p = await getPlayerProfile(user.id);
         setProfile(p);
-        if (p) {
-          setEditName(p.name || user.name || '');
-          setEditRole(p.role || 'All-Rounder');
-          setEditBatting(p.battingStyle || 'Right Hand Bat');
-          setEditBowling(p.bowlingStyle || 'Right Arm Medium');
-          setEditCity(p.city || '');
-          setEditPhone(p.phone || '');
-          setEditJerseyNumber(p.jerseyNumber || p.jersey_number || '');
-          setEditDob(p.dob || '');
-          if (p.name && p.photoUrl) {
-            registerPlayerPhoto(p.name, p.photoUrl);
-          }
+        if (p?.name && p?.photoUrl) {
+          registerPlayerPhoto(p.name, p.photoUrl);
         }
       }
     } catch (e) {
@@ -435,11 +398,61 @@ export function MyProfileScreen({
     } finally {
       setLoading(false);
     }
-  };
+  }, [targetPlayer]);
 
-  const [refreshing, setRefreshing] = useState(false);
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  // Auth Listener & App Lifecycle Effect (Fixed keystroke re-render bug)
+  useEffect(() => {
+    loadUserSession();
+    loadMatchesForCareer();
+
+    let authListener;
+    if (supabase && supabase.auth) {
+      const res = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user) {
+          await handleAuthenticatedUser(session.user);
+        }
+      });
+      authListener = res?.data?.subscription;
+    }
+
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        checkSupabaseAuthSession();
+      }
+    });
+
+    const linkSub = Linking.addEventListener('url', async (event) => {
+      if (event?.url && event.url.includes('access_token=') && supabase) {
+        try {
+          const hash = event.url.split('#')[1];
+          if (hash) {
+            const params = new URLSearchParams(hash);
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+            if (accessToken) {
+              const { data } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken || ''
+              });
+              if (data?.user) {
+                await handleAuthenticatedUser(data.user);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Deep link parse error:', e);
+        }
+      }
+    });
+
+    return () => {
+      authListener?.unsubscribe?.();
+      appStateSub.remove();
+      linkSub.remove();
+    };
+  }, [targetPlayer, loadUserSession, loadMatchesForCareer, handleAuthenticatedUser, checkSupabaseAuthSession]);
+
+  const handleRefresh = useCallback(async () => {
     try {
       await Promise.all([
         loadMatchesForCareer(),
@@ -447,14 +460,11 @@ export function MyProfileScreen({
       ]);
     } catch (e) {
       console.warn('Refresh error:', e);
-    } finally {
-      setRefreshing(false);
     }
-  };
+  }, [loadMatchesForCareer, loadUserSession]);
 
-  const [photoSourcePickerVisible, setPhotoSourcePickerVisible] = useState(false);
-
-  const processAndUploadPhoto = async (asset) => {
+  // Photo Upload Handlers
+  const processAndUploadPhoto = useCallback(async (asset) => {
     if (!asset) return;
     try {
       const dataUri = asset.base64
@@ -478,9 +488,9 @@ export function MyProfileScreen({
       console.warn('Image pick error:', e);
       showToast('Could not update photo', 'error');
     }
-  };
+  }, [profile?.name, currentUser?.name]);
 
-  const handlePickFromCamera = async () => {
+  const handlePickFromCamera = useCallback(async () => {
     setPhotoSourcePickerVisible(false);
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -503,9 +513,9 @@ export function MyProfileScreen({
       console.warn('Camera error:', e);
       showToast('Could not open camera', 'error');
     }
-  };
+  }, [processAndUploadPhoto]);
 
-  const handlePickFromGallery = async () => {
+  const handlePickFromGallery = useCallback(async () => {
     setPhotoSourcePickerVisible(false);
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -529,84 +539,15 @@ export function MyProfileScreen({
       console.warn('Gallery error:', e);
       showToast('Could not open gallery', 'error');
     }
-  };
+  }, [processAndUploadPhoto]);
 
-  const handlePickImage = () => {
+  const handlePickImage = useCallback(() => {
     setPhotoSourcePickerVisible(true);
-  };
+  }, []);
 
-  // Phone Auth State
-  const [authPhone, setAuthPhone] = useState('');
-  const [authOtp, setAuthOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
-
-  useEffect(() => {
-    let interval;
-    if (resendTimer > 0) {
-      interval = setInterval(() => setResendTimer(prev => prev - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [resendTimer]);
-
-  const handleSendOtp = async () => {
-    const cleanPhone = authPhone.trim().replace(/\D/g, '');
-    if (!cleanPhone || cleanPhone.length < 10) {
-      showToast('Please enter a valid 10-digit mobile number', 'error');
-      return;
-    }
-    setLoading(true);
-    try {
-      await sendPhoneOtp(cleanPhone);
-      setOtpSent(true);
-      setResendTimer(30);
-      setAuthOtp('');
-      showToast(`OTP sent to +91 ${cleanPhone.slice(-10)}`, 'success');
-    } catch (e) {
-      showToast(e?.message || 'Could not send OTP. Please try again.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!authOtp || authOtp.trim().length < 4) {
-      showToast('Please enter the verification code', 'error');
-      return;
-    }
-    setLoading(true);
-    try {
-      const cleanPhone = authPhone.trim().replace(/\D/g, '');
-      const { user, profile: verifiedProfile, isExistingPlayer } = await verifyPhoneOtp(cleanPhone, authOtp.trim());
-
-      setCurrentUser(user);
-      setProfile(verifiedProfile);
-      setEditName(verifiedProfile.name || '');
-      setEditPhone(cleanPhone);
-      setEditRole(verifiedProfile.role || 'All-Rounder');
-      setEditBatting(verifiedProfile.battingStyle || 'Right Hand Bat');
-      setEditBowling(verifiedProfile.bowlingStyle || 'Right Arm Medium');
-      setEditCity(verifiedProfile.city || '');
-      setEditJerseyNumber(verifiedProfile.jerseyNumber || '');
-
-      if (isExistingPlayer && verifiedProfile.name) {
-        showToast(`Welcome back, ${verifiedProfile.name}! Career stats linked!`, 'success');
-      } else {
-        showToast('Mobile verified successfully! Please complete your player profile.', 'success');
-        setIsEditing(true);
-      }
-    } catch (e) {
-      showToast(e?.message || 'Invalid verification code. Please try again', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = useCallback(async () => {
     try {
       setLoading(true);
-
-      // 1. Try real Google OAuth 2.0 Browser Authentication
       try {
         const oAuthData = await signInWithGoogleOAuth();
         if (oAuthData?.url) {
@@ -618,10 +559,9 @@ export function MyProfileScreen({
         console.warn('OAuth URL launch fallback:', oauthErr);
       }
 
-      // 2. Direct Fallback if in Expo Go / standalone simulation
       const fallbackUser = {
         id: `google_${Date.now()}`,
-        name: quickPlayerName.trim() || 'Google Cricketer',
+        name: quickPlayerNameRef.current.trim() || 'Google Cricketer',
         email: 'cricketer@gmail.com',
         photoUrl: null,
         provider: 'google',
@@ -639,9 +579,9 @@ export function MyProfileScreen({
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleAuthenticatedUser]);
 
-  const handleInstantLogin = async (customName = 'Basti Ram Suthar') => {
+  const handleInstantLogin = useCallback(async (customName = 'Basti Ram Suthar') => {
     try {
       setLoading(true);
       const instantUser = {
@@ -665,32 +605,12 @@ export function MyProfileScreen({
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleAuthenticatedUser]);
 
-  const handleSaveProfile = async () => {
-    if (!editName.trim()) {
-      showToast('Please enter your player full name', 'error');
-      return;
-    }
-    const cleanPhone = editPhone.trim().replace(/\D/g, '');
-    if (!cleanPhone || cleanPhone.length < 10) {
-      showToast('Mobile number is mandatory (10 digits)', 'error');
-      return;
-    }
+  const handleSaveProfile = useCallback(async (profileData) => {
     setLoading(true);
     try {
-      const updated = await savePlayerProfile({
-        name: editName.trim(),
-        role: editRole,
-        battingStyle: editBatting,
-        bowlingStyle: editBowling,
-        city: editCity.trim() || 'Local Ground',
-        jerseyNumber: editJerseyNumber.trim(),
-        phone: cleanPhone,
-        dob: editDob || profile?.dob || '',
-        photoUrl: profile?.photoUrl || null,
-        isProfileComplete: true
-      });
+      const updated = await savePlayerProfile(profileData);
       setProfile(updated);
       setIsEditing(false);
       showToast('Profile updated successfully!', 'success');
@@ -699,9 +619,9 @@ export function MyProfileScreen({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(() => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out of your cricketer account?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -711,13 +631,10 @@ export function MyProfileScreen({
           await signOutUser();
           setCurrentUser(null);
           setProfile(null);
-          setOtpSent(false);
-          setAuthPhone('');
-          setAuthOtp('');
         }
       }
     ]);
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -728,20 +645,32 @@ export function MyProfileScreen({
     );
   }
 
-  // ─── 1. SIGN IN SCREEN (OFFICIAL GOOGLE AUTHENTICATION) ───
+  // ─── 1. SIGN IN SCREEN ───
   if (!currentUser && !isPublicView) {
     return (
       <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        {onBack ? (
+          <View style={styles.headerBar}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={onBack}
+              activeOpacity={0.7}
+              accessibilityLabel="Go Back"
+            >
+              <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Sign In</Text>
+            <View style={styles.headerRightWrap} />
+          </View>
+        ) : null}
         <ScrollView style={styles.container} contentContainerStyle={styles.authContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.authCard}>
-            {/* CricScorer Brand Logo */}
             <Image source={require('../../assets/logo.png')} style={{ width: 88, height: 88, resizeMode: 'contain', marginBottom: 14 }} />
             <Text style={styles.authTitle}>Welcome to CricScorer</Text>
             <Text style={styles.authSub}>
               Sign in with your Google account or 1-tap fast login to track your career stats, match records and rankings.
             </Text>
 
-            {/* Feature Perks */}
             <View style={styles.benefitList}>
               <View style={styles.benefitItem}>
                 <MaterialCommunityIcons name="cricket" size={16} color="#0284C7" />
@@ -757,27 +686,8 @@ export function MyProfileScreen({
               </View>
             </View>
 
-            {/* Official Google Login Button (Authentic Multi-Color G Logo) */}
             <TouchableOpacity
-              style={{
-                width: '100%',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 12,
-                backgroundColor: '#FFFFFF',
-                borderRadius: 14,
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderWidth: 1,
-                borderColor: '#CBD5E1',
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 4,
-                elevation: 2,
-                marginTop: 4
-              }}
+              style={styles.googleBtn}
               onPress={handleGoogleSignIn}
               activeOpacity={0.85}
             >
@@ -785,34 +695,19 @@ export function MyProfileScreen({
                 source={require('../../assets/google_logo.png')}
                 style={{ width: 22, height: 22, resizeMode: 'contain' }}
               />
-              <Text style={{ color: '#1E293B', fontSize: 15, fontFamily: systemFontMedium }}>
+              <Text style={styles.googleBtnText}>
                 Continue with Google
               </Text>
             </TouchableOpacity>
 
-            {/* Dev Mode Instant Login (Automatically hidden in production/release builds) */}
             {__DEV__ && (
               <TouchableOpacity
-                style={{
-                  width: '100%',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  backgroundColor: '#071B2C',
-                  borderRadius: 14,
-                  paddingVertical: 13,
-                  paddingHorizontal: 16,
-                  borderWidth: 1,
-                  borderColor: '#38BDF8',
-                  marginTop: 10,
-                  elevation: 2
-                }}
+                style={styles.devBtn}
                 onPress={() => handleInstantLogin('Basti Ram Suthar')}
                 activeOpacity={0.85}
               >
                 <Ionicons name="flash" size={16} color="#38BDF8" />
-                <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontFamily: systemFontBold }}>
+                <Text style={styles.devBtnText}>
                   Quick Test Login (Dev Mode)
                 </Text>
               </TouchableOpacity>
@@ -823,81 +718,57 @@ export function MyProfileScreen({
             </Text>
           </View>
         </ScrollView>
-
-
       </View>
     );
   }
 
+  // ─── 2. MAIN PROFILE SCREEN ───
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
-      {onBack ? (
-        <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
-          <TouchableOpacity onPress={onBack} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="arrow-back" size={22} color="#E0F2FE" />
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontFamily: systemFontBold }}>{playerName}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      {/* HERO PROFILE CARD */}
-      <View style={[styles.profileHeaderCard, { marginHorizontal: 14, marginTop: 12, marginBottom: 8 }]}>
-        <View style={styles.profileAvatarRow}>
+      {/* SCREEN HEADER BAR */}
+      <View style={styles.headerBar}>
+        {onBack ? (
           <TouchableOpacity
-            onPress={() => setPhotoModalVisible(true)}
-            style={styles.avatarWrapper}
-            activeOpacity={0.85}
+            style={styles.backBtn}
+            onPress={onBack}
+            activeOpacity={0.7}
+            accessibilityLabel="Go Back"
           >
-            <PlayerAvatar
-              name={playerName}
-              photoUrl={profile?.photoUrl}
-              size={64}
-            />
+            <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
           </TouchableOpacity>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
 
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 6 }}>
-                <Text style={styles.playerNameText} numberOfLines={1}>{playerName}</Text>
-                {profile?.jerseyNumber ? (
-                  <View style={styles.jerseyBadge}>
-                    <Text style={styles.jerseyBadgeText}>#{profile.jerseyNumber}</Text>
-                  </View>
-                ) : null}
-                <Ionicons name="checkmark-circle" size={17} color="#0284C7" />
-              </View>
+        <Text style={styles.headerTitle}>
+          {isPublicView ? 'Player Profile' : 'My Profile'}
+        </Text>
 
-              {!isPublicView ? (
-                <TouchableOpacity
-                  onPress={() => setOptionsMenuVisible(true)}
-                  style={styles.threeDotsBtn}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Ionicons name="ellipsis-vertical" size={20} color="#64748B" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-
-            <Text style={styles.playerRoleText}>
-              {profile?.role || 'All-Rounder'} • {profile?.city || 'Local Ground'}
-            </Text>
-
-            <View style={styles.styleBadgesRow}>
-              <View style={styles.styleBadgeItem}>
-                <MaterialCommunityIcons name="cricket" size={12} color="#18181B" />
-                <Text style={styles.styleBadgeText}>{profile?.battingStyle || 'Right Hand Bat'}</Text>
-              </View>
-              <View style={[styles.styleBadgeItem, styles.bowlingBadgeItem]}>
-                <MaterialCommunityIcons name="baseball" size={12} color="#64748B" />
-                <Text style={[styles.styleBadgeText, { color: '#475569' }]}>{profile?.bowlingStyle || 'Right Arm Medium'}</Text>
-              </View>
-            </View>
-          </View>
+        <View style={styles.headerRightWrap}>
+          {!isPublicView ? (
+            <TouchableOpacity
+              onPress={() => setOptionsMenuVisible(true)}
+              style={styles.headerActionBtn}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Options Menu"
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color={themeColors.textPrimary} />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
         </View>
       </View>
 
-      {/* ─── CREX / RANKINGS STYLE CLEAN TEXT-ONLY UNDERLINE TABS BAR ─── */}
+      {/* HERO PROFILE CARD (MEMOIZED) */}
+      <ProfileHeroCard
+        playerName={playerName}
+        profile={profile}
+        onPressPhoto={() => setPhotoModalVisible(true)}
+      />
+
+      {/* TABS BAR (CREX / RANKINGS STYLE TEXT-ONLY UNDERLINE) */}
       <View style={styles.tabsBarWrapper}>
         <ScrollView
           ref={tabsScrollRef}
@@ -925,20 +796,28 @@ export function MyProfileScreen({
             );
           })}
 
-          {/* Smooth Finger-Tracking Animated Underline Indicator */}
           <Animated.View
+            pointerEvents="none"
             style={[
-              styles.animatedUnderline,
+              styles.animatedUnderlineOuter,
               {
-                left: animatedUnderlineX,
-                width: animatedUnderlineWidth
+                transform: [{ translateX: animatedUnderlineTranslateX }]
               }
             ]}
-          />
+          >
+            <Animated.View
+              style={[
+                styles.animatedUnderlineInner,
+                {
+                  transform: [{ scaleX: animatedUnderlineScaleX }]
+                }
+              ]}
+            />
+          </Animated.View>
         </ScrollView>
       </View>
 
-      {/* ─── NATIVE HORIZONTAL SWIPEABLE PAGER (ViewPager2) ─── */}
+      {/* NATIVE HORIZONTAL SWIPEABLE PAGER (ViewPager2) */}
       <PagerView
         ref={pagerRef}
         style={{ flex: 1 }}
@@ -946,387 +825,45 @@ export function MyProfileScreen({
         onPageSelected={handlePageSelected}
         onPageScroll={handlePageScroll}
       >
-        {/* 1. OVERVIEW PAGE */}
+        {/* 1. OVERVIEW PAGE (MEMOIZED) */}
         <View key="overview" style={{ flex: 1 }}>
-          <ScrollView
-            style={styles.pageScrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={{ gap: 14 }}>
-              <View style={styles.summaryGrid}>
-                <View style={styles.summaryCard}>
-                  <MaterialCommunityIcons name="scoreboard-outline" size={48} color="#18181B" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.05 }} />
-                  <Text style={styles.summaryVal}>{stats.matchesPlayed}</Text>
-                  <Text style={styles.summaryLbl}>Matches</Text>
-                </View>
-
-                <View style={styles.summaryCard}>
-                  <MaterialCommunityIcons name="cricket" size={48} color="#0F2744" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.06 }} />
-                  <Text style={[styles.summaryVal, { color: '#0F2744' }]}>{stats.totalRuns}</Text>
-                  <Text style={styles.summaryLbl}>Total Runs</Text>
-                </View>
-
-                <View style={styles.summaryCard}>
-                  <Ionicons name="trophy-outline" size={44} color="#18181B" style={{ position: 'absolute', right: -6, bottom: -6, opacity: 0.06 }} />
-                  <Text style={[styles.summaryVal, { color: '#18181B' }]}>{stats.highestScore}</Text>
-                  <Text style={styles.summaryLbl}>High Score</Text>
-                </View>
-
-                <View style={styles.summaryCard}>
-                  <MaterialCommunityIcons name="baseball" size={48} color="#EA580C" style={{ position: 'absolute', right: -8, bottom: -8, opacity: 0.06 }} />
-                  <Text style={[styles.summaryVal, { color: '#EA580C' }]}>{stats.wickets}</Text>
-                  <Text style={styles.summaryLbl}>Wickets</Text>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#EEEEF0', gap: 6 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MaterialCommunityIcons name="cricket" size={16} color="#0F2744" />
-                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>Batting</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Average</Text>
-                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>{stats.battingAvg}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Strike Rate</Text>
-                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F2744' }}>{stats.strikeRate}</Text>
-                  </View>
-                </View>
-
-                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#EEEEF0', gap: 6 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MaterialCommunityIcons name="baseball" size={16} color="#EA580C" />
-                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>Bowling</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Economy</Text>
-                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#0F172A' }}>{stats.economy}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>Best</Text>
-                    <Text style={{ fontSize: 12, fontFamily: systemFontBold, color: '#EA580C' }}>{stats.bestBowling || '-'}</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
+          <ProfileOverviewTab stats={stats} />
         </View>
 
-        {/* 2. BATTING PAGE */}
+        {/* 2. BATTING PAGE (MEMOIZED) */}
         <View key="batting" style={{ flex: 1 }}>
-          <ScrollView
-            style={styles.pageScrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.statsCard}>
-              <MaterialCommunityIcons
-                name="cricket"
-                size={135}
-                color="#0F2744"
-                style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.04, transform: [{ rotate: '-12deg' }] }}
-              />
-              <View style={styles.statsCardHeader}>
-                <MaterialCommunityIcons name="cricket" size={18} color="#0F2744" />
-                <Text style={styles.statsCardTitle}>Batting Performance</Text>
-              </View>
-              <View style={styles.statRowGrid}>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.inningsBatted}</Text>
-                  <Text style={styles.statColLbl}>Innings</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.strikeRate}</Text>
-                  <Text style={styles.statColLbl}>Strike Rate</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.battingAvg}</Text>
-                  <Text style={styles.statColLbl}>Average</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.fours}</Text>
-                  <Text style={styles.statColLbl}>Fours (4s)</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.sixes}</Text>
-                  <Text style={styles.statColLbl}>Sixes (6s)</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.fifties}</Text>
-                  <Text style={styles.statColLbl}>50s</Text>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
+          <ProfileBattingTab stats={stats} />
         </View>
 
-        {/* 3. BOWLING PAGE */}
+        {/* 3. BOWLING PAGE (MEMOIZED) */}
         <View key="bowling" style={{ flex: 1 }}>
-          <ScrollView
-            style={styles.pageScrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.statsCard}>
-              <MaterialCommunityIcons
-                name="baseball"
-                size={135}
-                color="#EA580C"
-                style={{ position: 'absolute', right: -15, bottom: -25, opacity: 0.04, transform: [{ rotate: '12deg' }] }}
-              />
-              <View style={styles.statsCardHeader}>
-                <MaterialCommunityIcons name="baseball" size={18} color="#EA580C" />
-                <Text style={styles.statsCardTitle}>Bowling Performance</Text>
-              </View>
-              <View style={styles.statRowGrid}>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.oversBowled}</Text>
-                  <Text style={styles.statColLbl}>Overs</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.wickets}</Text>
-                  <Text style={styles.statColLbl}>Wickets</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.economy}</Text>
-                  <Text style={styles.statColLbl}>Economy</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.maidens}</Text>
-                  <Text style={styles.statColLbl}>Maidens</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.bestBowling}</Text>
-                  <Text style={styles.statColLbl}>Best Bowling</Text>
-                </View>
-                <View style={styles.statCol}>
-                  <Text style={styles.statColVal}>{stats.runsConceded}</Text>
-                  <Text style={styles.statColLbl}>Runs Given</Text>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
+          <ProfileBowlingTab stats={stats} />
         </View>
 
-        {/* 4. MATCHES PAGE */}
+        {/* 4. MATCHES PAGE (MEMOIZED & VIRTUALIZED) */}
         <View key="matches" style={{ flex: 1 }}>
-          <ScrollView
-            style={styles.pageScrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={{ gap: 10 }}>
-              {stats.participatedMatches.length === 0 ? (
-                <View style={styles.emptyMatchesCard}>
-                  <Ionicons name="trophy-outline" size={28} color="#94A3B8" />
-                  <Text style={styles.emptyTitle}>No Matches Recorded Yet</Text>
-                  <Text style={styles.emptySub}>
-                    When you play in a match on CricFlow, your individual batting and bowling cards will appear here.
-                  </Text>
-                </View>
-              ) : (
-                stats.participatedMatches.map((m, idx) => {
-                  const matchTitle = m.match_title || m.matchTitle || m.title || (m.team1_name && m.team2_name ? `${m.team1_name} vs ${m.team2_name}` : '') || (m.match_data?.matchTitle || (m.match_data?.team1?.name && m.match_data?.team2?.name ? `${m.match_data.team1.name} vs ${m.match_data.team2.name}` : '')) || (m.team1?.name && m.team2?.name ? `${m.team1.name} vs ${m.team2.name}` : 'Cricket Match');
-                  const matchResult = m.result_text || m.resultText || m.match_data?.resultText || m.winner || 'Match Completed';
-                  const matchDate = m.dateText || m.dateLabel || (m.created_at ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent Match');
-
-                  return (
-                    <TouchableOpacity
-                      key={`match_history_${m.id || 'item'}_${idx}`}
-                      style={styles.matchHistoryItem}
-                      onPress={() => {
-                        if (onSelectMatch) {
-                          const fullMatch = m.match_data ? { ...m.match_data, id: m.id, title: matchTitle, matchTitle, resultText: matchResult, dateText: matchDate } : m;
-                          onSelectMatch(fullMatch);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.matchTitle}>{matchTitle}</Text>
-                        <Text style={styles.matchDate}>{matchDate}</Text>
-                        <Text style={styles.matchResultText} numberOfLines={1}>{matchResult}</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </View>
-          </ScrollView>
+          <ProfileMatchesTab
+            participatedMatches={stats.participatedMatches}
+            onSelectMatch={onSelectMatch}
+          />
         </View>
 
-        {/* 5. SCORER HUB PAGE (OWNER ONLY) */}
+        {/* 5. SCORER HUB PAGE (REUSES SCORERHUB CARD) */}
         {!isPublicView ? (
           <View key="scorer" style={{ flex: 1 }}>
             <ScrollView
-              style={styles.pageScrollView}
-              contentContainerStyle={styles.scrollContent}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ padding: 14, paddingBottom: 28 }}
               showsVerticalScrollIndicator={false}
             >
-              <View style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: 16,
-                padding: 16,
-                borderWidth: 1,
-                borderColor: '#EEEEF0',
-                gap: 12
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <MaterialCommunityIcons name="scoreboard-outline" size={18} color="#18181B" />
-                    <Text style={{ fontSize: 11, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFontBold }}>
-                      GROUND MATCH SCORING
-                    </Text>
-                  </View>
-                  <View style={{ backgroundColor: '#F8F8FA', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#EEEEF0' }}>
-                    <Text style={{ fontSize: 10, color: '#18181B', fontFamily: systemFontBold }}>Verified Scorer</Text>
-                  </View>
-                </View>
-
-                {/* IF THERE IS AN ONGOING ACTIVE MATCH */}
-                {activeMatch && activeMatch.phase !== 'result' && activeMatch.phase !== 'finished' && !activeMatch.isCompleted ? (
-                  <View style={{
-                    backgroundColor: '#F8F8FA',
-                    borderRadius: 12,
-                    padding: 12,
-                    borderWidth: 1,
-                    borderColor: '#EEEEF0',
-                    gap: 8
-                  }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#E11D48' }} />
-                        <Text style={{ fontSize: 11, color: '#E11D48', fontFamily: systemFontBold }}>MATCH IN PROGRESS</Text>
-                      </View>
-                      {activeMatch.matchCode ? (
-                        <View style={{ backgroundColor: '#EEEEF0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                          <Text style={{ fontSize: 10, color: '#333333', fontFamily: systemFontMedium }}>Code: {activeMatch.matchCode}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-
-                    <Text style={{ fontSize: 14, color: '#0F172A', fontFamily: systemFontBold }}>
-                      {activeMatch.matchTitle || `${activeMatch.team1?.name || 'Team 1'} vs ${activeMatch.team2?.name || 'Team 2'}`}
-                    </Text>
-
-                    <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }}>
-                      Inning {activeMatch.inning || 1} • {activeMatch.innings?.[(activeMatch.inning || 1) - 1]?.battingTeam?.runs ?? 0}/{activeMatch.innings?.[(activeMatch.inning || 1) - 1]?.battingTeam?.wickets ?? 0} ({formatOvers(activeMatch.innings?.[(activeMatch.inning || 1) - 1]?.totalLegalBalls || 0)} Ov)
-                    </Text>
-
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        if (onStartQuickMatch) onStartQuickMatch(activeMatch);
-                      }}
-                      style={{
-                        backgroundColor: '#18181B',
-                        borderRadius: 10,
-                        height: 42,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                        marginTop: 4
-                      }}
-                    >
-                      <MaterialCommunityIcons name="play-circle-outline" size={18} color="#FFFFFF" />
-                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>
-                        RESUME SCORING
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  /* Primary Action: Start Quick Match */
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      if (onStartQuickMatch) onStartQuickMatch();
-                    }}
-                    style={{
-                      backgroundColor: '#18181B',
-                      borderRadius: 12,
-                      height: 44,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8
-                    }}
-                  >
-                    <MaterialCommunityIcons name="cricket" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>
-                      START NEW QUICK MATCH
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Co-Scorer / Join Actions (Conditional on Match Active state) */}
-                {activeMatch && activeMatch.phase !== 'result' && activeMatch.phase !== 'finished' && !activeMatch.isCompleted ? (
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => setShareModalVisible(true)}
-                      style={{
-                        flex: 1,
-                        backgroundColor: '#F8F8FA',
-                        borderRadius: 10,
-                        paddingVertical: 9,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexDirection: 'row',
-                        gap: 6,
-                        borderWidth: 1,
-                        borderColor: '#EEEEF0'
-                      }}
-                    >
-                      <Ionicons name="share-social-outline" size={14} color="#18181B" />
-                      <Text style={{ color: '#333333', fontSize: 11.5, fontFamily: systemFontMedium }}>Share Access</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => setJoinModalVisible(true)}
-                      style={{
-                        flex: 1,
-                        backgroundColor: '#F8F8FA',
-                        borderRadius: 10,
-                        paddingVertical: 9,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexDirection: 'row',
-                        gap: 6,
-                        borderWidth: 1,
-                        borderColor: '#EEEEF0'
-                      }}
-                    >
-                      <Ionicons name="enter-outline" size={14} color="#18181B" />
-                      <Text style={{ color: '#333333', fontSize: 11.5, fontFamily: systemFontMedium }}>Join Match</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => setJoinModalVisible(true)}
-                    style={{
-                      backgroundColor: '#F8F8FA',
-                      borderRadius: 10,
-                      paddingVertical: 10,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexDirection: 'row',
-                      gap: 6,
-                      borderWidth: 1,
-                      borderColor: '#EEEEF0'
-                    }}
-                  >
-                    <Ionicons name="enter-outline" size={15} color="#18181B" />
-                    <Text style={{ color: '#333333', fontSize: 12, fontFamily: systemFontMedium }}>Join Match with Code</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+              <ScorerHubCard
+                hasActiveMatch={Boolean(activeMatch && activeMatch.phase !== 'result' && activeMatch.phase !== 'finished' && !activeMatch.isCompleted)}
+                activeMatch={activeMatch}
+                onResumeScoring={onStartQuickMatch}
+                onStartQuickMatch={onStartQuickMatch}
+                onOpenShareModal={() => setShareModalVisible(true)}
+                onOpenJoinModal={() => setJoinModalVisible(true)}
+              />
             </ScrollView>
           </View>
         ) : (
@@ -1334,570 +871,95 @@ export function MyProfileScreen({
         )}
       </PagerView>
 
-      {/* EDIT PROFILE MODAL */}
-      <Modal visible={isEditing} animationType="slide" transparent onRequestClose={() => setIsEditing(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Cricket Profile</Text>
-              <TouchableOpacity onPress={() => setIsEditing(false)}>
-                <Ionicons name="close-circle" size={24} color="#94A3B8" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Photo Change in Edit Modal */}
-              <View style={{ alignItems: 'center', marginBottom: 18, marginTop: 4 }}>
-                <TouchableOpacity
-                  onPress={handlePickImage}
-                  style={{ position: 'relative' }}
-                  activeOpacity={0.85}
-                >
-                  <PlayerAvatar name={editName || playerName} photoUrl={profile?.photoUrl} size={76} />
-                  <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#18181B', width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' }}>
-                    <Ionicons name="camera" size={13} color="#FFFFFF" />
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handlePickImage} style={{ marginTop: 6 }}>
-                  <Text style={{ color: '#18181B', fontSize: 12.5, fontFamily: systemFontMedium }}>Change Profile Photo</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Player Name</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editName}
-                  onChangeText={(t) => setEditName(capitalizeWords(t))}
-                  placeholder="Enter name"
-                  autoCapitalize="words"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Playing Role</Text>
-                <View style={styles.pillSelectorRow}>
-                  {['Batter', 'Bowler', 'All-Rounder', 'Wicket Keeper'].map(role => (
-                    <TouchableOpacity
-                      key={role}
-                      style={[styles.roleSelectPill, editRole === role && styles.roleSelectPillActive]}
-                      onPress={() => setEditRole(role)}
-                    >
-                      <Text style={[styles.roleSelectPillText, editRole === role && styles.roleSelectPillTextActive]}>{role}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Batting Style</Text>
-                <View style={styles.pillSelectorRow}>
-                  {['Right Hand Bat', 'Left Hand Bat'].map(b => (
-                    <TouchableOpacity
-                      key={b}
-                      style={[styles.roleSelectPill, editBatting === b && styles.roleSelectPillActive]}
-                      onPress={() => setEditBatting(b)}
-                    >
-                      <Text style={[styles.roleSelectPillText, editBatting === b && styles.roleSelectPillTextActive]}>{b}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Bowling Style</Text>
-                <View style={styles.pillSelectorRow}>
-                  {['Right Arm Fast', 'Right Arm Medium', 'Off Spin', 'Leg Spin', 'Left Arm Medium', 'Left Arm Spin'].map(b => (
-                    <TouchableOpacity
-                      key={b}
-                      style={[styles.roleSelectPill, editBowling === b && styles.roleSelectPillActive]}
-                      onPress={() => setEditBowling(b)}
-                    >
-                      <Text style={[styles.roleSelectPillText, editBowling === b && styles.roleSelectPillTextActive]}>{b}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Jersey Number</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editJerseyNumber}
-                  onChangeText={setEditJerseyNumber}
-                  placeholder="e.g. 7, 18, 45"
-                  keyboardType="numeric"
-                  maxLength={3}
-                />
-              </View>
-
-              {/* Date of Birth Picker (Premium Industry Standard) */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Date of Birth</Text>
-                <TouchableOpacity
-                  onPress={() => setDobPickerVisible(true)}
-                  style={[styles.textInput, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }]}
-                  activeOpacity={0.8}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name="calendar-outline" size={18} color="#18181B" />
-                    <Text style={{ color: editDob ? '#0F172A' : '#94A3B8', fontSize: 13, fontFamily: systemFontMedium }}>
-                      {editDob ? editDob : 'Select Date of Birth'}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>City / District / Ground</Text>
-                <TouchableOpacity
-                  onPress={() => setLocationPickerVisible(true)}
-                  style={[styles.textInput, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 10 }]}
-                  activeOpacity={0.75}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="location-outline" size={18} color="#18181B" />
-                    <Text style={{ color: editCity ? '#0F172A' : '#94A3B8', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
-                      {editCity || 'Select City, District or Village'}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Mobile Number <Text style={{ color: '#EF4444' }}>* (Mandatory)</Text>
-                </Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editPhone}
-                  onChangeText={setEditPhone}
-                  placeholder="10-digit mobile number"
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                />
-              </View>
-
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProfile} activeOpacity={0.8}>
-                <Text style={styles.saveBtnText}>Save Profile Changes</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Location Hierarchy Picker Modal */}
-      <LocationPickerModal
-        visible={locationPickerVisible}
-        currentCity={editCity}
-        onClose={() => setLocationPickerVisible(false)}
-        onSelectLocation={(loc) => {
-          setEditCity(loc.formatted || loc.city);
-        }}
+      {/* EDIT PROFILE MODAL (ENCAPSULATED STATE) */}
+      <ProfileEditModal
+        visible={isEditing}
+        profile={profile}
+        playerName={playerName}
+        onClose={() => setIsEditing(false)}
+        onSave={handleSaveProfile}
+        onPickImage={handlePickImage}
       />
 
-      {/* Premium Date of Birth Modal */}
-      <DobPickerModal
-        visible={dobPickerVisible}
-        initialDate={editDob}
-        onClose={() => setDobPickerVisible(false)}
-        onSelectDate={(selectedDate) => setEditDob(selectedDate)}
-      />
-
-      {/* Full Player Photo Preview & Quick Edit Modal */}
-      <Modal
+      {/* FULL PHOTO PREVIEW MODAL */}
+      <PhotoPreviewModal
         visible={photoModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPhotoModalVisible(false)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setPhotoModalVisible(false)}
-          style={{ flex: 1, backgroundColor: 'rgba(7, 27, 44, 0.92)', justifyContent: 'center', alignItems: 'center', padding: 24 }}
-        >
-          <TouchableOpacity activeOpacity={1} style={{ width: '100%', maxWidth: 360, alignItems: 'center' }}>
-            {/* Header */}
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-              <Text style={{ color: '#FFFFFF', fontSize: 17, fontFamily: systemFontBold }}>
-                {playerName}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setPhotoModalVisible(false)}
-                style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Ionicons name="close" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
+        playerName={playerName}
+        photoUrl={profile?.photoUrl}
+        isPublicView={isPublicView}
+        onClose={() => setPhotoModalVisible(false)}
+        onPickImage={handlePickImage}
+      />
 
-            {/* Large High-Res Photo Circle */}
-            <View style={{ width: 220, height: 220, borderRadius: 110, overflow: 'hidden', borderWidth: 3, borderColor: '#18181B', backgroundColor: '#0F2942', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 18, elevation: 12 }}>
-              <PlayerAvatar
-                name={playerName}
-                photoUrl={profile?.photoUrl}
-                size={220}
-              />
-            </View>
-
-            {/* Quick Change / Update Photo Button for Logged-In User */}
-            <View style={{ width: '100%', flexDirection: 'row', gap: 10, marginTop: 28 }}>
-              {!isPublicView ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    setPhotoModalVisible(false);
-                    handlePickImage();
-                  }}
-                  style={{
-                    flex: 1.4,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    backgroundColor: '#18181B',
-                    paddingVertical: 13,
-                    borderRadius: 12
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="create-outline" size={18} color="#FFFFFF" />
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>Change Photo</Text>
-                </TouchableOpacity>
-              ) : null}
-
-              <TouchableOpacity
-                onPress={() => setPhotoModalVisible(false)}
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                  paddingVertical: 13,
-                  borderRadius: 12
-                }}
-                activeOpacity={0.85}
-              >
-                <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* 3-DOTS INDUSTRIAL ACTION MENU BOTTOM SHEET */}
-      <Modal
+      {/* 3-DOTS ACTION MENU MODAL */}
+      <OptionsMenuModal
         visible={optionsMenuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOptionsMenuVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.actionModalOverlay}
-          activeOpacity={1}
-          onPress={() => setOptionsMenuVisible(false)}
-        >
-          <View style={styles.actionMenuCard}>
-            <View style={styles.actionMenuHeader}>
-              <Text style={styles.actionMenuTitle}>Profile Settings</Text>
-              <TouchableOpacity
-                onPress={() => setOptionsMenuVisible(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-
-            {/* Edit Profile Option */}
-            <TouchableOpacity
-              style={styles.actionMenuItem}
-              onPress={() => {
-                setOptionsMenuVisible(false);
-                setIsEditing(true);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8F8FA' }]}>
-                <Ionicons name="create-outline" size={18} color="#18181B" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.actionMenuLabel}>Edit Profile</Text>
-                <Text style={styles.actionMenuSub}>Photo, role, batting & bowling style, city</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
-            </TouchableOpacity>
-
-            {/* Refresh Stats Option */}
-            <TouchableOpacity
-              style={styles.actionMenuItem}
-              onPress={() => {
-                setOptionsMenuVisible(false);
-                handleRefresh();
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8F8FA' }]}>
-                <Ionicons name="refresh-outline" size={18} color="#475569" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.actionMenuLabel}>Refresh Stats</Text>
-                <Text style={styles.actionMenuSub}>Sync career matches, runs & wickets</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
-            </TouchableOpacity>
-
-            {/* Sign Out Option */}
-            <TouchableOpacity
-              style={[styles.actionMenuItem, { borderBottomWidth: 0 }]}
-              onPress={() => {
-                setOptionsMenuVisible(false);
-                handleSignOut();
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#FEF2F2' }]}>
-                <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.actionMenuLabel, { color: '#EF4444' }]}>Sign Out</Text>
-                <Text style={styles.actionMenuSub}>Log out of your cricketer account</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#FECACA" />
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setOptionsMenuVisible(false)}
+        onEditProfile={() => setIsEditing(true)}
+        onRefreshStats={handleRefresh}
+        onSignOut={handleSignOut}
+      />
 
       {/* JOIN MATCH VIA CODE MODAL */}
-      <Modal
+      <JoinMatchModal
         visible={joinModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setJoinModalVisible(false)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setJoinModalVisible(false)}
-          style={{ flex: 1, backgroundColor: 'rgba(7, 27, 44, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            style={{ width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, gap: 14, borderWidth: 1, borderColor: '#EEEEF0' }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="key" size={20} color="#18181B" />
-                <Text style={{ fontSize: 16, color: '#0F172A', fontFamily: systemFontBold }}>Enter Match Code</Text>
-              </View>
-              <TouchableOpacity onPress={() => setJoinModalVisible(false)}>
-                <Ionicons name="close" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }}>
-              Enter the 6-character match code shared by the match creator to score or view live.
-            </Text>
-
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#F8F8FA',
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: '#EEEEF0',
-              paddingHorizontal: 14,
-              height: 48,
-              gap: 10
-            }}>
-              <Ionicons name="barcode-outline" size={20} color="#18181B" />
-              <TextInput
-                style={{
-                  flex: 1,
-                  fontSize: 15,
-                  fontFamily: systemFontBold,
-                  color: '#0F172A',
-                  paddingVertical: 0
-                }}
-                placeholder="e.g. CF-8421"
-                placeholderTextColor="#94A3B8"
-                value={inputMatchCode}
-                onChangeText={setInputMatchCode}
-                autoCapitalize="characters"
-                autoCorrect={false}
-              />
-              {Boolean(inputMatchCode) && (
-                <TouchableOpacity onPress={() => setInputMatchCode('')} style={{ padding: 4 }}>
-                  <Ionicons name="close-circle" size={16} color="#94A3B8" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <TouchableOpacity
-              onPress={async () => {
-                if (!inputMatchCode.trim()) {
-                  showToast('Please enter a match code', 'error');
-                  return;
-                }
-                if (onJoinMatchByCode) {
-                  const success = await onJoinMatchByCode(inputMatchCode.trim());
-                  if (success) {
-                    setJoinModalVisible(false);
-                    setInputMatchCode('');
-                    showToast(`Scoring connected for match!`, 'success');
-                  } else {
-                    showToast(`No live match found for "${inputMatchCode.trim()}"`, 'error');
-                  }
-                } else {
-                  setJoinModalVisible(false);
-                  showToast(`Searching match ${inputMatchCode.trim()}...`, 'success');
-                }
-              }}
-              style={{ backgroundColor: '#18181B', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>Join Match</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setJoinModalVisible(false)}
+        onJoinMatchByCode={onJoinMatchByCode}
+      />
 
       {/* SHARE SCORER ACCESS MODAL */}
-      <Modal
+      <ShareAccessModal
         visible={shareModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShareModalVisible(false)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setShareModalVisible(false)}
-          style={{ flex: 1, backgroundColor: 'rgba(7, 27, 44, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            style={{ width: '100%', maxWidth: 360, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, gap: 14, borderWidth: 1, borderColor: '#EEEEF0' }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="share-social" size={20} color="#18181B" />
-                <Text style={{ fontSize: 16, color: '#0F172A', fontFamily: systemFontBold }}>Share Scoring Access</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShareModalVisible(false)}>
-                <Ionicons name="close" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
+        activeMatch={activeMatch}
+        onClose={() => setShareModalVisible(false)}
+        onStartQuickMatch={onStartQuickMatch}
+      />
 
-            {activeMatch && (activeMatch.phase === 'playing' || activeMatch.phase === 'inningBreak') ? (
-              <>
-                <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }}>
-                  Share this access code with your co-scorer or umpire on the ground for <Text style={{ color: '#0F172A', fontFamily: systemFontBold }}>{activeMatch.matchTitle || 'Live Match'}</Text>.
-                </Text>
-
-                <View style={{ backgroundColor: '#F8F8FA', padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#EEEEF0' }}>
-                  <Text style={{ fontSize: 24, letterSpacing: 4, color: '#18181B', fontFamily: systemFontBold }}>
-                    {activeMatch.matchCode || activeMatch.scorerPin || ('CF-' + (activeMatch.id || '8421').slice(-4).toUpperCase())}
-                  </Text>
-                  <Text style={{ fontSize: 10, color: '#64748B', marginTop: 4, fontFamily: systemFontMedium }}>Valid for current active match</Text>
-                </View>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    setShareModalVisible(false);
-                    const code = activeMatch.matchCode || activeMatch.scorerPin || ('CF-' + (activeMatch.id || '8421').slice(-4).toUpperCase());
-                    showToast(`Scorer code ${code} copied!`, 'success');
-                  }}
-                  style={{ backgroundColor: '#18181B', borderRadius: 10, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>Copy Access Code</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <View style={{ gap: 12, alignItems: 'center', paddingVertical: 8 }}>
-                <MaterialCommunityIcons name="cricket" size={32} color="#94A3B8" />
-                <Text style={{ fontSize: 13, color: '#0F172A', fontFamily: systemFontBold, textAlign: 'center' }}>
-                  No Active Match Currently
-                </Text>
-                <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont, textAlign: 'center' }}>
-                  Start a quick match first. While the match is live, you can share its unique code from here anytime!
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setShareModalVisible(false);
-                    if (onStartQuickMatch) onStartQuickMatch();
-                  }}
-                  style={{ backgroundColor: '#18181B', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, marginTop: 4 }}
-                >
-                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: systemFontBold }}>Start New Match</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* PHOTO SOURCE SELECTION MODAL (CAMERA vs GALLERY) */}
-      <Modal
+      {/* PHOTO SOURCE SELECTION MODAL */}
+      <PhotoSourcePickerModal
         visible={photoSourcePickerVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPhotoSourcePickerVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.actionModalOverlay}
-          activeOpacity={1}
-          onPress={() => setPhotoSourcePickerVisible(false)}
-        >
-          <View style={styles.actionMenuCard}>
-            <View style={styles.actionMenuHeader}>
-              <Text style={styles.actionMenuTitle}>Select Profile Photo</Text>
-              <TouchableOpacity
-                onPress={() => setPhotoSourcePickerVisible(false)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Camera Option */}
-            <TouchableOpacity
-              style={styles.actionMenuItem}
-              onPress={handlePickFromCamera}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8F8FA' }]}>
-                <Ionicons name="camera" size={20} color="#18181B" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.actionMenuLabel}>Take Photo</Text>
-                <Text style={styles.actionMenuSub}>Use your phone camera to click a new picture</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
-            </TouchableOpacity>
-
-            {/* Gallery Option */}
-            <TouchableOpacity
-              style={[styles.actionMenuItem, { borderBottomWidth: 0 }]}
-              onPress={handlePickFromGallery}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.actionMenuIconWrap, { backgroundColor: '#F8F8FA' }]}>
-                <Ionicons name="images" size={20} color="#18181B" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.actionMenuLabel}>Choose from Gallery</Text>
-                <Text style={styles.actionMenuSub}>Select an existing photo from device albums</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
+        onClose={() => setPhotoSourcePickerVisible(false)}
+        onPickFromCamera={handlePickFromCamera}
+        onPickFromGallery={handlePickFromGallery}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  headerBar: {
+    height: 52,
+    backgroundColor: themeColors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: themeColors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'flex-start',
+    justifyContent: 'center'
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: systemFontMedium,
+    color: themeColors.textPrimary,
+    textAlign: 'center'
+  },
+  headerRightWrap: {
+    width: 36,
+    alignItems: 'flex-end',
+    justifyContent: 'center'
+  },
+  headerActionBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'flex-end',
+    justifyContent: 'center'
+  },
   container: {
     flex: 1,
     backgroundColor: themeColors.appBackground
@@ -1936,15 +998,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2
   },
-  authBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14
-  },
   authTitle: {
     fontSize: 18,
     fontFamily: systemFontBold,
@@ -1981,43 +1034,48 @@ const styles = StyleSheet.create({
     fontFamily: systemFontMedium,
     flex: 1
   },
-  inputGroup: {
-    width: '100%',
-    marginBottom: 12
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontFamily: systemFontBold,
-    color: '#475569',
-    marginBottom: 5,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3
-  },
-  textInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: '#0F172A',
-    fontFamily: systemFontMedium
-  },
   googleBtn: {
     width: '100%',
-    backgroundColor: '#0284C7',
-    borderRadius: 12,
-    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    marginTop: 6
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    marginTop: 4
   },
   googleBtnText: {
+    color: '#1E293B',
+    fontSize: 15,
+    fontFamily: systemFontMedium
+  },
+  devBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#071B2C',
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#38BDF8',
+    marginTop: 10,
+    elevation: 2
+  },
+  devBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13.5,
     fontFamily: systemFontBold
   },
   authTerms: {
@@ -2029,100 +1087,7 @@ const styles = StyleSheet.create({
     fontFamily: systemFont
   },
 
-  // ── Profile Main Screen Styles ──
-  profileContent: {
-    padding: 14,
-    paddingBottom: 40,
-    gap: 14
-  },
-  profileHeaderCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0'
-  },
-  profileAvatarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14
-  },
-  avatarWrapper: {
-    position: 'relative'
-  },
-  cameraIconBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#0284C7',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF'
-  },
-  playerNameText: {
-    fontSize: 17,
-    fontFamily: systemFontBold,
-    color: '#0F172A'
-  },
-  jerseyBadge: {
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6
-  },
-  jerseyBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontFamily: systemFontMedium
-  },
-  threeDotsBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  playerRoleText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontFamily: systemFontMedium,
-    marginTop: 2
-  },
-  styleBadgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-    flexWrap: 'wrap'
-  },
-  styleBadgeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F0F9FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#BAE6FD'
-  },
-  bowlingBadgeItem: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0'
-  },
-  styleBadgeText: {
-    fontSize: 11,
-    fontFamily: systemFontMedium,
-    color: '#0284C7'
-  },
-
-  // Tabs Bar & Pager Styles (CREX / Rankings Style)
+  // Tabs Bar & Pager Styles
   tabsBarWrapper: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
@@ -2150,276 +1115,18 @@ const styles = StyleSheet.create({
     color: '#18181B',
     fontFamily: systemFontBold
   },
-  animatedUnderline: {
+  animatedUnderlineOuter: {
     position: 'absolute',
     bottom: 0,
+    left: 0,
+    width: 100,
+    height: 2.5
+  },
+  animatedUnderlineInner: {
+    flex: 1,
     height: 2.5,
     backgroundColor: '#18181B',
     borderRadius: 2
-  },
-  pageScrollView: {
-    flex: 1
-  },
-  scrollContent: {
-    padding: 14,
-    paddingBottom: 28
-  },
-
-  // 3-Dots Action Menu Bottom Sheet Styles
-  actionModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(7, 27, 44, 0.65)',
-    justifyContent: 'flex-end'
-  },
-  actionMenuCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 36,
-    gap: 4
-  },
-  actionMenuHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    marginBottom: 6
-  },
-  actionMenuTitle: {
-    fontSize: 16,
-    fontFamily: systemFontBold,
-    color: '#0F172A'
-  },
-  actionMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC'
-  },
-  actionMenuIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  actionMenuLabel: {
-    fontSize: 14,
-    fontFamily: systemFontBold,
-    color: '#1E293B'
-  },
-  actionMenuSub: {
-    fontSize: 11,
-    fontFamily: systemFont,
-    color: '#64748B',
-    marginTop: 1
-  },
-
-  sectionHeader: {
-    fontSize: 11,
-    fontFamily: systemFontBold,
-    color: '#64748B',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginTop: 4
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    gap: 8
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
-    position: 'relative'
-  },
-  summaryVal: {
-    fontSize: 18,
-    fontFamily: systemFontBold,
-    color: '#0F172A'
-  },
-  summaryLbl: {
-    fontSize: 10,
-    fontFamily: systemFontMedium,
-    color: '#64748B',
-    marginTop: 2
-  },
-
-  statsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
-    position: 'relative'
-  },
-  statsCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    paddingBottom: 8
-  },
-  statsCardTitle: {
-    fontSize: 13,
-    fontFamily: systemFontBold,
-    color: '#0F172A'
-  },
-  statRowGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    rowGap: 10
-  },
-  statCol: {
-    width: '33.33%',
-    alignItems: 'center'
-  },
-  statColVal: {
-    fontSize: 15,
-    fontFamily: systemFontBold,
-    color: '#0F172A'
-  },
-  statColLbl: {
-    fontSize: 10,
-    fontFamily: systemFontMedium,
-    color: '#64748B',
-    marginTop: 2
-  },
-
-  emptyMatchesCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 6
-  },
-  emptyTitle: {
-    fontSize: 13,
-    fontFamily: systemFontBold,
-    color: '#0F172A',
-    marginTop: 4
-  },
-  emptySub: {
-    fontSize: 11,
-    color: '#64748B',
-    fontFamily: systemFont,
-    textAlign: 'center',
-    lineHeight: 16
-  },
-  matchHistoryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 8
-  },
-  matchTitle: {
-    fontSize: 13,
-    fontFamily: systemFontBold,
-    color: '#0F172A'
-  },
-  matchDate: {
-    fontSize: 10,
-    color: '#64748B',
-    fontFamily: systemFont,
-    marginTop: 2
-  },
-  matchResultText: {
-    fontSize: 11,
-    fontFamily: systemFontBold,
-    color: '#059669',
-    marginTop: 4
-  },
-
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    justifyContent: 'flex-end'
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '85%'
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingBottom: 10
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontFamily: systemFontBold,
-    color: '#0F172A'
-  },
-  pillSelectorRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 4
-  },
-  roleSelectPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0'
-  },
-  roleSelectPillActive: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B'
-  },
-  roleSelectPillText: {
-    fontSize: 11,
-    fontFamily: systemFontMedium,
-    color: '#475569'
-  },
-  roleSelectPillTextActive: {
-    color: '#FFFFFF',
-    fontFamily: systemFontBold
-  },
-  saveBtn: {
-    backgroundColor: '#18181B',
-    borderRadius: 10,
-    paddingVertical: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    marginBottom: 20
-  },
-  saveBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontFamily: systemFontBold
   }
 });
 

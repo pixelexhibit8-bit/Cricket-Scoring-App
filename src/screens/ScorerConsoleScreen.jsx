@@ -12,38 +12,76 @@ import {
   systemFontBold,
   systemFontMedium
 } from '../theme.js';
+import { useMatch } from '../context/MatchContext.jsx';
+import { QuickMatchSetupScreen } from './QuickMatchSetupScreen.jsx';
+import { FinishedMatchViewScreen } from './FinishedMatchViewScreen.jsx';
+import { InningBreakScreen } from './InningBreakScreen.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
+import { ScorerModals } from '../components/modals/ScorerModals.jsx';
 import {
   formatOvers,
   sumDeliveryTokens,
   getCurrentOverNumber,
-  renderBallTimeline
+  renderBallTimeline,
+  buildFinishedMatch
 } from '../utils/cricketUtils.js';
 
-export function ScorerConsoleScreen({
-  activeMatch,
-  getBattingRoster,
-  getBowlingRoster,
-  handleRecordBall,
-  handleWicketPress,
-  handleUndo,
-  handleRedo,
-  handleSwapStrike,
-  handleRetireBatsman,
-  handleOpenPlayerProfile,
-  setExtrasSheetVisible,
-  setIsEditSquadModalOpen,
-  setNextBowlerName,
-  setBowlerChangePending
-}) {
+export function ScorerConsoleScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    activeMatch = matchCtx.activeMatch,
+    getBattingRoster = matchCtx.getBattingRoster,
+    getBowlingRoster = matchCtx.getBowlingRoster,
+    handleRecordBall = matchCtx.handleRecordBall,
+    handleWicketPress = matchCtx.handleWicketPress,
+    handleUndo = matchCtx.handleUndo,
+    handleRedo = matchCtx.handleRedo,
+    handleSwapStrike = matchCtx.handleSwapStrike,
+    handleRetireBatsman = matchCtx.handleRetireBatsman,
+    handleOpenPlayerProfile = (profile) => {
+      if (matchCtx.setSelectedPlayerProfile) matchCtx.setSelectedPlayerProfile(profile);
+      if (matchCtx.setCurrentScreen) matchCtx.setCurrentScreen('playerProfile');
+    },
+    setExtrasSheetVisible = matchCtx.setExtrasSheetVisible,
+    setIsEditSquadModalOpen = matchCtx.setIsEditSquadModalOpen,
+    setNextBowlerName = matchCtx.setNextBowlerName,
+    setBowlerChangePending = matchCtx.setBowlerChangePending,
+    handleStartNewMatchSetup = matchCtx.handleStartNewMatchSetup
+  } = props;
+
   const { height: screenHeight } = useWindowDimensions();
 
-  if (!activeMatch) return null;
+  if (!activeMatch) {
+    return <QuickMatchSetupScreen />;
+  }
 
-  const inn = activeMatch.inning === 2
-    ? (activeMatch.innings?.[1] || activeMatch.secondInning)
-    : (activeMatch.innings?.[0] || activeMatch.firstInning);
-  if (!inn) return null;
+  if (activeMatch.phase === 'result') {
+    return <FinishedMatchViewScreen />;
+  }
+
+  if (activeMatch.phase === 'inningBreak') {
+    return <InningBreakScreen />;
+  }
+
+  const innIdx = (activeMatch?.inning || 1) - 1;
+  const inn = activeMatch?.innings?.[innIdx] || activeMatch?.innings?.[0];
+  if (!inn?.battingTeam || !inn?.bowlingTeam) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#071B2C', gap: 12 }}>
+        <Ionicons name="alert-circle-outline" size={32} color="#0284C7" />
+        <Text style={{ fontSize: 18, color: '#FFFFFF', fontFamily: systemFontBold, textAlign: 'center' }}>No Active Match Selected</Text>
+        <Text style={{ fontSize: 13, color: '#94A3B8', fontFamily: systemFont, textAlign: 'center', lineHeight: 19 }}>
+          Start a new match setup or unlock an existing match to score.
+        </Text>
+        <TouchableOpacity
+          onPress={handleStartNewMatchSetup}
+          style={{ marginTop: 10, backgroundColor: '#0284C7', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 }}
+        >
+          <Text style={{ color: '#FFFFFF', fontFamily: systemFontBold, fontSize: 13, letterSpacing: 0.5 }}>+ START NEW MATCH</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const batRoster = getBattingRoster ? getBattingRoster() : [];
   const bowlRoster = getBowlingRoster ? getBowlingRoster() : [];
@@ -397,6 +435,9 @@ export function ScorerConsoleScreen({
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Scorer Cricket Modals */}
+      <ScorerModals />
     </View>
   );
 }

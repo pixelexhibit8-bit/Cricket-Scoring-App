@@ -5,12 +5,12 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Modal,
   Pressable,
   RefreshControl
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   themeColors,
@@ -19,8 +19,27 @@ import {
   systemFontBold
 } from '../theme.js';
 import { getTournaments } from '../services/tournamentService.js';
+import { useMatch } from '../context/MatchContext.jsx';
 
-export function AllSeriesDirectoryScreen({ navigation, onBack, onSelectSeries, isTab = false }) {
+export function AllSeriesDirectoryScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    navigation = props.navigation,
+    onBack = props.onBack || (() => {
+      if (props.navigation && props.navigation.canGoBack()) {
+        props.navigation.goBack();
+      } else {
+        if (matchCtx.setBottomNavTab) matchCtx.setBottomNavTab('home');
+        if (matchCtx.setCurrentScreen) matchCtx.setCurrentScreen('home');
+      }
+    }),
+    onSelectSeries = props.onSelectSeries || ((sItem) => {
+      if (props.navigation) {
+        props.navigation.navigate('PublicSeriesView', { seriesData: sItem });
+      }
+    }),
+    isTab = props.isTab || false
+  } = props;
   // Active Category Filter Chip State
   const [activeCategory, setActiveCategory] = useState('All');
   const filterCategories = ['All', 'T20', 'Limited Overs', 'Turf / Box', 'Open'];
@@ -81,12 +100,17 @@ export function AllSeriesDirectoryScreen({ navigation, onBack, onSelectSeries, i
   });
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
       <View style={styles.container}>
 
         {/* ── 1. TOP HEADER BAR ── */}
         <View style={styles.headerBar}>
+          {/* Centered Title (absolute positioned so it never gets skewed) */}
+          <View style={styles.headerTitleWrap} pointerEvents="none">
+            <Text style={styles.headerTitle}>Tournaments & Series</Text>
+          </View>
+
           {!isTab ? (
             <TouchableOpacity
               style={styles.backBtn}
@@ -97,11 +121,10 @@ export function AllSeriesDirectoryScreen({ navigation, onBack, onSelectSeries, i
               <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
             </TouchableOpacity>
           ) : (
-            <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 36, alignItems: 'center', justifyContent: 'center' }}>
               <MaterialCommunityIcons name="trophy" size={22} color={themeColors.textPrimary} />
             </View>
           )}
-          <Text style={styles.headerTitle}>Tournaments & Series</Text>
 
           <TouchableOpacity
             style={styles.hostBtn}
@@ -221,15 +244,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16
+    paddingHorizontal: 16,
+    position: 'relative'
   },
   backBtn: {
-    padding: 4,
-    marginLeft: -4
+    width: 36,
+    height: 36,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    zIndex: 1
+  },
+  headerTitleWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   headerTitle: {
-    fontSize: 17,
-    fontFamily: systemFontBold,
+    fontSize: 16,
+    fontFamily: systemFontMedium,
     color: themeColors.textPrimary,
     letterSpacing: -0.2
   },
@@ -240,12 +276,13 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8
+    borderRadius: 8,
+    zIndex: 1
   },
   hostBtnText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontFamily: systemFontBold
+    fontFamily: systemFontMedium
   },
   filterBarWrapper: {
     backgroundColor: themeColors.surface,

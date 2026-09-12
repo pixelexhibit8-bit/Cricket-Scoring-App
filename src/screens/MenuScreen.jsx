@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   themeColors,
@@ -15,18 +15,45 @@ import {
   systemFontMedium,
   systemFontBold
 } from '../theme.js';
+import { useMatch } from '../context/MatchContext.jsx';
 
-export function MenuScreen({
-  navigation,
-  onBack,
-  onLeaderboardPress,
-  onProfilePress,
-  onCreateTournamentPress,
-  userProfile = {
-    name: 'Bastiram Suthar',
-    phoneOrEmail: 'bastisuthar@gmail.com'
-  }
-}) {
+export function MenuScreen(props = {}) {
+  const matchCtx = useMatch();
+  const {
+    navigation = props.navigation,
+    onBack = props.onBack || (() => {
+      if (props.navigation && props.navigation.canGoBack()) {
+        props.navigation.goBack();
+      } else if (matchCtx.setCurrentScreen) {
+        matchCtx.setCurrentScreen('home');
+      }
+    }),
+    onLeaderboardPress = props.onLeaderboardPress || (() => {
+      if (props.navigation) {
+        props.navigation.navigate('Rankings');
+      } else if (matchCtx.setCurrentScreen) {
+        matchCtx.setCurrentScreen('rankings');
+      }
+    }),
+    onProfilePress = props.onProfilePress || (() => {
+      if (props.navigation) {
+        props.navigation.navigate('PlayerProfile');
+      } else if (matchCtx.setCurrentScreen) {
+        matchCtx.setCurrentScreen('playerProfile');
+      }
+    }),
+    onCreateTournamentPress = props.onCreateTournamentPress || (() => {
+      if (props.navigation) {
+        props.navigation.navigate('CreateTournament');
+      } else if (matchCtx.setCurrentScreen) {
+        matchCtx.setCurrentScreen('createTournament');
+      }
+    }),
+    userProfile = props.userProfile || {
+      name: 'Bastiram Suthar',
+      phoneOrEmail: 'bastisuthar@gmail.com'
+    }
+  } = props;
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -36,7 +63,7 @@ export function MenuScreen({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
       <View style={styles.container}>
         {/* ── 1. HEADER BAR ── */}

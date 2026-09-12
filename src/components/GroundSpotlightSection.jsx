@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { PlayerAvatar } from './PlayerAvatar.jsx';
 import { systemFontMedium, systemFontBold } from '../theme.js';
 
-export function GroundSpotlightSection({
+export const GroundSpotlightSection = React.memo(function GroundSpotlightSection({
   topBatters = [],
   topBowlers = [],
   topAllRounders = [],
@@ -139,7 +139,9 @@ export function GroundSpotlightSection({
       </View>
     </View>
   );
-}
+});
+
+export default GroundSpotlightSection;
 
 const styles = StyleSheet.create({
   container: {

@@ -1,19 +1,26 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { systemFontMedium, systemFontBold } from '../../theme.js';
 
 import { ScalePressable } from '../motion/MotionSystem.jsx';
 
-export function AppBottomNav({ activeTab, onTabChange }) {
+export function AppBottomNav(props) {
+  const { activeTab, onTabChange, state, navigation } = props;
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 6 : 4);
+
+  const isReactNavigation = Boolean(state && navigation);
+  const currentTab = isReactNavigation
+    ? (state.routes[state.index]?.name || 'Home').toLowerCase()
+    : (activeTab || 'home').toLowerCase();
 
   const tabs = [
     {
       id: 'home',
       label: 'Home',
+      routeName: 'Home',
       activeIcon: 'home',
       inactiveIcon: 'home-outline',
       isMCI: false
@@ -21,6 +28,7 @@ export function AppBottomNav({ activeTab, onTabChange }) {
     {
       id: 'matches',
       label: 'Matches',
+      routeName: 'Matches',
       activeIcon: 'cricket',
       inactiveIcon: 'cricket',
       isMCI: true
@@ -28,21 +36,44 @@ export function AppBottomNav({ activeTab, onTabChange }) {
     {
       id: 'series',
       label: 'Series',
+      routeName: 'Series',
       activeIcon: 'trophy',
       inactiveIcon: 'trophy-outline',
       isMCI: true
     }
   ];
 
+  const handleTabPress = (tab) => {
+    if (isReactNavigation) {
+      const route = state.routes.find(
+        (r) => r.name.toLowerCase() === tab.id.toLowerCase()
+      );
+      if (route) {
+        const isFocused = state.index === state.routes.indexOf(route);
+        const event = navigation.emit({
+          type: 'tabPress',
+          target: route.key,
+          canPreventDefault: true,
+        });
+
+        if (!isFocused && !event.defaultPrevented) {
+          navigation.navigate(route.name);
+        }
+      }
+    } else if (onTabChange) {
+      onTabChange(tab.id);
+    }
+  };
+
   return (
     <View style={[styles.container, { paddingBottom: bottomPadding }]}>
       <View style={styles.navRow}>
         {tabs.map((tab) => {
-          const isActive = activeTab === tab.id || (tab.id === 'home' && !activeTab);
+          const isActive = currentTab === tab.id;
           return (
             <ScalePressable
               key={tab.id}
-              onPress={() => onTabChange(tab.id)}
+              onPress={() => handleTabPress(tab)}
               style={styles.tabButton}
               activeScale={0.92}
               accessibilityRole="tab"
