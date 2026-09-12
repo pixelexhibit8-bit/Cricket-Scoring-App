@@ -12,7 +12,8 @@
       "backgroundColor": "#071B2C"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cricscorer.app"
     },
     "android": {
       "package": "com.cricscorer.app",
