@@ -17,6 +17,7 @@ export function AppHeader({
   placeholder = 'Search matches, players...',
   showSearch = true,
   rightElement = null,
+  onMenuPress = null,
   scrollY = null   // kept in API for compatibility but no longer used
 }) {
   return (
@@ -38,7 +39,7 @@ export function AppHeader({
             <TouchableOpacity
               style={styles.menuDrawerBtn}
               activeOpacity={0.7}
-              disabled={true}
+              onPress={onMenuPress}
               accessibilityLabel="Navigation Menu"
             >
               <Ionicons name="menu-outline" size={24} color={themeColors.textPrimary} />

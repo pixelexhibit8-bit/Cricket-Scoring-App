@@ -9,29 +9,42 @@ import {
   StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { systemFont, systemFontBold, systemFontMedium } from '../../theme.js';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
+import { getPlayerMatchStatus } from '../../utils/cricketUtils.js';
+import { showToast } from '../../services/toastService.js';
 
 export function SquadSelectorModal({
   visible,
   onClose,
-  team1Name = 'Team 1',
-  team2Name = 'Team 2',
-  team1LogoKey = 'csk',
-  team2LogoKey = 'rcb',
-  team1Roster = [],
-  team2Roster = [],
+  activeMatch = null,
+  team1Name: propTeam1Name,
+  team2Name: propTeam2Name,
+  team1LogoKey: propTeam1LogoKey,
+  team2LogoKey: propTeam2LogoKey,
+  team1Roster: propTeam1Roster,
+  team2Roster: propTeam2Roster,
   allPlayersPool = [],
   localPlayersDb = [],
   onMoveToTeam,
+  onMovePlayer,
   onOpenAddPlayerModal,
   onOpenSquadPreview,
   onEditPlayerPhoto
 }) {
   const [activeTab, setActiveTab] = useState('team1'); // 'team1' | 'team2'
   const [searchQuery, setSearchQuery] = useState('');
+
+  const moveHandler = onMoveToTeam || onMovePlayer;
+
+  const team1Name = propTeam1Name || activeMatch?.teams?.[0]?.name || activeMatch?.innings?.[0]?.battingTeam?.name || 'Team 1';
+  const team2Name = propTeam2Name || activeMatch?.teams?.[1]?.name || activeMatch?.innings?.[0]?.bowlingTeam?.name || 'Team 2';
+  const team1LogoKey = propTeam1LogoKey || activeMatch?.teams?.[0]?.logoKey || 'csk';
+  const team2LogoKey = propTeam2LogoKey || activeMatch?.teams?.[1]?.logoKey || 'rcb';
+  const team1Roster = propTeam1Roster || activeMatch?.playingXI?.[team1Name] || activeMatch?.teams?.[0]?.roster || [];
+  const team2Roster = propTeam2Roster || activeMatch?.playingXI?.[team2Name] || activeMatch?.teams?.[1]?.roster || [];
 
   const activeTeamName = activeTab === 'team1' ? team1Name : team2Name;
   const activeTeamLogoKey = activeTab === 'team1' ? team1LogoKey : team2LogoKey;
@@ -43,7 +56,7 @@ export function SquadSelectorModal({
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
     const qClean = q.replace(/\D/g, '');
-    const dbMatch = localPlayersDb.find(p => p && p.name && p.name.trim().toLowerCase() === name.trim().toLowerCase());
+    const dbMatch = (localPlayersDb || []).find(p => p && p.name && p.name.trim().toLowerCase() === name.trim().toLowerCase());
     const phone = dbMatch?.phone || dbMatch?.mobile || '';
     const phoneClean = String(phone).replace(/\D/g, '');
 
@@ -68,7 +81,16 @@ export function SquadSelectorModal({
             <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>Select Squad Players</Text>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={styles.headerTitle}>
+              {activeMatch ? 'Edit Squad (Live Match)' : 'Select Squad Players'}
+            </Text>
+            {activeMatch ? (
+              <Text style={{ fontSize: 10.5, color: '#0284C7', fontFamily: systemFontMedium }}>
+                Live Match in Progress
+              </Text>
+            ) : null}
+          </View>
 
           <View style={{ width: 48 }} />
         </View>
@@ -220,10 +242,12 @@ export function SquadSelectorModal({
             filteredPlayers.map((playerName) => {
               const inCurrent = activeRoster.includes(playerName);
               const inOther = otherRoster.includes(playerName);
-              const dbMatch = localPlayersDb.find(p => p && p.name && p.name.trim().toLowerCase() === playerName.trim().toLowerCase());
+              const dbMatch = (localPlayersDb || []).find(p => p && p.name && p.name.trim().toLowerCase() === playerName.trim().toLowerCase());
               const playerPhone = dbMatch?.phone || dbMatch?.mobile || '';
               const role = dbMatch?.role || 'All-Rounder';
               const photoUrl = dbMatch?.avatar || dbMatch?.photoUrl || dbMatch?.photo_url || null;
+
+              const matchStatus = getPlayerMatchStatus(activeMatch, playerName);
 
               return (
                 <View
@@ -249,21 +273,44 @@ export function SquadSelectorModal({
                     <Text style={styles.playerNameText} numberOfLines={1}>
                       {playerName}
                     </Text>
-                    <Text style={styles.playerSubText} numberOfLines={1}>
-                      {role}{playerPhone ? ` • ${playerPhone.slice(-4)}` : ''}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <Text style={styles.playerSubText} numberOfLines={1}>
+                        {role}{playerPhone ? ` • ${playerPhone.slice(-4)}` : ''}
+                      </Text>
+                      {matchStatus.statusLabel ? (
+                        <View style={{ backgroundColor: matchStatus.badgeBg, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: matchStatus.badgeBorder, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                          <Ionicons name="lock-closed" size={9} color={matchStatus.badgeText} />
+                          <Text style={{ fontSize: 9.5, color: matchStatus.badgeText, fontFamily: systemFontMedium }}>
+                            {matchStatus.statusLabel}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
 
                   {/* Right Action Button */}
                   {inCurrent ? (
-                    <TouchableOpacity
-                      onPress={() => onMoveToTeam && onMoveToTeam(playerName, 'pool')}
-                      style={styles.selectedBadgeBtn}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                      <Text style={styles.selectedBadgeText}>Selected</Text>
-                    </TouchableOpacity>
+                    !matchStatus.canRemove ? (
+                      <TouchableOpacity
+                        onPress={() => showToast(matchStatus.reason || `${playerName} is actively playing in this match and cannot be removed`, 'info')}
+                        style={[styles.lockedBadgeBtn, { backgroundColor: matchStatus.badgeBg || '#F1F5F9', borderColor: matchStatus.badgeBorder || '#E2E8F0' }]}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="lock-closed" size={12} color={matchStatus.badgeText || '#64748B'} />
+                        <Text style={[styles.lockedBadgeText, { color: matchStatus.badgeText || '#64748B' }]}>
+                          {matchStatus.statusLabel || 'In Match'}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => moveHandler && moveHandler(playerName, 'pool')}
+                        style={styles.selectedBadgeBtn}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                        <Text style={styles.selectedBadgeText}>Selected</Text>
+                      </TouchableOpacity>
+                    )
                   ) : inOther ? (
                     <View style={styles.inOtherBadge}>
                       <Text style={styles.inOtherBadgeText} numberOfLines={1}>
@@ -272,7 +319,7 @@ export function SquadSelectorModal({
                     </View>
                   ) : (
                     <TouchableOpacity
-                      onPress={() => onMoveToTeam && onMoveToTeam(playerName, activeTab)}
+                      onPress={() => moveHandler && moveHandler(playerName, activeTab)}
                       style={styles.selectBtn}
                       activeOpacity={0.8}
                     >
@@ -569,6 +616,19 @@ const styles = StyleSheet.create({
   },
   selectedBadgeText: {
     color: '#FFFFFF',
+    fontSize: 11,
+    fontFamily: systemFontMedium
+  },
+  lockedBadgeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  lockedBadgeText: {
     fontSize: 11,
     fontFamily: systemFontMedium
   },

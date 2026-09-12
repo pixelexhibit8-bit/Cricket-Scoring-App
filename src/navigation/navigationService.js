@@ -11,7 +11,12 @@ export const SCREEN_ROUTE_MAP = {
   playerProfile: 'PlayerProfile',
   matches: 'Matches',
   rankings: 'Rankings',
-  inningBreak: 'InningBreak'
+  inningBreak: 'InningBreak',
+  menu: 'Menu',
+  createTournament: 'CreateTournament',
+  tournamentHub: 'TournamentHub',
+  publicSeriesView: 'PublicSeriesView',
+  allSeriesDirectory: 'AllSeriesDirectory'
 };
 
 export const ROUTE_SCREEN_MAP = {
@@ -23,7 +28,12 @@ export const ROUTE_SCREEN_MAP = {
   PlayerProfile: 'playerProfile',
   Matches: 'matches',
   Rankings: 'rankings',
-  InningBreak: 'inningBreak'
+  InningBreak: 'inningBreak',
+  Menu: 'menu',
+  CreateTournament: 'createTournament',
+  TournamentHub: 'tournamentHub',
+  PublicSeriesView: 'publicSeriesView',
+  AllSeriesDirectory: 'allSeriesDirectory'
 };
 
 export function navigate(name, params) {

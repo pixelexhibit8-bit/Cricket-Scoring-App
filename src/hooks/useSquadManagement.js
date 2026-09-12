@@ -5,6 +5,7 @@ import { syncPlayersToPhotoRegistry } from '../services/playerPhotoStore.js';
 import { showToast } from '../services/toastService.js';
 import { capitalizeWords } from '../utils/textUtils.js';
 import { syncMatchToSupabase } from '../services/matchService.js';
+import { getPlayerMatchStatus } from '../utils/cricketUtils.js';
 
 export function useSquadManagement({ activeMatch, setActiveMatch }) {
   const [localPlayersList, setLocalPlayersList] = useState([]);
@@ -36,22 +37,33 @@ export function useSquadManagement({ activeMatch, setActiveMatch }) {
   ])].filter(Boolean);
 
   const handleMidMatchMoveToTeam = (playerName, targetTeam) => {
-    if (!activeMatch) return;
+    if (!activeMatch || !playerName) return;
+
     const t1Name = activeMatch?.teams?.[0]?.name || activeMatch?.innings?.[0]?.battingTeam?.name || 'Team 1';
     const t2Name = activeMatch?.teams?.[1]?.name || activeMatch?.innings?.[0]?.bowlingTeam?.name || 'Team 2';
 
-    let currentT1 = [...(activeMatch.playingXI?.[t1Name] || [])];
-    let currentT2 = [...(activeMatch.playingXI?.[t2Name] || [])];
+    const isRemoving = targetTeam === 'pool' || targetTeam === 'remove' || (!targetTeam.startsWith('team') && targetTeam !== t1Name && targetTeam !== t2Name);
+
+    if (isRemoving) {
+      const matchStatus = getPlayerMatchStatus(activeMatch, playerName);
+      if (!matchStatus.canRemove) {
+        showToast(matchStatus.reason || `${playerName} is actively playing in this match and cannot be removed`, 'error');
+        return;
+      }
+    }
+
+    let currentT1 = [...(activeMatch.playingXI?.[t1Name] || activeMatch?.teams?.[0]?.roster || [])];
+    let currentT2 = [...(activeMatch.playingXI?.[t2Name] || activeMatch?.teams?.[1]?.roster || [])];
 
     currentT1 = currentT1.filter(p => p !== playerName);
     currentT2 = currentT2.filter(p => p !== playerName);
 
-    if (targetTeam === 'team1') {
+    if (targetTeam === 'team1' || targetTeam === t1Name) {
       currentT1.push(playerName);
-      showToast(`${playerName} added to ${t1Name}!`, 'success');
-    } else if (targetTeam === 'team2') {
+      showToast(`${playerName} added to ${t1Name} squad!`, 'success');
+    } else if (targetTeam === 'team2' || targetTeam === t2Name) {
       currentT2.push(playerName);
-      showToast(`${playerName} added to ${t2Name}!`, 'success');
+      showToast(`${playerName} added to ${t2Name} squad!`, 'success');
     } else {
       showToast(`${playerName} removed from squad`, 'info');
     }

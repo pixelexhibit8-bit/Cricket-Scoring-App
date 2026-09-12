@@ -994,3 +994,129 @@ export const getUnplayedBatters = (roster = [], recordedBatters = []) => {
     .map(getPlayerPreview);
 };
 
+export function getPlayerMatchStatus(activeMatch, playerName) {
+  if (!activeMatch || !playerName) {
+    return { isPlayed: false, isCurrentlyPlaying: false, statusLabel: null, badgeBg: null, badgeBorder: null, badgeText: null, icon: null, canRemove: true, reason: null };
+  }
+
+  const cleanName = String(playerName).trim().toLowerCase();
+  if (!cleanName) {
+    return { isPlayed: false, isCurrentlyPlaying: false, statusLabel: null, badgeBg: null, badgeBorder: null, badgeText: null, icon: null, canRemove: true, reason: null };
+  }
+
+  const innings = Array.isArray(activeMatch.innings) && activeMatch.innings.length > 0
+    ? activeMatch.innings
+    : [activeMatch.firstInning, activeMatch.secondInning, activeMatch.curInning].filter(Boolean);
+
+  for (const inn of innings) {
+    if (!inn) continue;
+
+    // 1. Currently Batting - Striker
+    if (inn.striker?.name && String(inn.striker.name).trim().toLowerCase() === cleanName) {
+      return {
+        isPlayed: true,
+        isCurrentlyPlaying: true,
+        statusLabel: 'Striker',
+        badgeBg: '#E0F2FE',
+        badgeBorder: '#BAE6FD',
+        badgeText: '#0284C7',
+        icon: 'bat',
+        canRemove: false,
+        reason: `${playerName} is currently batting (Striker) and cannot be removed.`
+      };
+    }
+
+    // 2. Currently Batting - Non-Striker
+    if (inn.nonStriker?.name && String(inn.nonStriker.name).trim().toLowerCase() === cleanName) {
+      return {
+        isPlayed: true,
+        isCurrentlyPlaying: true,
+        statusLabel: 'Non-Striker',
+        badgeBg: '#E0F2FE',
+        badgeBorder: '#BAE6FD',
+        badgeText: '#0284C7',
+        icon: 'bat',
+        canRemove: false,
+        reason: `${playerName} is currently batting (Non-Striker) and cannot be removed.`
+      };
+    }
+
+    // 3. Currently Bowling
+    if (inn.bowler?.name && String(inn.bowler.name).trim().toLowerCase() === cleanName) {
+      return {
+        isPlayed: true,
+        isCurrentlyPlaying: true,
+        statusLabel: 'Bowler',
+        badgeBg: '#FFEDD5',
+        badgeBorder: '#FED7AA',
+        badgeText: '#C2410C',
+        icon: 'baseball',
+        canRemove: false,
+        reason: `${playerName} is currently bowling and cannot be removed.`
+      };
+    }
+
+    // 4. Dismissed / Out
+    if (Array.isArray(inn.dismissedPlayers) && inn.dismissedPlayers.some(p => String(p).trim().toLowerCase() === cleanName)) {
+      return {
+        isPlayed: true,
+        isCurrentlyPlaying: false,
+        statusLabel: 'Out',
+        badgeBg: '#FEF2F2',
+        badgeBorder: '#FCA5A5',
+        badgeText: '#DC2626',
+        icon: 'account-cancel-outline',
+        canRemove: false,
+        reason: `${playerName} has already batted (Out) and cannot be removed.`
+      };
+    }
+
+    // 5. Batted in allBatters or batsmen
+    const allBatters = inn.allBatters || inn.batsmen || [];
+    const batterMatch = allBatters.find(b => b?.name && String(b.name).trim().toLowerCase() === cleanName);
+    if (batterMatch && (batterMatch.runs > 0 || batterMatch.balls > 0 || batterMatch.isOut)) {
+      const isOut = Boolean(batterMatch.isOut || (batterMatch.dismissal && batterMatch.dismissal !== 'Not out'));
+      return {
+        isPlayed: true,
+        isCurrentlyPlaying: false,
+        statusLabel: isOut ? 'Out' : 'Batted',
+        badgeBg: isOut ? '#FEF2F2' : '#DCFCE7',
+        badgeBorder: isOut ? '#FCA5A5' : '#86EFAC',
+        badgeText: isOut ? '#DC2626' : '#15803D',
+        icon: isOut ? 'account-cancel-outline' : 'bat',
+        canRemove: false,
+        reason: `${playerName} has already batted in this match and cannot be removed.`
+      };
+    }
+
+    // 6. Bowled in bowlingStats or bowlers
+    const bowlStat = (inn.bowlingStats || {})[playerName] || (inn.bowlers || []).find(b => b?.name && String(b.name).trim().toLowerCase() === cleanName);
+    if (bowlStat && (bowlStat.balls > 0 || bowlStat.runs > 0 || bowlStat.wickets > 0)) {
+      return {
+        isPlayed: true,
+        isCurrentlyPlaying: false,
+        statusLabel: 'Bowled',
+        badgeBg: '#FEF3C7',
+        badgeBorder: '#FDE68A',
+        badgeText: '#B45309',
+        icon: 'baseball',
+        canRemove: false,
+        reason: `${playerName} has already bowled in this match and cannot be removed.`
+      };
+    }
+  }
+
+  return {
+    isPlayed: false,
+    isCurrentlyPlaying: false,
+    statusLabel: null,
+    badgeBg: null,
+    badgeBorder: null,
+    badgeText: null,
+    icon: null,
+    canRemove: true,
+    reason: null
+  };
+}
+
+

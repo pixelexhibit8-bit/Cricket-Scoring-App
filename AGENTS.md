@@ -7,6 +7,10 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 - All version control operations performed by the agent MUST BE STRICTLY LOCAL (`git commit` on local branch only).
 - The USER exclusively owns, reviews, and executes all remote pushes to GitHub.
 
+# User Confirmation & Explicit Authorization Rule - STRICT
+- **STRICT**: The AI agent MUST NEVER execute any code modifications, file writes, or feature implementations without explicitly proposing the plan, asking the USER, and receiving their direct, affirmative confirmation first.
+- Always present the UI plan or architectural design concept first, ask for review/feedback, and wait for the user to approve before editing any code.
+
 # CricFlow Source Of Truth - STRICT
 
 - Every CricFlow request from the user defaults to the Expo application, even when the user does not say "app", "mobile", or "Expo".
@@ -27,8 +31,8 @@ This is a **Cricket App (CricFlow)**. ALWAYS use the installed icon libraries:
 ## React Native (CricFlowMobile)
 - ALWAYS import from `@expo/vector-icons` — specifically `MaterialCommunityIcons` and `Ionicons`
 - `MaterialCommunityIcons` preferred for: `cricket`, `baseball`, `bat`, `trophy`, `star-circle-outline`, `scoreboard`, `account-group`, `weather-sunny`
-- `Ionicons` preferred for: `search`, `arrow-back`, `settings-outline`, `sunny-outline`, `radio-outline`, `checkmark-circle-outline`, `trophy-outline`, `cloudy-night-outline`
-- NEVER use plain text emojis or Unicode characters as icons in JSX
+- `Ionicons` preferred for: `search`, `arrow-back`, `settings-outline`, `sunny-outline`, `radio-outline`, `checkmark-circle-outline`, `trophy-outline`, `cloudy-night-outline`, `calendar-outline`
+- **STRICT ZERO EMOJI RULE**: NEVER use plain text emojis or Unicode emoji characters (e.g. 📅, 🏏, 🏆, 📢, ⚡, 👤, 👥, 📍, 🔑, 📊, ⚡) anywhere in JSX text or headers. ALWAYS use `@expo/vector-icons` (`Ionicons` / `MaterialCommunityIcons`) or clean industry-standard badges.
 - NEVER use `lucide-react` in React Native
 
 ## Web (CricFlow)
@@ -86,23 +90,20 @@ This is a **Cricket App (CricFlow)**. ALWAYS use the installed icon libraries:
 - Its player roster (`local_players` database) and match data are completely separate from official tournament records, professional stats, or official player rankings.
 - It provides a free, instant, zero-friction local scoring experience for ground users without requiring official tournament setup.
 
-# CricFlow Product Vision & Core Architecture - STRICT
+# CricFlow True Product Vision & Core Architecture - STRICT & LOCKED
 
-1. **Local Unofficial Ground Matches First (Quick Match)**:
-   - Primary focus is free, instant, zero-friction local cricket (gully, turf, gaon, school, college).
-   - Must allow adding new players on-the-fly mid-match without forcing upfront formal registration.
-   - Separate feature distinction: Local Ground Matches (current priority) vs Official Tournament/League Management (future roadmap).
+CricFlow is a COMPLETE CRICKET ECOSYSTEM (Tournaments, Matches, Live Public Streaming, and Organized Data Collection) — NOT just a scoring utility.
 
-2. **Offline-First Fast Scoring**:
-   - Scoring MUST work 100% offline with zero latency without requiring an active internet connection.
-   - Match updates sync to Supabase automatically when online without blocking scorer interaction.
-
-3. **Local Player Career Stats**:
-   - Track local player career performance (runs, wickets, strike rate, boundaries, 50s, 100s, economy) over time across ground matches.
-
-4. **Modular Foundation & Reusable Core**:
-   - Perfect the Local Ground Match platform first as a solid foundation.
-   - Build all UI primitives (Scorecards, Live Pagers, Overs, Graphs, Player Cards) and Database models modularly so they can be seamlessly reused for Official Tournaments & Leagues in Phase 2.
+1. **Full Tournament & League Management**:
+   - Organizers can create, host, and conduct complete local, corporate, school/college, and official Tournaments & Series end-to-end (Team registrations, Points Table, Match Scheduling, Stages/Rounds, Leaderboard, WhatsApp Invites).
+2. **Flexible Match Hosting (Quick Ground & Tournament Matches)**:
+   - Supports both standalone instant ground matches (Quick Match) and structured tournament fixtures with equal robustness.
+3. **Real-time Live Public Scoring & Match Experience**:
+   - Public users can watch live ball-by-ball scoring, live commentary, scorecard, overs, graphs, squads, and tournament standings with zero friction.
+4. **Well-Managed, Organized Data Collection & Player Career Profiles**:
+   - The primary objective of CricFlow is clean, structured, well-organized cricket data collection — tracking players, teams, stats (runs, wickets, strike rate, boundaries, economy, MVP, rankings) and tournament archives permanently.
+5. **Scoring is a Core Engine Module**:
+   - The Scorer Wizard is an offline-first, zero-latency scoring engine that powers the ecosystem, while the rest of the application delivers the full tournament, live viewing, and data management platform.
 
 # Official CricFlow Color Palette & Design Rule - STRICT
 

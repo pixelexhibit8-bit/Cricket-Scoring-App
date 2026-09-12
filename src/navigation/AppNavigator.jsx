@@ -13,6 +13,10 @@ import { MyProfileScreen } from '../screens/MyProfileScreen.jsx';
 import { QuickMatchSetupScreen } from '../screens/QuickMatchSetupScreen.jsx';
 import { MatchesScreen } from '../screens/MatchesScreen.jsx';
 import { RankingsScreen } from '../screens/RankingsScreen.jsx';
+import { MenuScreen } from '../screens/MenuScreen.jsx';
+import { CreateTournamentScreen } from '../screens/CreateTournamentScreen.jsx';
+import { PublicSeriesViewScreen } from '../screens/PublicSeriesViewScreen.jsx';
+import { AllSeriesDirectoryScreen } from '../screens/AllSeriesDirectoryScreen.jsx';
 
 // Modals
 import { ExtrasModal } from '../components/modals/ExtrasModal.jsx';
@@ -152,7 +156,7 @@ function FinishedMatchViewScreenRoute() {
   );
 }
 
-function PlayerProfileScreenRoute() {
+function PlayerProfileScreenRoute({ navigation }) {
   const {
     selectedPlayerProfile,
     setCurrentScreen,
@@ -163,7 +167,13 @@ function PlayerProfileScreenRoute() {
   return (
     <MyProfileScreen
       targetPlayer={selectedPlayerProfile}
-      onBack={() => setCurrentScreen('home')}
+      onBack={() => {
+        if (navigation && navigation.canGoBack()) {
+          navigation.goBack();
+        } else if (setCurrentScreen) {
+          setCurrentScreen('home');
+        }
+      }}
       finishedMatches={finishedArchive}
       onSelectMatch={(m) => {
         if (setSelectedMatch) setSelectedMatch(m);
@@ -376,7 +386,7 @@ function MatchesScreenRoute() {
   );
 }
 
-function RankingsScreenRoute() {
+function RankingsScreenRoute({ navigation }) {
   const {
     TOP_BATTERS = [],
     TOP_BOWLERS = [],
@@ -389,6 +399,8 @@ function RankingsScreenRoute() {
 
   return (
     <RankingsScreen
+      navigation={navigation}
+      onBack={() => navigation.goBack()}
       topBatters={TOP_BATTERS}
       topBowlers={TOP_BOWLERS}
       topAllRounders={TOP_ALLROUNDERS}
@@ -398,6 +410,69 @@ function RankingsScreenRoute() {
       }}
       refreshing={refreshing}
       onRefresh={handlePullToRefresh}
+    />
+  );
+}
+
+function MenuScreenRoute({ navigation }) {
+  const matchCtx = useMatch();
+  return (
+    <MenuScreen
+      navigation={navigation}
+      onBack={() => navigation.goBack()}
+      onProfilePress={(user) => {
+        if (matchCtx?.setSelectedPlayerProfile) {
+          matchCtx.setSelectedPlayerProfile(user || null);
+        }
+        navigation.navigate('PlayerProfile');
+      }}
+      onStartMatchPress={() => {
+        if (matchCtx?.handleStartNewMatchSetup) matchCtx.handleStartNewMatchSetup();
+      }}
+      onLeaderboardPress={() => {
+        navigation.navigate('Rankings');
+      }}
+      onCreateTournamentPress={() => {
+        navigation.navigate('CreateTournament');
+      }}
+    />
+  );
+}
+
+function CreateTournamentScreenRoute({ navigation }) {
+  return (
+    <CreateTournamentScreen
+      navigation={navigation}
+      onBack={() => navigation.goBack()}
+      onComplete={(tournamentData) => {
+        navigation.replace('PublicSeriesView', {
+          seriesData: tournamentData,
+          isOrganiser: true
+        });
+      }}
+    />
+  );
+}
+
+function PublicSeriesViewScreenRoute({ navigation, route }) {
+  const seriesData = route?.params?.seriesData;
+  const isOrganiser = route?.params?.isOrganiser ?? Boolean(seriesData?.isOrganiser);
+  return (
+    <PublicSeriesViewScreen
+      navigation={navigation}
+      onBack={() => navigation.goBack()}
+      seriesData={seriesData}
+      isOrganiser={isOrganiser}
+    />
+  );
+}
+
+function AllSeriesDirectoryScreenRoute({ navigation }) {
+  return (
+    <AllSeriesDirectoryScreen
+      navigation={navigation}
+      onBack={() => navigation.goBack()}
+      onSelectSeries={(sItem) => navigation.navigate('PublicSeriesView', { seriesData: sItem })}
     />
   );
 }
@@ -459,6 +534,7 @@ export function AppNavigator(props) {
     isAddPlayerModalOpen,
     setIsAddPlayerModalOpen,
     isAddingPlayer,
+    localPlayersList = [],
     handleMidMatchMoveToTeam,
     handleMidMatchCreatePlayer,
     newPlayerRoleInput,
@@ -507,6 +583,10 @@ export function AppNavigator(props) {
           <Stack.Screen name="InningBreak" component={InningBreakScreenRoute} />
           <Stack.Screen name="Matches" component={MatchesScreenRoute} />
           <Stack.Screen name="Rankings" component={RankingsScreenRoute} />
+          <Stack.Screen name="Menu" component={MenuScreenRoute} />
+          <Stack.Screen name="CreateTournament" component={CreateTournamentScreenRoute} />
+          <Stack.Screen name="PublicSeriesView" component={PublicSeriesViewScreenRoute} />
+          <Stack.Screen name="AllSeriesDirectory" component={AllSeriesDirectoryScreenRoute} />
         </Stack.Navigator>
       </NavigationContainer>
 
@@ -575,8 +655,9 @@ export function AppNavigator(props) {
         visible={Boolean(isEditSquadModalOpen)}
         onClose={() => setIsEditSquadModalOpen(false)}
         activeMatch={activeMatch}
-        onMovePlayer={handleMidMatchMoveToTeam}
         allPlayersPool={allMidMatchPlayersPool}
+        localPlayersDb={localPlayersList}
+        onMoveToTeam={handleMidMatchMoveToTeam}
         onOpenAddPlayerModal={() => setIsAddPlayerModalOpen(true)}
       />
 

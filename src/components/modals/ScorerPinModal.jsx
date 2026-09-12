@@ -3,7 +3,6 @@ import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, KeyboardAvo
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { systemFont, systemFontMedium, systemFontBold, shadows } from '../../theme.js';
 import { fetchMatchesByPinFromSupabase } from '../../services/matchService.js';
-import { AppButton } from '../common/AppButton.jsx';
 
 export function ScorerPinModal({ visible, activeMatch, onClose, onSuccessContinueMatch, onSuccessRemoteMatch, onSelectStartNewMatch }) {
   const [pin, setPin] = useState('');
@@ -213,14 +212,14 @@ export function ScorerPinModal({ visible, activeMatch, onClose, onSuccessContinu
 
           {/* Bottom Actions Row */}
           <View style={styles.actionsRow}>
-            <AppButton
-              title="Start New Match"
-              icon="add-circle-outline"
-              iconType="ionicons"
-              variant="outline"
-              size="md"
+            <TouchableOpacity
+              style={styles.newMatchBtn}
               onPress={handleStartNewMatch}
-            />
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle-outline" size={18} color="#0284C7" />
+              <Text style={styles.newMatchText}>Start New Match</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>

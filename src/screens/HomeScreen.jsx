@@ -21,12 +21,15 @@ import { AppBottomNav } from '../components/navigation/AppBottomNav.jsx';
 import { MatchesScreen } from './MatchesScreen.jsx';
 import { RankingsScreen } from './RankingsScreen.jsx';
 import { MyProfileScreen } from './MyProfileScreen.jsx';
+import { AllSeriesDirectoryScreen } from './AllSeriesDirectoryScreen.jsx';
+import { PublicSeriesViewScreen } from './PublicSeriesViewScreen.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { MatchListScoreCard } from '../components/MatchListScoreCard.jsx';
 import { GroundSpotlightSection } from '../components/GroundSpotlightSection.jsx';
 import { SocialConnectCard } from '../components/SocialConnectCard.jsx';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
+import { navigate } from '../navigation/navigationService.js';
 import {
   systemFont,
   systemFontMedium,
@@ -267,6 +270,7 @@ export function HomeScreen(props) {
         <AppHeader
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          onMenuPress={() => navigate('menu')}
           scrollY={scrollY}
         />
 
@@ -782,6 +786,18 @@ export function HomeScreen(props) {
             onSelectMatch={(m) => {
               if (setSelectedMatch) setSelectedMatch(m);
               if (setCurrentScreen) setCurrentScreen('finishedView');
+            }}
+          />
+        </View>
+      ) : null}
+
+      {/* ── 5. PUBLIC SERIES / TOURNAMENT TAB CONTAINER (Lazy Mount + Instant Keep-Alive) ── */}
+      {visitedTabs.series ? (
+        <View style={[{ flex: 1 }, bottomNavTab !== 'series' && { display: 'none' }]}>
+          <PublicSeriesViewScreen
+            isTab={true}
+            onBack={() => {
+              if (setBottomNavTab) setBottomNavTab('home');
             }}
           />
         </View>

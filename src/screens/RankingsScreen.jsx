@@ -7,6 +7,7 @@ import {
   Animated,
   RefreshControl,
   useWindowDimensions,
+  SafeAreaView,
   StyleSheet
 } from 'react-native';
 import PagerView from 'react-native-pager-view';
@@ -16,6 +17,8 @@ import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
 
 export function RankingsScreen({
+  navigation,
+  onBack,
   topBatters = [],
   topBowlers = [],
   topAllRounders = [],
@@ -23,6 +26,14 @@ export function RankingsScreen({
   refreshing = false,
   onRefresh = null
 }) {
+  const handleGoBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (navigation && navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  };
+
   const { width: screenWidth } = useWindowDimensions();
   const [activeCategory, setActiveCategory] = useState('batters'); // 'batters' | 'bowlers' | 'allrounders'
 
@@ -121,12 +132,13 @@ export function RankingsScreen({
 
           {/* TABLE ROWS */}
           {list.map((player, idx) => {
-            const isTop3 = (player.rank || (idx + 1)) <= 3;
+            const isTop3 = idx < 3;
             const isLast = idx === list.length - 1;
             const rankNum = player.rank || (idx + 1);
+            const rankBadgeColor = idx === 0 ? '#D97706' : idx === 1 ? '#64748B' : idx === 2 ? '#B45309' : '#94A3B8';
 
             return (
-              <FadeSlideIn key={`rank-${categoryKey}-${player.name}-${idx}`} delay={Math.min(idx * 25, 200)} distance={6}>
+              <FadeSlideIn key={player.id || player.name || idx} index={idx}>
                 <ScalePressable
                   activeScale={0.985}
                   onPress={() => {
@@ -188,7 +200,21 @@ export function RankingsScreen({
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* ─── TOP HEADER BAR WITH BACK BUTTON ─── */}
+      <View style={styles.topHeaderBar}>
+        <TouchableOpacity
+          style={styles.headerBackBtn}
+          onPress={handleGoBack}
+          activeOpacity={0.7}
+          accessibilityLabel="Go Back"
+        >
+          <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitleText}>Leaderboard Rankings</Text>
+        <View style={{ width: 32 }} />
+      </View>
+
       {/* ─── CREX STYLE CLEAN TEXT-ONLY UNDERLINE TABS BAR ─── */}
       <View style={styles.tabsBarWrapper}>
         <ScrollView
@@ -252,7 +278,7 @@ export function RankingsScreen({
           {renderRankingList(topAllRounders, 'allrounders')}
         </View>
       </PagerView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -260,6 +286,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: themeColors.appBackground
+  },
+  topHeaderBar: {
+    height: 52,
+    backgroundColor: themeColors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: themeColors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16
+  },
+  headerBackBtn: {
+    padding: 4,
+    marginLeft: -4
+  },
+  headerTitleText: {
+    fontSize: 17,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary,
+    letterSpacing: -0.2
   },
   tabsBarWrapper: {
     backgroundColor: themeColors.surface,

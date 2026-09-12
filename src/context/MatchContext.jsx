@@ -18,7 +18,7 @@ export function MatchProvider({ children }) {
     _setCurrentScreen(screenName);
     navigate(screenName);
   }, []);
-  const [bottomNavTab, setBottomNavTab] = useState('home'); // 'home' | 'matches' | 'rankings' | 'profile'
+  const [bottomNavTab, setBottomNavTab] = useState('home'); // 'home' | 'matches' | 'series' | 'rankings' | 'profile'
   const [matchesSubTab, setMatchesSubTab] = useState('home');
   const [publicLiveTab, setPublicLiveTab] = useState('live');
   const [liveViewReturnScreen, setLiveViewReturnScreen] = useState('home');

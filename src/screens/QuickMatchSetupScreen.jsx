@@ -56,10 +56,10 @@ export function QuickMatchSetupScreen({
   const [wizardStep, setWizardStep] = useState(initialSetup?.startAtStep || 1);
 
   // Default Team Names & Logos
-  const [team1Name, setTeam1Name] = useState(initialSetup?.team1Name || 'CSK');
-  const [team2Name, setTeam2Name] = useState(initialSetup?.team2Name || 'RCB');
-  const [team1LogoKey, setTeam1LogoKey] = useState(initialSetup?.team1LogoKey || 'csk');
-  const [team2LogoKey, setTeam2LogoKey] = useState(initialSetup?.team2LogoKey || 'rcb');
+  const [team1Name, setTeam1Name] = useState(initialSetup?.team1Name || 'Team 1');
+  const [team2Name, setTeam2Name] = useState(initialSetup?.team2Name || 'Team 2');
+  const [team1LogoKey, setTeam1LogoKey] = useState(initialSetup?.team1LogoKey || 'default_1');
+  const [team2LogoKey, setTeam2LogoKey] = useState(initialSetup?.team2LogoKey || 'default_2');
   const [logoPickerModalVisible, setLogoPickerModalVisible] = useState(false);
   const [logoPickerTargetTeam, setLogoPickerTargetTeam] = useState('team1');
 

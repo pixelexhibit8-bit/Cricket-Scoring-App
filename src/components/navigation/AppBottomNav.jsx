@@ -26,18 +26,11 @@ export function AppBottomNav({ activeTab, onTabChange }) {
       isMCI: true
     },
     {
-      id: 'rankings',
-      label: 'Rankings',
+      id: 'series',
+      label: 'Series',
       activeIcon: 'trophy',
       inactiveIcon: 'trophy-outline',
-      isMCI: false
-    },
-    {
-      id: 'profile',
-      label: 'My Profile',
-      activeIcon: 'person',
-      inactiveIcon: 'person-outline',
-      isMCI: false
+      isMCI: true
     }
   ];
 

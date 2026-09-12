@@ -92,7 +92,14 @@ export function useCricketScoring({
       else if (byeType === 'b') { ballLabel = `${runs || 1}B`; }
       else if (byeType === 'lb') { ballLabel = `${runs || 1}LB`; }
       else if (byeType === 'penalty') { addedRuns = 5; ballLabel = '5Pen'; isLegal = false; }
-      if (isWicket) { ballLabel = isRunOut && runs > 0 ? `${runs}W` : 'W'; addedRuns = runs; }
+      if (isWicket) {
+        ballLabel = isRunOut && runs > 0 ? `${runs}W` : 'W';
+        if (extraType === 'wd' || extraType === 'nb') {
+          addedRuns = runs + 1;
+        } else {
+          addedRuns = runs;
+        }
+      }
 
       inn.lastDelivery = {
         ...makeLastDelivery({
@@ -255,9 +262,10 @@ export function useCricketScoring({
           }
         }
 
+        const endForNewBatter = strikerEndPlayer?.name === dismissedName ? 'striker' : 'nonStriker';
         inn.striker = overComplete ? nonStrikerEndPlayer : strikerEndPlayer;
         inn.nonStriker = overComplete ? strikerEndPlayer : nonStrikerEndPlayer;
-        inn.pendingBatterEnd = inn.striker?.name === dismissedName ? 'striker' : 'nonStriker';
+        inn.pendingBatterEnd = endForNewBatter;
       } else {
         const strikeRotationRuns = (byeType === 'b' || byeType === 'lb') ? (runs || 1) : runs;
         const oddRun = strikeRotationRuns % 2 === 1;
@@ -716,6 +724,8 @@ export function useCricketScoring({
       try { Speech.speak('Second innings started. Target is ' + (prev.target || (inn1.battingTeam.runs + 1)) + ' runs.', { language: 'en-IN' }); } catch (e) { }
       return { ...prev, innings: [inn1, inn2], inning: 2, phase: 'playing' };
     });
+    setMatchHistoryStack([]);
+    setMatchRedoStack([]);
     setInn2Striker('');
     setInn2NonStriker('');
     setInn2Bowler('');

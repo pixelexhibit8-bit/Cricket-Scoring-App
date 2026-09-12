@@ -29,8 +29,11 @@ import {
 } from '../theme.js';
 import { AppHeader } from '../components/navigation/AppHeader.jsx';
 import { AppBottomNav } from '../components/navigation/AppBottomNav.jsx';
+import { navigate } from '../navigation/navigationService.js';
 import { MyProfileScreen } from './MyProfileScreen.jsx';
 import { RankingsScreen } from './RankingsScreen.jsx';
+import { AllSeriesDirectoryScreen } from './AllSeriesDirectoryScreen.jsx';
+import { PublicSeriesViewScreen } from './PublicSeriesViewScreen.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { MatchListScoreCard } from '../components/MatchListScoreCard.jsx';
@@ -280,6 +283,7 @@ export function MatchesScreen({
       <AppHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        onMenuPress={() => navigate('menu')}
         scrollY={scrollY}
       />
 
@@ -477,6 +481,15 @@ export function MatchesScreen({
             onSelectPlayer={handlePlayerPress}
             refreshing={refreshing}
             onRefresh={handlePullToRefresh}
+          />
+        </View>
+      ) : bottomNavTab === 'series' ? (
+        <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
+          <PublicSeriesViewScreen
+            isTab={true}
+            onBack={() => {
+              if (setBottomNavTab) setBottomNavTab('matches');
+            }}
           />
         </View>
       ) : bottomNavTab === 'profile' ? (
