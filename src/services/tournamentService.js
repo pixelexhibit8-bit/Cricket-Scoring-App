@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabaseClient.js';
 
-const TOURNAMENTS_STORAGE_KEY = 'cricflow.tournaments.v1';
+const TOURNAMENTS_STORAGE_KEY = 'cricflow.tournaments.v2';
+const MY_HOSTED_TOURNAMENTS_KEY = 'cricflow.my_hosted_tournaments.v2';
+const ACTIVE_TOURNAMENT_KEY = 'cricflow.active_tournament_id.v2';
 
 /**
  * Format calculation for Net Run Rate (NRR)
@@ -108,22 +110,151 @@ export function autoCalculatePointsTable(teams = [], matches = []) {
 }
 
 /**
- * Fetch all tournaments from Local Storage (and Supabase if connected)
+ * Map raw Supabase database row to CricFlow tournament object
  */
-export async function getTournaments() {
+function mapSupabaseRowToTournament(row) {
+  if (!row) return null;
+  const raw = (typeof row.raw_data === 'object' && row.raw_data) ? row.raw_data : {};
+  return {
+    ...raw,
+    id: row.id,
+    name: row.name || raw.name || raw.title || 'Tournament',
+    title: row.title || row.name || raw.name || 'Tournament',
+    fullName: row.full_name || row.name || raw.fullName || 'Tournament',
+    city: row.city || raw.city || 'Local Ground',
+    host: row.host || raw.host || row.city || 'Local Ground',
+    category: row.category || raw.category || 'OPEN',
+    format: row.format || raw.format || 'LIMITED OVERS',
+    ballType: row.ball_type || raw.ballType || 'tennis',
+    pitchType: row.pitch_type || raw.pitchType || 'turf',
+    organiserName: row.organiser_name || raw.organiserName || '',
+    organiserPhone: row.organiser_phone || raw.organiserPhone || '',
+    organiserEmail: row.organiser_email || raw.organiserEmail || '',
+    startDate: row.start_date || raw.startDate || '',
+    endDate: row.end_date || raw.endDate || '',
+    duration: row.duration || raw.duration || `${row.start_date || ''} - ${row.end_date || ''}`.trim(),
+    needMoreTeams: Boolean(row.need_more_teams ?? raw.needMoreTeams),
+    needOfficials: Boolean(row.need_officials ?? raw.needOfficials),
+    bannerUri: row.banner_uri || raw.bannerUri || null,
+    logoUri: row.logo_uri || raw.logoUri || null,
+    teams: Array.isArray(row.teams) ? row.teams : (raw.teams || []),
+    matches: Array.isArray(row.matches) ? row.matches : (raw.matches || []),
+    pointsTable: Array.isArray(row.points_table) ? row.points_table : (raw.pointsTable || []),
+    stats: (typeof row.stats === 'object' && row.stats) ? row.stats : (raw.stats || {}),
+    createdAt: row.created_at || raw.createdAt || new Date().toISOString(),
+    updatedAt: row.updated_at || raw.updatedAt || new Date().toISOString()
+  };
+}
+
+/**
+ * Fetch all tournaments from Local Storage (Offline-First)
+ */
+export async function getTournamentsFromStorage() {
   try {
     const raw = await AsyncStorage.getItem(TOURNAMENTS_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
-    console.warn('[TournamentService] Failed to load tournaments:', err);
     return [];
   }
 }
 
 /**
- * Save / Create a new tournament
+ * Fetch all tournaments (Reads local first, then syncs with Supabase cloud)
+ */
+export async function getTournaments() {
+  const localList = await getTournamentsFromStorage();
+
+  if (!supabase) {
+    return localList;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('tournaments')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      const cloudTournaments = data.map(mapSupabaseRowToTournament).filter(Boolean);
+      // Sync local storage with latest cloud snapshot
+      await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(cloudTournaments));
+      return cloudTournaments;
+    } else if (error) {
+      console.warn('[TournamentService] Supabase fetch error, fallback to local:', error.message);
+    }
+  } catch (err) {
+    console.warn('[TournamentService] Network error fetching tournaments:', err);
+  }
+
+  return localList;
+}
+
+/**
+ * Get IDs of tournaments hosted by the current user
+ */
+export async function getMyHostedTournamentIds() {
+  try {
+    const raw = await AsyncStorage.getItem(MY_HOSTED_TOURNAMENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+/**
+ * Mark a tournament ID as hosted by current user
+ */
+export async function saveHostedTournamentId(tournamentId) {
+  if (!tournamentId) return;
+  try {
+    const current = await getMyHostedTournamentIds();
+    if (!current.includes(tournamentId)) {
+      const updated = [tournamentId, ...current];
+      await AsyncStorage.setItem(MY_HOSTED_TOURNAMENTS_KEY, JSON.stringify(updated));
+    }
+  } catch (err) {
+    console.warn('[TournamentService] Failed to save hosted tournament ID:', err);
+  }
+}
+
+/**
+ * Check if a tournament is hosted by the current user
+ */
+export async function isTournamentHostedByMe(tournamentId) {
+  if (!tournamentId) return false;
+  const ids = await getMyHostedTournamentIds();
+  return ids.includes(tournamentId);
+}
+
+/**
+ * Retrieve active tournament ID from storage
+ */
+export async function getActiveTournamentId() {
+  try {
+    return await AsyncStorage.getItem(ACTIVE_TOURNAMENT_KEY);
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Save active tournament ID into storage
+ */
+export async function saveActiveTournamentId(tournamentId) {
+  if (!tournamentId) return;
+  try {
+    await AsyncStorage.setItem(ACTIVE_TOURNAMENT_KEY, tournamentId);
+  } catch (err) {
+    console.warn('[TournamentService] Failed to save active tournament ID:', err);
+  }
+}
+
+/**
+ * Save / Create a new tournament (Offline storage + Supabase Cloud Upsert)
  */
 export async function saveTournament(tournamentData) {
   try {
@@ -131,7 +262,8 @@ export async function saveTournament(tournamentData) {
       tournamentData.id = `t_${Date.now()}`;
     }
 
-    const existingList = await getTournaments();
+    // 1. Immediately update Local Storage (instant UI response)
+    const existingList = await getTournamentsFromStorage();
     const index = existingList.findIndex(t => t.id === tournamentData.id);
 
     let updatedList;
@@ -152,20 +284,47 @@ export async function saveTournament(tournamentData) {
 
     await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(updatedList));
 
-    // Optional Supabase Background Sync
+    // 2. Persist to Supabase Cloud
     if (supabase) {
-      supabase.from('tournaments').upsert({
-        id: tournamentData.id,
-        name: tournamentData.name || tournamentData.title,
-        city: tournamentData.city,
-        category: tournamentData.category,
-        format: tournamentData.format,
-        ball_type: tournamentData.ballType,
-        pitch_type: tournamentData.pitchType,
-        organiser_name: tournamentData.organiserName,
-        organiser_phone: tournamentData.organiserPhone,
-        raw_data: tournamentData
-      }).then(() => {}).catch(() => {});
+      try {
+        const payload = {
+          id: tournamentData.id,
+          name: tournamentData.name || tournamentData.title,
+          title: tournamentData.title || tournamentData.name,
+          full_name: tournamentData.fullName || tournamentData.name,
+          city: tournamentData.city || 'Local Ground',
+          host: tournamentData.host || 'Local Ground',
+          category: tournamentData.category || 'OPEN',
+          format: tournamentData.format || 'LIMITED OVERS',
+          ball_type: tournamentData.ballType || 'tennis',
+          pitch_type: tournamentData.pitchType || 'turf',
+          organiser_name: tournamentData.organiserName || '',
+          organiser_phone: tournamentData.organiserPhone || '',
+          organiser_email: tournamentData.organiserEmail || '',
+          start_date: tournamentData.startDate || '',
+          end_date: tournamentData.endDate || '',
+          duration: tournamentData.duration || '',
+          need_more_teams: Boolean(tournamentData.needMoreTeams),
+          need_officials: Boolean(tournamentData.needOfficials),
+          banner_uri: tournamentData.bannerUri || null,
+          logo_uri: tournamentData.logoUri || null,
+          teams: tournamentData.teams || [],
+          matches: tournamentData.matches || [],
+          points_table: tournamentData.pointsTable || [],
+          stats: tournamentData.stats || {},
+          raw_data: tournamentData,
+          updated_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase.from('tournaments').upsert(payload);
+        if (error) {
+          console.warn('[TournamentService] Supabase upsert error:', error.message);
+        } else {
+          console.log('[TournamentService] Successfully persisted to Supabase:', tournamentData.id);
+        }
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase sync network error:', cloudErr);
+      }
     }
 
     return tournamentData;
@@ -176,11 +335,11 @@ export async function saveTournament(tournamentData) {
 }
 
 /**
- * Add a Team to Tournament & Auto-Initialize in Points Table
+ * Add a Team to Tournament & Auto-Initialize in Points Table (Local + Supabase Sync)
  */
 export async function addTeamToTournament(tournamentId, teamData) {
   try {
-    const list = await getTournaments();
+    const list = await getTournamentsFromStorage();
     const target = list.find(t => t.id === tournamentId);
     if (!target) return null;
 
@@ -207,6 +366,22 @@ export async function addTeamToTournament(tournamentId, teamData) {
     target.updatedAt = new Date().toISOString();
 
     await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+
+    // Supabase Cloud Sync
+    if (supabase) {
+      try {
+        await supabase
+          .from('tournaments')
+          .update({
+            teams: updatedTeams,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase team update error:', cloudErr);
+      }
+    }
+
     return target;
   } catch (err) {
     console.error('[TournamentService] Add team error:', err);
@@ -215,11 +390,11 @@ export async function addTeamToTournament(tournamentId, teamData) {
 }
 
 /**
- * Add a Match / Fixture to Tournament
+ * Add a Match / Fixture to Tournament (Local + Supabase Sync)
  */
 export async function addMatchToTournament(tournamentId, matchData) {
   try {
-    const list = await getTournaments();
+    const list = await getTournamentsFromStorage();
     const target = list.find(t => t.id === tournamentId);
     if (!target) return null;
 
@@ -234,13 +409,63 @@ export async function addMatchToTournament(tournamentId, matchData) {
     };
 
     const currentMatches = target.matches || [];
-    target.matches = [...currentMatches, newMatch];
+    const updatedMatches = [...currentMatches, newMatch];
+    target.matches = updatedMatches;
     target.updatedAt = new Date().toISOString();
 
     await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+
+    // Supabase Cloud Sync
+    if (supabase) {
+      try {
+        await supabase
+          .from('tournaments')
+          .update({
+            matches: updatedMatches,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase match update error:', cloudErr);
+      }
+    }
+
     return target;
   } catch (err) {
     console.error('[TournamentService] Add match error:', err);
     return null;
+  }
+}
+
+/**
+ * Real-time WebSocket subscription for tournaments table
+ */
+export function subscribeToTournamentsLive(onUpdate) {
+  if (!supabase || typeof onUpdate !== 'function') {
+    return () => {};
+  }
+
+  try {
+    const channelName = `tourns_live_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const channel = supabase.channel(channelName);
+
+    channel
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tournaments' },
+        (payload) => {
+          onUpdate(payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try {
+        supabase.removeChannel(channel);
+      } catch (e) {}
+    };
+  } catch (err) {
+    console.warn('[TournamentService Realtime Init Error]:', err);
+    return () => {};
   }
 }

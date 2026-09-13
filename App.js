@@ -5,10 +5,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 
 // ── Components & UI Primitives ──
+import { MatchProvider } from './src/context/MatchContext.jsx';
 import { AppNavigator } from './src/navigation/AppNavigator.jsx';
 import { CricGlobalToast } from './src/components/CricGlobalToast.jsx';
 import { ErrorBoundary } from './src/components/ErrorBoundary.jsx';
-import { MatchProvider } from './src/context/MatchContext.jsx';
 import { theme, themeColors } from './src/theme.js';
 
 LogBox.ignoreLogs([

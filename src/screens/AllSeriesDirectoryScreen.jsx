@@ -185,7 +185,7 @@ export function AllSeriesDirectoryScreen(props = {}) {
                     key={t.id}
                     style={styles.seriesListRow}
                     activeOpacity={0.7}
-                    onPress={() => handleSeriesClick({ ...t, isOrganiser: true })}
+                    onPress={() => handleSeriesClick(t)}
                   >
                     <View style={[styles.seriesLogoSquare, { backgroundColor: '#18181B10' }]}>
                       <MaterialCommunityIcons name="trophy" size={24} color="#18181B" />

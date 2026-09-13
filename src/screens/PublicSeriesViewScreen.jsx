@@ -29,14 +29,16 @@ import {
   getTournaments,
   addTeamToTournament,
   addMatchToTournament,
-  autoCalculatePointsTable
+  autoCalculatePointsTable,
+  getMyHostedTournamentIds,
+  saveActiveTournamentId,
+  getActiveTournamentId,
+  subscribeToTournamentsLive
 } from '../services/tournamentService.js';
 import { navigate } from '../navigation/navigationService.js';
 import { AddTeamHubModal } from '../components/modals/AddTeamHubModal.jsx';
-import { useMatch } from '../context/MatchContext.jsx';
 
 export function PublicSeriesViewScreen(props = {}) {
-  const matchCtx = useMatch();
   const routeParams = props.route?.params || {};
   const {
     navigation = props.navigation,
@@ -44,8 +46,7 @@ export function PublicSeriesViewScreen(props = {}) {
       if (props.navigation && props.navigation.canGoBack()) {
         props.navigation.goBack();
       } else {
-        if (matchCtx.setBottomNavTab) matchCtx.setBottomNavTab('home');
-        if (matchCtx.setCurrentScreen) matchCtx.setCurrentScreen('home');
+        navigate('home');
       }
     }),
     seriesData = props.seriesData || routeParams.seriesData,
@@ -55,48 +56,116 @@ export function PublicSeriesViewScreen(props = {}) {
   const { width: windowWidth } = useWindowDimensions();
   const pagerRef = useRef(null);
 
+  // Tournaments List & User Hosted State
+  const [tournamentsList, setTournamentsList] = useState([]);
+  const [myHostedIds, setMyHostedIds] = useState([]);
+
+  // Select Series Modal Drawer State & Search
+  const [selectSeriesModalVisible, setSelectSeriesModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Tournament Data State
   const [tournament, setTournament] = useState(() => {
-    return seriesData || {
-      id: 'local_series',
-      title: 'Ground Tournament',
-      fullName: 'Local Cricket Tournament',
-      city: 'Local Ground',
-      duration: 'Ongoing',
-      format: 'Limited Overs',
-      category: 'OPEN',
-      ballType: 'tennis_red',
-      pitchType: 'TURF',
-      teams: [],
-      matches: []
-    };
+    return seriesData || null;
   });
 
-  // Keep state in sync if props change or load latest tournament from storage
+  // Keep state in sync if props change or load latest/active tournament from storage
   useEffect(() => {
-    if (seriesData) {
-      setTournament(prev => ({
-        ...prev,
-        ...seriesData,
-        teams: (seriesData.teams && seriesData.teams.length > 0) ? seriesData.teams : (prev.teams || []),
-        matches: (seriesData.matches && seriesData.matches.length > 0) ? seriesData.matches : (prev.matches || [])
-      }));
-    } else {
-      getTournaments().then(list => {
-        if (list && list.length > 0) {
-          const latest = list[0];
+    let isMounted = true;
+    const loadTournamentsData = async () => {
+      try {
+        const [allTourns, hosted, savedActiveId] = await Promise.all([
+          getTournaments(),
+          getMyHostedTournamentIds(),
+          getActiveTournamentId()
+        ]);
+        if (!isMounted) return;
+
+        const list = Array.isArray(allTourns) ? allTourns : [];
+        setTournamentsList(list);
+        setMyHostedIds(Array.isArray(hosted) ? hosted : []);
+
+        if (seriesData) {
           setTournament(prev => ({
-            ...prev,
-            ...latest,
-            teams: (latest.teams && latest.teams.length > 0) ? latest.teams : (prev.teams || []),
-            matches: (latest.matches && latest.matches.length > 0) ? latest.matches : (prev.matches || [])
+            ...(prev || {}),
+            ...seriesData,
+            teams: (seriesData.teams && seriesData.teams.length > 0) ? seriesData.teams : (prev?.teams || []),
+            matches: (seriesData.matches && seriesData.matches.length > 0) ? seriesData.matches : (prev?.matches || [])
           }));
+          if (seriesData.id) {
+            saveActiveTournamentId(seriesData.id);
+          }
+        } else if (savedActiveId) {
+          const found = list.find(t => t.id === savedActiveId);
+          if (found) {
+            setTournament(found);
+          } else if (list.length > 0) {
+            setTournament(list[0]);
+            saveActiveTournamentId(list[0].id);
+          } else {
+            setTournament(null);
+          }
+        } else if (list.length > 0) {
+          setTournament(list[0]);
+          saveActiveTournamentId(list[0].id);
+        } else {
+          setTournament(null);
         }
-      }).catch(() => {});
-    }
+      } catch (err) {
+        console.warn('Failed to load tournament data:', err);
+      }
+    };
+    loadTournamentsData();
+    return () => { isMounted = false; };
   }, [seriesData]);
 
-  const isUserOrganiser = isOrganiser || Boolean(seriesData?.isOrganiser) || Boolean(tournament?.isOrganiser);
+  // Realtime Live Cloud Sync: Listen for remote tournament updates
+  useEffect(() => {
+    const unsubscribe = subscribeToTournamentsLive(() => {
+      getTournaments().then(updatedList => {
+        if (Array.isArray(updatedList)) {
+          setTournamentsList(updatedList);
+          setTournament(prev => {
+            if (!prev?.id) return prev;
+            return updatedList.find(t => t.id === prev.id) || prev;
+          });
+        }
+      }).catch(() => {});
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Smart Role Detection: Is current user the host/organizer of this tournament?
+  const isUserOrganiser = isOrganiser || (tournament?.id ? myHostedIds.includes(tournament.id) : false) || Boolean(seriesData?.isOrganiser) || Boolean(tournament?.isOrganiser);
+
+  // Switch Active Tournament
+  const handleSelectTournament = (selectedItem) => {
+    if (!selectedItem) return;
+    setTournament(selectedItem);
+    if (selectedItem.id) {
+      saveActiveTournamentId(selectedItem.id);
+    }
+    setSelectSeriesModalVisible(false);
+  };
+
+  // Filtered Tournaments in the "Select Series" bottom sheet
+  const filteredSheetTournaments = useMemo(() => {
+    if (!searchQuery.trim()) return tournamentsList;
+    const q = searchQuery.toLowerCase().trim();
+    return tournamentsList.filter(t => {
+      const name = (t.fullName || t.name || t.title || '').toLowerCase();
+      const city = (t.city || t.host || '').toLowerCase();
+      const cat = (t.category || t.format || '').toLowerCase();
+      return name.includes(q) || city.includes(q) || cat.includes(q);
+    });
+  }, [tournamentsList, searchQuery]);
+
+  const userHostedTournaments = useMemo(() => {
+    return filteredSheetTournaments.filter(t => myHostedIds.includes(t.id));
+  }, [filteredSheetTournaments, myHostedIds]);
 
   // Tabs: Overview | Matches | Teams | Points Table | Stats | Venues | News | Info
   const tabs = [
@@ -139,47 +208,57 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Auto-calculated Points Table Data
   const pointsTableData = useMemo(() => {
+    if (!tournament) return [];
     const teams = tournament.teams || [];
     const matches = tournament.matches || [];
     if (teams.length === 0) return [];
     return autoCalculatePointsTable(teams, matches);
-  }, [tournament.teams, tournament.matches]);
+  }, [tournament?.teams, tournament?.matches]);
 
-  // Squad Players for Bottom Sheet Drawer
-  const mockSquadPlayers = [
-    { id: 'p_1', name: 'Shivi Sharma', role: 'Batter (Capt)', runs: 128, sr: 144.2 },
-    { id: 'p_2', name: 'Nazma Sultana', role: 'Bowler', wickets: 4, econ: 5.38 },
-    { id: 'p_3', name: 'Apeksha Anand', role: 'All-Rounder', runs: 64, wickets: 2 },
-    { id: 'p_4', name: 'Sumiti Soni', role: 'Bowler', wickets: 3, econ: 6.10 },
-    { id: 'p_5', name: 'Tanisha Singh', role: 'Batter', runs: 82, sr: 138.4 },
-    { id: 'p_6', name: 'Nidhi Mahto', role: 'Wicket-Keeper', runs: 45, sr: 125.0 }
-  ];
+  // Squad Players for Bottom Sheet Drawer from selected team
+  const squadPlayers = useMemo(() => {
+    if (selectedTeamDrawer?.players && selectedTeamDrawer.players.length > 0) {
+      return selectedTeamDrawer.players.map((p, idx) => ({
+        id: p.id || `sp_${idx}`,
+        name: typeof p === 'string' ? p : (p.name || `Player ${idx + 1}`),
+        role: p.role || 'Player',
+        runs: p.runs != null ? p.runs : null,
+        wickets: p.wickets != null ? p.wickets : null
+      }));
+    }
+    return [];
+  }, [selectedTeamDrawer]);
 
-  // Key Stats
-  const keyStatsTop = {
-    label: 'Most Runs',
-    player: 'Shivi Sharma',
-    fullName: 'Shivi Sharma',
-    team: tournament.teams?.[0]?.name || 'Top Batter',
-    val: '184',
-    unit: 'runs',
-    color: '#FFF1F2',
-    borderColor: '#FFE4E6'
-  };
+  // Key Stats derived dynamically from tournament teams
+  const keyStatsTop = useMemo(() => {
+    return {
+      label: 'Most Runs',
+      player: tournament?.teams?.[0]?.captainName || 'Leaderboard',
+      fullName: tournament?.teams?.[0]?.captainName || 'Tournament Leader',
+      team: tournament?.teams?.[0]?.name || 'Pending Matches',
+      val: '-',
+      unit: '',
+      color: '#FFF1F2',
+      borderColor: '#FFE4E6'
+    };
+  }, [tournament]);
 
-  const keyStatsGrid = [
-    { label: 'Most Wickets', player: 'Nazma Sultana', team: tournament.teams?.[1]?.name || 'Top Bowler', val: '8', unit: 'wickets', color: '#FFF1F2', borderColor: '#FFE4E6' },
-    { label: 'Best Bowling', player: 'Sumiti Soni', team: tournament.teams?.[2]?.name || 'Bowler', val: '4-12', unit: '', color: '#F0FDF4', borderColor: '#DCFCE7' },
-    { label: 'Highest Score', player: 'Apeksha Anand', team: tournament.teams?.[0]?.name || 'Batter', val: '89*', unit: 'runs', color: '#FFF1F2', borderColor: '#FFE4E6' },
-    { label: 'Most Sixes', player: 'Tanisha Singh', team: tournament.teams?.[1]?.name || 'Batter', val: '7', unit: 'sixes', color: '#F0FDF4', borderColor: '#DCFCE7' }
-  ];
+  const keyStatsGrid = useMemo(() => {
+    return [
+      { label: 'Most Wickets', player: tournament?.teams?.[1]?.captainName || 'Top Bowler', team: tournament?.teams?.[1]?.name || 'Pending Matches', val: '-', unit: '', color: '#FFF1F2', borderColor: '#FFE4E6' },
+      { label: 'Best Bowling', player: '-', team: 'Pending Matches', val: '-', unit: '', color: '#F0FDF4', borderColor: '#DCFCE7' },
+      { label: 'Highest Score', player: '-', team: 'Pending Matches', val: '-', unit: '', color: '#FFF1F2', borderColor: '#FFE4E6' },
+      { label: 'Most Sixes', player: '-', team: 'Pending Matches', val: '-', unit: '', color: '#F0FDF4', borderColor: '#DCFCE7' }
+    ];
+  }, [tournament]);
 
   // Handle Share WhatsApp Ground Invite
   const handleShareInvite = async () => {
+    if (!tournament) return;
     try {
       const tourName = tournament.name || tournament.title || 'Cricket Tournament';
       const city = tournament.city || tournament.host || 'Local Ground';
-      const msg = `🏏 Join *${tourName}* on CricFlow!\n📍 Location: ${city}\n📅 Dates: ${tournament.startDate || tournament.duration || 'Upcoming'}\n\nCaptains can register their teams and track live ball-by-ball scoring on CricFlow.`;
+      const msg = `Join *${tourName}* on CricFlow!\nLocation: ${city}\nDates: ${tournament.startDate || tournament.duration || 'Upcoming'}\n\nCaptains can register their teams and track live ball-by-ball scoring on CricFlow.`;
       await Share.share({
         message: msg,
         title: tourName
@@ -247,6 +326,28 @@ export function PublicSeriesViewScreen(props = {}) {
     }
   };
 
+  // Public Viewer: Watch Live Ball-by-Ball
+  const handleWatchLive = (match = null) => {
+    if (navigation) {
+      navigation.navigate('PublicLiveView', {
+        matchId: match?.id,
+        tournamentId: tournament.id,
+        matchData: match
+      });
+    }
+  };
+
+  // Public Viewer: View Finished Match Scorecard
+  const handleViewScorecard = (match = null) => {
+    if (navigation) {
+      navigation.navigate('FinishedMatchView', {
+        matchId: match?.id,
+        tournamentId: tournament.id,
+        matchData: match
+      });
+    }
+  };
+
   // Back Navigation
   const handleBack = () => {
     if (onBack) {
@@ -295,7 +396,7 @@ export function PublicSeriesViewScreen(props = {}) {
     }
   };
 
-  const rawMatches = tournament.matches || [];
+  const rawMatches = tournament?.matches || [];
   const filteredMatches = useMemo(() => {
     if (matchSubFilter === 'LIVE') return rawMatches.filter(m => m.status === 'LIVE');
     if (matchSubFilter === 'UPCOMING') return rawMatches.filter(m => m.status === 'UPCOMING' || !m.status);
@@ -303,12 +404,136 @@ export function PublicSeriesViewScreen(props = {}) {
     return rawMatches;
   }, [rawMatches, matchSubFilter]);
 
+  if (!tournament || !tournament.id) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+        <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
+        <View style={styles.container}>
+          {/* Top Bar */}
+          <View style={styles.headerBar}>
+            {!isTab ? (
+              <TouchableOpacity
+                style={styles.backBtn}
+                onPress={handleBack}
+                activeOpacity={0.7}
+                accessibilityLabel="Go Back"
+              >
+                <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 28, alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name="trophy" size={22} color={themeColors.textPrimary} />
+              </View>
+            )}
+
+            <View style={styles.headerTitleWrapBtn}>
+              <Text style={styles.headerTitle}>Tournament Hub</Text>
+              <Text style={styles.headerSubtitle}>Manage & Explore Ground Tournaments</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.shareHeaderBtn}
+              onPress={() => {
+                if (navigation) {
+                  navigation.navigate('CreateTournament');
+                }
+              }}
+              activeOpacity={0.7}
+              accessibilityLabel="Host Tournament"
+            >
+              <Ionicons name="add-circle-outline" size={24} color={themeColors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Clean Fresh Slate Empty View */}
+          <View style={styles.emptyScreenContainer}>
+            <View style={styles.emptyTrophyIconCircle}>
+              <MaterialCommunityIcons name="trophy-outline" size={50} color="#0284C7" />
+            </View>
+            <Text style={styles.emptyScreenTitle}>No Tournaments Yet</Text>
+            <Text style={styles.emptyScreenSubtitle}>
+              Host your first cricket tournament to schedule fixtures, register teams, and track live ball-by-ball scoring.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.hostFirstBtn}
+              onPress={() => {
+                if (navigation) {
+                  navigation.navigate('CreateTournament');
+                }
+              }}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons name="trophy" size={20} color="#FFFFFF" />
+              <Text style={styles.hostFirstBtnText}>HOST YOUR FIRST TOURNAMENT</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
       <View style={styles.container}>
 
-        {/* ── 1. TOP HEADER BAR ── */}
+        {/* ── 1. TOP CAROUSEL OF SERIES (CREX STYLE) ── */}
+        {tournamentsList.length > 0 ? (
+          <View style={styles.topCarouselContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.topCarouselContent}
+            >
+              {tournamentsList.map(tItem => {
+                const isSelected = tournament?.id === tItem.id;
+                return (
+                  <TouchableOpacity
+                    key={tItem.id}
+                    style={[
+                      styles.carouselCard,
+                      isSelected && styles.carouselCardSelected
+                    ]}
+                    onPress={() => handleSelectTournament(tItem)}
+                    activeOpacity={0.8}
+                  >
+                    {tItem.bannerUri || tItem.logoUri ? (
+                      <Image
+                        source={{ uri: tItem.bannerUri || tItem.logoUri }}
+                        style={styles.carouselCardImage}
+                      />
+                    ) : (
+                      <View style={[styles.carouselCardFallback, { backgroundColor: isSelected ? '#18181B' : '#334155' }]}>
+                        <MaterialCommunityIcons
+                          name="trophy"
+                          size={24}
+                          color={isSelected ? '#FFFFFF' : '#CBD5E1'}
+                        />
+                      </View>
+                    )}
+                    <View style={styles.carouselCardOverlay}>
+                      <Text
+                        style={[styles.carouselCardTitle, isSelected && styles.carouselCardTitleSelected]}
+                        numberOfLines={2}
+                      >
+                        {tItem.name || tItem.title}
+                      </Text>
+                    </View>
+
+                    {isSelected ? (
+                      <View style={styles.carouselCheckmarkBadge}>
+                        <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+                      </View>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
+
+        {/* ── 2. ACTIVE SERIES HEADER BAR WITH DROPDOWN CHEVRON ── */}
         <View style={styles.headerBar}>
           {!isTab ? (
             <TouchableOpacity
@@ -325,28 +550,28 @@ export function PublicSeriesViewScreen(props = {}) {
             </View>
           )}
 
-          <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {tournament.name || tournament.title || 'Tournament Hub'}
-            </Text>
+          <TouchableOpacity
+            style={styles.headerTitleWrapBtn}
+            onPress={() => setSelectSeriesModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {tournament.name || tournament.title || 'Tournament Hub'}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={themeColors.textPrimary} style={{ marginLeft: 4 }} />
+            </View>
             <Text style={styles.headerSubtitle} numberOfLines={1}>
-              {tournament.city || tournament.host || 'Local Ground'} • {tournament.format || '10-Over Limited'}
+              {tournament.city || tournament.host || 'Local Ground'} • {tournament.duration || tournament.startDate || 'Season 2026'}
             </Text>
-          </View>
+          </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {/* Quick Browse All Series Directory */}
             <TouchableOpacity
               style={styles.shareHeaderBtn}
-              onPress={() => {
-                if (navigation) {
-                  navigation.navigate('AllSeriesDirectory');
-                } else {
-                  navigate('allSeriesDirectory');
-                }
-              }}
+              onPress={() => setSelectSeriesModalVisible(true)}
               activeOpacity={0.7}
-              accessibilityLabel="All Series Directory"
+              accessibilityLabel="Select Series Drawer"
             >
               <MaterialCommunityIcons name="format-list-bulleted-square" size={20} color={themeColors.textPrimary} />
             </TouchableOpacity>
@@ -506,8 +731,13 @@ export function PublicSeriesViewScreen(props = {}) {
                         <Text style={styles.teamScoreText}>{m.team2?.score || ''}</Text>
                       </View>
                       {m.result ? (
-                        <Text style={styles.resultBadgeText}>{m.result}</Text>
-                      ) : (
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => handleViewScorecard(m)}
+                        >
+                          <Text style={styles.resultBadgeText}>{m.result} • Scorecard ›</Text>
+                        </TouchableOpacity>
+                      ) : isUserOrganiser ? (
                         <TouchableOpacity
                           style={styles.cardScoreActionBtn}
                           onPress={() => handleStartMatchScoring(m)}
@@ -515,6 +745,20 @@ export function PublicSeriesViewScreen(props = {}) {
                         >
                           <Text style={styles.cardScoreActionBtnText}>SCORE THIS MATCH</Text>
                         </TouchableOpacity>
+                      ) : m.status === 'LIVE' ? (
+                        <TouchableOpacity
+                          style={[styles.cardScoreActionBtn, { backgroundColor: '#DC2626' }]}
+                          onPress={() => handleWatchLive(m)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.cardScoreActionBtnText}>WATCH LIVE</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={styles.featuredUpcomingBadge}>
+                          <Text style={styles.featuredUpcomingBadgeText} numberOfLines={1}>
+                            {m.venue || 'Upcoming Match'}
+                          </Text>
+                        </View>
                       )}
                     </View>
                   ))}
@@ -692,8 +936,14 @@ export function PublicSeriesViewScreen(props = {}) {
                       </View>
 
                       {item.result ? (
-                        <Text style={styles.finishedResultText}>{item.result}</Text>
-                      ) : (
+                        <TouchableOpacity
+                          style={styles.timeTagBadgeFinished}
+                          onPress={() => handleViewScorecard(item)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.timeTagTextFinished}>SCORECARD ›</Text>
+                        </TouchableOpacity>
+                      ) : isUserOrganiser ? (
                         <TouchableOpacity
                           style={styles.timeTagBadge}
                           onPress={() => handleStartMatchScoring(item)}
@@ -701,6 +951,18 @@ export function PublicSeriesViewScreen(props = {}) {
                         >
                           <Text style={styles.timeTagText}>SCORE MATCH</Text>
                         </TouchableOpacity>
+                      ) : item.status === 'LIVE' ? (
+                        <TouchableOpacity
+                          style={[styles.timeTagBadge, { backgroundColor: '#DC2626' }]}
+                          onPress={() => handleWatchLive(item)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.timeTagText, { color: '#FFFFFF' }]}>WATCH LIVE</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={styles.timeTagBadgeUpcoming}>
+                          <Text style={styles.timeTagUpcomingText}>{item.venue || 'Upcoming'}</Text>
+                        </View>
                       )}
                     </View>
                   </View>
@@ -1105,18 +1367,216 @@ export function PublicSeriesViewScreen(props = {}) {
               </View>
 
               <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
-                {mockSquadPlayers.map((player) => (
-                  <View key={player.id} style={styles.squadPlayerRow}>
-                    <PlayerAvatar name={player.name} size={34} />
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.squadPlayerName}>{player.name}</Text>
-                      <Text style={styles.squadPlayerRole}>{player.role}</Text>
-                    </View>
-                    <Text style={styles.squadPlayerStat}>
-                      {player.runs != null ? `${player.runs} Runs` : `${player.wickets} Wkts`}
+                {(selectedTeamDrawer?.players && selectedTeamDrawer.players.length > 0) ? (
+                  selectedTeamDrawer.players.map((player, pIdx) => {
+                    const pName = typeof player === 'string' ? player : (player.name || `Player ${pIdx + 1}`);
+                    const pRole = player.role || 'Player';
+                    return (
+                      <View key={player.id || pIdx} style={styles.squadPlayerRow}>
+                        <PlayerAvatar name={pName} size={34} />
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <Text style={styles.squadPlayerName}>{pName}</Text>
+                          <Text style={styles.squadPlayerRole}>{pRole}</Text>
+                        </View>
+                        {player.runs != null || player.wickets != null ? (
+                          <Text style={styles.squadPlayerStat}>
+                            {player.runs != null ? `${player.runs} Runs` : `${player.wickets} Wkts`}
+                          </Text>
+                        ) : null}
+                      </View>
+                    );
+                  })
+                ) : (
+                  <View style={{ paddingVertical: 24, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="people-outline" size={32} color={themeColors.textSubtle} />
+                    <Text style={{ fontSize: 13, fontFamily: systemFont, color: themeColors.textSecondary, marginTop: 8 }}>
+                      No squad players registered yet
                     </Text>
                   </View>
-                ))}
+                )}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* ── MODAL 4: SELECT SERIES BOTTOM SHEET DRAWER (CREX STYLE) ── */}
+        <Modal
+          visible={selectSeriesModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setSelectSeriesModalVisible(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setSelectSeriesModalVisible(false)}
+          >
+            <Pressable style={styles.selectSeriesSheet} onPress={e => e.stopPropagation()}>
+              {/* Top Drag Handle */}
+              <View style={styles.sheetHandle} />
+
+              {/* Sheet Header */}
+              <View style={styles.sheetHeaderRow}>
+                <Text style={styles.sheetTitle}>Select Series</Text>
+                <TouchableOpacity
+                  style={styles.sheetCloseBtn}
+                  onPress={() => setSelectSeriesModalVisible(false)}
+                  activeOpacity={0.7}
+                  accessibilityLabel="Close Drawer"
+                >
+                  <Ionicons name="close" size={20} color={themeColors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Search Bar */}
+              <View style={styles.searchBarWrap}>
+                <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search series by name or city..."
+                  placeholderTextColor="#94A3B8"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  clearButtonMode="while-editing"
+                />
+                {searchQuery ? (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+                    <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+
+              {/* Series List ScrollView */}
+              <ScrollView
+                style={styles.seriesSheetScroll}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              >
+                {/* User Hosted Series Section */}
+                {userHostedTournaments.length > 0 ? (
+                  <View style={{ marginBottom: 12 }}>
+                    <View style={styles.sheetSectionHeaderRow}>
+                      <MaterialCommunityIcons name="shield-crown-outline" size={15} color="#0284C7" />
+                      <Text style={styles.sheetSectionTitle}>My Hosted Series</Text>
+                    </View>
+                    {userHostedTournaments.map(item => {
+                      const isSelected = tournament?.id === item.id;
+                      return (
+                        <TouchableOpacity
+                          key={`hosted_${item.id}`}
+                          style={[
+                            styles.seriesSheetItemRow,
+                            isSelected && styles.seriesSheetItemRowSelected
+                          ]}
+                          onPress={() => handleSelectTournament(item)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.sheetItemLogoWrap}>
+                            {item.logoUri || item.bannerUri ? (
+                              <Image source={{ uri: item.logoUri || item.bannerUri }} style={styles.sheetItemLogo} />
+                            ) : (
+                              <View style={[styles.sheetItemLogoFallback, { backgroundColor: isSelected ? '#18181B' : '#F1F5F9' }]}>
+                                <MaterialCommunityIcons name="trophy" size={20} color={isSelected ? '#FFFFFF' : '#64748B'} />
+                              </View>
+                            )}
+                          </View>
+
+                          <View style={{ flex: 1, marginHorizontal: 10 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={[styles.sheetItemName, isSelected && styles.sheetItemNameSelected]} numberOfLines={1}>
+                                {item.fullName || item.name || item.title}
+                              </Text>
+                              <View style={styles.sheetHostChip}>
+                                <Text style={styles.sheetHostChipText}>Host</Text>
+                              </View>
+                            </View>
+                            <Text style={styles.sheetItemDates} numberOfLines={1}>
+                              {item.duration || item.startDate || 'Season 2026'} • {item.city || 'Ground'}
+                            </Text>
+                          </View>
+
+                          {isSelected ? (
+                            <Ionicons name="checkmark-circle" size={22} color="#0284C7" />
+                          ) : (
+                            <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
+                {/* All Series Section */}
+                <View>
+                  {userHostedTournaments.length > 0 ? (
+                    <View style={styles.sheetSectionHeaderRow}>
+                      <MaterialCommunityIcons name="trophy-outline" size={15} color="#64748B" />
+                      <Text style={styles.sheetSectionTitle}>All Series</Text>
+                    </View>
+                  ) : null}
+
+                  {filteredSheetTournaments.map(item => {
+                    const isSelected = tournament?.id === item.id;
+                    const isHost = myHostedIds.includes(item.id);
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={[
+                          styles.seriesSheetItemRow,
+                          isSelected && styles.seriesSheetItemRowSelected
+                        ]}
+                        onPress={() => handleSelectTournament(item)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.sheetItemLogoWrap}>
+                          {item.logoUri || item.bannerUri ? (
+                            <Image source={{ uri: item.logoUri || item.bannerUri }} style={styles.sheetItemLogo} />
+                          ) : (
+                            <View style={[styles.sheetItemLogoFallback, { backgroundColor: isSelected ? '#18181B' : '#F1F5F9' }]}>
+                              <MaterialCommunityIcons name="trophy" size={20} color={isSelected ? '#FFFFFF' : '#64748B'} />
+                            </View>
+                          )}
+                        </View>
+
+                        <View style={{ flex: 1, marginHorizontal: 10 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={[styles.sheetItemName, isSelected && styles.sheetItemNameSelected]} numberOfLines={1}>
+                              {item.fullName || item.name || item.title}
+                            </Text>
+                            {isHost ? (
+                              <View style={styles.sheetHostChip}>
+                                <Text style={styles.sheetHostChipText}>Host</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          <Text style={styles.sheetItemDates} numberOfLines={1}>
+                            {item.duration || item.startDate || 'Season 2026'} • {item.city || 'Ground'}
+                          </Text>
+                        </View>
+
+                        {isSelected ? (
+                          <Ionicons name="checkmark-circle" size={22} color="#0284C7" />
+                        ) : (
+                          <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Host A Tournament Action Button */}
+                <TouchableOpacity
+                  style={styles.sheetHostActionBtn}
+                  onPress={() => {
+                    setSelectSeriesModalVisible(false);
+                    if (navigation) {
+                      navigation.navigate('CreateTournament');
+                    }
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons name="trophy" size={18} color="#FFFFFF" />
+                  <Text style={styles.sheetHostActionBtnText}>HOST A NEW TOURNAMENT</Text>
+                </TouchableOpacity>
               </ScrollView>
             </Pressable>
           </Pressable>
@@ -1136,15 +1596,87 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: themeColors.appBackground
   },
+  topCarouselContainer: {
+    backgroundColor: themeColors.surface,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: themeColors.border
+  },
+  topCarouselContent: {
+    paddingHorizontal: 16,
+    gap: 10
+  },
+  carouselCard: {
+    width: 88,
+    height: 88,
+    borderRadius: 14,
+    backgroundColor: '#18181B',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    position: 'relative'
+  },
+  carouselCardSelected: {
+    borderColor: '#0284C7'
+  },
+  carouselCardImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    resizeMode: 'cover'
+  },
+  carouselCardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'flex-end',
+    padding: 6
+  },
+  carouselCardFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1E293B',
+    padding: 6
+  },
+  carouselCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontFamily: systemFontMedium,
+    textAlign: 'center',
+    lineHeight: 12
+  },
+  carouselCardTitleSelected: {
+    color: '#38BDF8',
+    fontFamily: systemFontBold
+  },
+  carouselCheckmarkBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 9,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5
+  },
   headerBar: {
-    height: 52,
+    minHeight: 52,
     backgroundColor: themeColors.surface,
     borderBottomWidth: 1,
     borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16
+    paddingHorizontal: 16,
+    paddingVertical: 6
   },
   backBtn: {
     width: 36,
@@ -1152,9 +1684,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center'
   },
-  headerTitleWrap: {
+  headerTitleWrapBtn: {
     flex: 1,
-    marginLeft: 8,
     marginRight: 8
   },
   headerTitle: {
@@ -1166,7 +1697,8 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 11,
     fontFamily: systemFont,
-    color: themeColors.textMuted
+    color: themeColors.textMuted,
+    marginTop: 1
   },
   organiserPill: {
     flexDirection: 'row',
@@ -1992,6 +2524,250 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: systemFontBold,
     color: themeColors.primary
+  },
+  // Select Series Bottom Sheet Drawer Styles
+  selectSeriesSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    maxHeight: '82%',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 24
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 12
+  },
+  sheetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary
+  },
+  sheetCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  searchBarWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F8FA',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
+    marginBottom: 12
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: systemFont,
+    color: themeColors.textPrimary,
+    paddingVertical: 0
+  },
+  seriesSheetScroll: {
+    maxHeight: 380
+  },
+  sheetSectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    marginTop: 6,
+    marginBottom: 4
+  },
+  sheetSectionTitle: {
+    fontSize: 11.5,
+    fontFamily: systemFontBold,
+    color: themeColors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
+  },
+  seriesSheetItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginBottom: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9'
+  },
+  seriesSheetItemRowSelected: {
+    borderColor: '#BAE6FD',
+    backgroundColor: '#F0F9FF'
+  },
+  sheetItemLogoWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sheetItemLogo: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover'
+  },
+  sheetItemLogoFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sheetItemName: {
+    fontSize: 13.5,
+    fontFamily: systemFontMedium,
+    color: themeColors.textPrimary
+  },
+  sheetItemNameSelected: {
+    color: '#0284C7',
+    fontFamily: systemFontBold
+  },
+  sheetItemDates: {
+    fontSize: 11,
+    fontFamily: systemFont,
+    color: themeColors.textMuted,
+    marginTop: 2
+  },
+  sheetHostChip: {
+    backgroundColor: '#18181B',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4
+  },
+  sheetHostChipText: {
+    color: '#FFFFFF',
+    fontSize: 9.5,
+    fontFamily: systemFontBold
+  },
+  sheetHostActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#18181B',
+    height: 44,
+    borderRadius: 10,
+    marginTop: 14,
+    marginBottom: 8
+  },
+  sheetHostActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontFamily: systemFontBold,
+    letterSpacing: 0.3
+  },
+  featuredUpcomingBadge: {
+    backgroundColor: '#F8F8FA',
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 4
+  },
+  featuredUpcomingBadgeText: {
+    fontSize: 10,
+    fontFamily: systemFontMedium,
+    color: themeColors.textMuted
+  },
+  timeTagBadgeFinished: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignItems: 'center'
+  },
+  timeTagTextFinished: {
+    color: '#16A34A',
+    fontSize: 10.5,
+    fontFamily: systemFontBold
+  },
+  timeTagBadgeUpcoming: {
+    backgroundColor: '#F8F8FA',
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignItems: 'center'
+  },
+  timeTagUpcomingText: {
+    fontSize: 10,
+    fontFamily: systemFontMedium,
+    color: themeColors.textMuted
+  },
+  emptyScreenContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingBottom: 40
+  },
+  emptyTrophyIconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1.5,
+    borderColor: '#BAE6FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20
+  },
+  emptyScreenTitle: {
+    fontSize: 20,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary,
+    marginBottom: 8,
+    textAlign: 'center'
+  },
+  emptyScreenSubtitle: {
+    fontSize: 13,
+    fontFamily: systemFont,
+    color: themeColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 26,
+    maxWidth: 320
+  },
+  hostFirstBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#18181B',
+    paddingHorizontal: 22,
+    height: 48,
+    borderRadius: 12
+  },
+  hostFirstBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: systemFontBold,
+    letterSpacing: 0.4
   }
 });
 

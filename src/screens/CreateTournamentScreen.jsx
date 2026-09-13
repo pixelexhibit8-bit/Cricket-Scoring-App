@@ -20,7 +20,11 @@ import {
   systemFontMedium,
   systemFontBold
 } from '../theme.js';
-import { saveTournament } from '../services/tournamentService.js';
+import {
+  saveTournament,
+  saveHostedTournamentId,
+  saveActiveTournamentId
+} from '../services/tournamentService.js';
 import { useMatch } from '../context/MatchContext.jsx';
 
 export function CreateTournamentScreen(props = {}) {
@@ -228,6 +232,8 @@ export function CreateTournamentScreen(props = {}) {
 
     try {
       await saveTournament(tournamentData);
+      await saveHostedTournamentId(tournamentData.id);
+      await saveActiveTournamentId(tournamentData.id);
     } catch (e) {
       console.warn('Failed to persist tournament:', e);
     }
