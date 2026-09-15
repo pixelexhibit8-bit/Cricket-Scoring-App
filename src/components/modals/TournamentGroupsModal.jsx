@@ -22,51 +22,92 @@ export function TournamentGroupsModal({
   visible = false,
   onClose = () => {},
   tournament = null,
-  onTournamentUpdated = () => {}
+  onTournamentUpdated = () => {},
+  onOpenRounds = () => {}
 }) {
   if (!tournament) return null;
 
   const [groups, setGroups] = useState([]);
+  const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+  const [selectedRoundForNewGroup, setSelectedRoundForNewGroup] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
-  const [showAddGroupInput, setShowAddGroupInput] = useState(false);
+  const [selectedTeamsForNewGroup, setSelectedTeamsForNewGroup] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const registeredTeams = Array.isArray(tournament.teams) ? tournament.teams : [];
+  const tournamentRounds = Array.isArray(tournament.rounds) && tournament.rounds.length > 0
+    ? tournament.rounds
+    : [];
 
   useEffect(() => {
     if (tournament) {
       if (Array.isArray(tournament.groups) && tournament.groups.length > 0) {
         setGroups(tournament.groups);
-      } else {
-        // Default two groups if teams exist
+      } else if (tournamentRounds.length > 0 && registeredTeams.length > 0) {
+        // Automatically default to Group A & Group B for initial round
+        const firstRound = tournamentRounds[0];
         const half = Math.ceil(registeredTeams.length / 2);
         const gA = registeredTeams.slice(0, half).map(t => t.name || t.teamName || t.id);
         const gB = registeredTeams.slice(half).map(t => t.name || t.teamName || t.id);
 
         setGroups([
-          { id: 'group_a', name: 'Group A', teams: gA },
-          { id: 'group_b', name: 'Group B', teams: gB }
+          { id: 'group_a', roundName: firstRound, name: 'Group A', teams: gA },
+          { id: 'group_b', roundName: firstRound, name: 'Group B', teams: gB }
         ]);
+      } else {
+        setGroups([]);
       }
+      setShowAddGroupModal(false);
     }
   }, [tournament, visible]);
 
-  const handleAddGroup = () => {
+  // Click on "Add groups" button (Screenshot 5 / 6)
+  const handleAddGroupClick = () => {
+    // Check if tournament has any rounds
+    if (tournamentRounds.length === 0) {
+      Alert.alert(
+        'Add rounds first',
+        'Before adding a group, you need to add rounds for this tournament.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Add Rounds',
+            onPress: () => {
+              onClose();
+              if (onOpenRounds) onOpenRounds();
+            }
+          }
+        ]
+      );
+      return;
+    }
+
+    // Set default round for new group
+    setSelectedRoundForNewGroup(tournamentRounds[0]);
+    setNewGroupName(`Group ${String.fromCharCode(65 + groups.length)}`);
+    setSelectedTeamsForNewGroup([]);
+    setShowAddGroupModal(true);
+  };
+
+  const handleCreateGroup = () => {
     const name = newGroupName.trim() || `Group ${String.fromCharCode(65 + groups.length)}`;
     if (groups.some(g => g.name.toLowerCase() === name.toLowerCase())) {
       Alert.alert('Duplicate Group', 'A group with this name already exists.');
       return;
     }
-    setGroups([...groups, { id: `group_${Date.now()}`, name, teams: [] }]);
-    setNewGroupName('');
-    setShowAddGroupInput(false);
+
+    const newGroupObj = {
+      id: `group_${Date.now()}`,
+      roundName: selectedRoundForNewGroup || tournamentRounds[0] || 'Group Stage',
+      name,
+      teams: selectedTeamsForNewGroup
+    };
+
+    setGroups([...groups, newGroupObj]);
+    setShowAddGroupModal(false);
   };
 
   const handleRemoveGroup = (groupId) => {
-    if (groups.length <= 1) {
-      Alert.alert('Minimum One Group', 'You must have at least one group.');
-      return;
-    }
     setGroups(groups.filter(g => g.id !== groupId));
   };
 
@@ -78,13 +119,8 @@ export function TournamentGroupsModal({
           ...g,
           teams: hasTeam ? g.teams.filter(t => t !== teamName) : [...g.teams, teamName]
         };
-      } else {
-        // Remove team from other groups so a team belongs to only one group
-        return {
-          ...g,
-          teams: g.teams.filter(t => t !== teamName)
-        };
       }
+      return g;
     }));
   };
 
@@ -110,98 +146,82 @@ export function TournamentGroupsModal({
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={styles.modalContainer}>
-        {/* Header */}
+        {/* Header Bar */}
         <View style={styles.headerBar}>
           <TouchableOpacity style={styles.backBtn} onPress={onClose} activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
           </TouchableOpacity>
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle}>Tournament Groups</Text>
-            <Text style={styles.headerSub}>Organize teams for group stages & points table</Text>
+            <Text style={styles.headerTitle}>Groups</Text>
+            <Text style={styles.headerSub}>Points table pool allocation</Text>
           </View>
           <TouchableOpacity
-            style={styles.doneBtn}
+            style={styles.saveHeaderBtn}
             onPress={handleSaveGroups}
             disabled={saving}
             activeOpacity={0.8}
           >
-            <Text style={styles.doneBtnText}>{saving ? 'Saving...' : 'Done'}</Text>
+            <Text style={styles.saveHeaderBtnText}>{saving ? 'Saving...' : 'Done'}</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Tree Diagram Overview */}
-          <View style={styles.overviewCard}>
-            <View style={styles.cardHeaderRow}>
-              <MaterialCommunityIcons name="group" size={18} color="#18181B" />
-              <Text style={styles.cardHeaderTitle}>GROUP STRUCTURE</Text>
-            </View>
-
-            <View style={styles.treeWrap}>
-              <View style={styles.treeRoot}>
-                <Text style={styles.treeRootText}>Round Stage</Text>
+          {/* Visual Tree Diagram (Matching Screenshot 5) */}
+          {groups.length > 0 ? (
+            <View style={styles.treeSectionCard}>
+              <View style={styles.treeHeaderRow}>
+                <MaterialCommunityIcons name="tournament" size={18} color="#18181B" />
+                <Text style={styles.treeHeaderTitle}>GROUP STAGE ALLOCATION</Text>
               </View>
 
-              <View style={styles.treeBranches}>
-                {groups.map((grp) => (
-                  <View key={grp.id} style={styles.treeGroupNode}>
-                    <View style={styles.groupNodeBadge}>
-                      <Text style={styles.groupNodeBadgeText}>{grp.name}</Text>
-                      <Text style={styles.groupNodeCountText}>({grp.teams.length} teams)</Text>
-                    </View>
-                    <View style={styles.groupTeamsPills}>
-                      {grp.teams.length > 0 ? (
-                        grp.teams.map((tName, i) => (
-                          <View key={`${tName}-${i}`} style={styles.teamMiniPill}>
-                            <Text style={styles.teamMiniPillText}>{tName}</Text>
+              {/* Horizontal Root -> Groups -> Teams Tree Layout (Screenshot 5) */}
+              <View style={styles.treeBranchContainer}>
+                {/* 1. Left Root Round Node */}
+                <View style={styles.roundRootNode}>
+                  <Text style={styles.roundRootNodeText}>
+                    {tournamentRounds[0] || 'Group Stage'}
+                  </Text>
+                </View>
+
+                {/* 2. Middle Groups & Right Teams Branches */}
+                <View style={styles.groupsBranchList}>
+                  {groups.map((grp) => (
+                    <View key={grp.id} style={styles.groupBranchItem}>
+                      <View style={styles.groupNodeBox}>
+                        <Text style={styles.groupNodeName}>{grp.name}</Text>
+                      </View>
+
+                      <View style={styles.teamsNodeColumn}>
+                        {grp.teams.length > 0 ? (
+                          grp.teams.map((tName, tIdx) => (
+                            <View key={`${tName}-${tIdx}`} style={styles.teamNodeBox}>
+                              <Text style={styles.teamNodeText} numberOfLines={1}>{tName}</Text>
+                            </View>
+                          ))
+                        ) : (
+                          <View style={[styles.teamNodeBox, { borderStyle: 'dashed' }]}>
+                            <Text style={[styles.teamNodeText, { color: themeColors.textMuted }]}>
+                              No teams assigned
+                            </Text>
                           </View>
-                        ))
-                      ) : (
-                        <Text style={styles.noTeamsHintText}>No teams assigned yet</Text>
-                      )}
+                        )}
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-
-          {/* Add Group Action */}
-          {showAddGroupInput ? (
-            <View style={styles.addGroupInputCard}>
-              <Text style={styles.inputLabel}>Group Name</Text>
-              <View style={styles.addGroupRow}>
-                <TextInput
-                  style={[styles.textInput, { flex: 1 }]}
-                  placeholder="e.g. Group C or Pool 1"
-                  placeholderTextColor={themeColors.textSubtle}
-                  value={newGroupName}
-                  onChangeText={setNewGroupName}
-                />
-                <TouchableOpacity style={styles.createGroupBtn} onPress={handleAddGroup} activeOpacity={0.8}>
-                  <Text style={styles.createGroupBtnText}>Create</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelAddGroupBtn}
-                  onPress={() => setShowAddGroupInput(false)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close" size={20} color={themeColors.textSecondary} />
-                </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             </View>
           ) : (
-            <TouchableOpacity
-              style={styles.addNewGroupTriggerBtn}
-              onPress={() => setShowAddGroupInput(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add-circle-outline" size={20} color="#18181B" style={{ marginRight: 6 }} />
-              <Text style={styles.addNewGroupTriggerText}>+ Add New Group</Text>
-            </TouchableOpacity>
+            <View style={styles.emptyGroupsCard}>
+              <MaterialCommunityIcons name="account-group-outline" size={48} color="#94A3B8" />
+              <Text style={styles.emptyGroupsTitle}>Add groups</Text>
+              <Text style={styles.emptyGroupsSub}>
+                For generating points table, you will have to add groups first.
+              </Text>
+            </View>
           )}
 
-          {/* Group Team Allocation Cards */}
+          {/* Group Team Assignment Cards */}
           {groups.map((groupItem) => (
             <View key={groupItem.id} style={styles.groupCard}>
               <View style={styles.groupCardHeader}>
@@ -212,30 +232,28 @@ export function TournamentGroupsModal({
                     <Text style={styles.groupCountBadgeText}>{groupItem.teams.length} Teams</Text>
                   </View>
                 </View>
-                {groups.length > 1 && (
-                  <TouchableOpacity
-                    style={styles.removeGroupBtn}
-                    onPress={() => handleRemoveGroup(groupItem.id)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  style={styles.removeGroupBtn}
+                  onPress={() => handleRemoveGroup(groupItem.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                </TouchableOpacity>
               </View>
 
-              <Text style={styles.groupCardSub}>Select teams to place into {groupItem.name}:</Text>
+              <Text style={styles.groupCardSub}>Tap teams to include in {groupItem.name}:</Text>
 
               {registeredTeams.length > 0 ? (
                 <View style={styles.teamSelectionGrid}>
                   {registeredTeams.map((team) => {
                     const teamName = team.name || team.teamName || 'Team';
-                    const isSelectedInThisGroup = groupItem.teams.includes(teamName);
+                    const isSelected = groupItem.teams.includes(teamName);
                     return (
                       <TouchableOpacity
                         key={team.id || teamName}
                         style={[
                           styles.teamSelectCard,
-                          isSelectedInThisGroup && styles.teamSelectCardActive
+                          isSelected && styles.teamSelectCardActive
                         ]}
                         onPress={() => toggleTeamInGroup(groupItem.id, teamName)}
                         activeOpacity={0.7}
@@ -243,22 +261,22 @@ export function TournamentGroupsModal({
                         <MaterialCommunityIcons
                           name="cricket"
                           size={14}
-                          color={isSelectedInThisGroup ? '#FFFFFF' : '#64748B'}
+                          color={isSelected ? '#FFFFFF' : '#64748B'}
                           style={{ marginRight: 6 }}
                         />
                         <Text
                           style={[
                             styles.teamSelectText,
-                            isSelectedInThisGroup && styles.teamSelectTextActive
+                            isSelected && styles.teamSelectTextActive
                           ]}
                           numberOfLines={1}
                         >
                           {teamName}
                         </Text>
                         <Ionicons
-                          name={isSelectedInThisGroup ? 'checkmark-circle' : 'ellipse-outline'}
+                          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
                           size={16}
-                          color={isSelectedInThisGroup ? '#FFFFFF' : '#CBD5E1'}
+                          color={isSelected ? '#FFFFFF' : '#CBD5E1'}
                           style={{ marginLeft: 6 }}
                         />
                       </TouchableOpacity>
@@ -268,13 +286,102 @@ export function TournamentGroupsModal({
               ) : (
                 <View style={styles.noRegisteredTeamsBox}>
                   <Text style={styles.noRegisteredTeamsText}>
-                    No teams registered yet. Add teams to tournament first.
+                    No teams registered yet. Register tournament teams first.
                   </Text>
                 </View>
               )}
             </View>
           ))}
         </ScrollView>
+
+        {/* ── BOTTOM ACTION BAR (Matching Screenshot 5) ── */}
+        <View style={styles.bottomBarContainer}>
+          <TouchableOpacity
+            style={styles.doneBottomBtn}
+            onPress={handleSaveGroups}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.doneBottomBtnText}>Done</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.addGroupsBottomBtn}
+            onPress={handleAddGroupClick}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+            <Text style={styles.addGroupsBottomBtnText}>Add groups</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── ADD GROUP MODAL (Matching Screenshot 6) ── */}
+        <Modal
+          visible={showAddGroupModal}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setShowAddGroupModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.addGroupDialog}>
+              <View style={styles.dialogHeaderRow}>
+                <Text style={styles.dialogTitle}>Add groups</Text>
+                <TouchableOpacity onPress={() => setShowAddGroupModal(false)}>
+                  <Ionicons name="close" size={22} color={themeColors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Field 1: Select Round */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Select round *</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                  {tournamentRounds.map((rnd) => {
+                    const isSelected = selectedRoundForNewGroup === rnd;
+                    return (
+                      <TouchableOpacity
+                        key={rnd}
+                        style={[styles.roundPill, isSelected && styles.roundPillActive]}
+                        onPress={() => setSelectedRoundForNewGroup(rnd)}
+                      >
+                        <Text style={[styles.roundPillText, isSelected && styles.roundPillTextActive]}>
+                          {rnd}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Field 2: Group Name */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Group name (e.g. Group A or Pool 1) *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Group Name"
+                  placeholderTextColor={themeColors.textSubtle}
+                  value={newGroupName}
+                  onChangeText={setNewGroupName}
+                />
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.dialogActionsRow}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setShowAddGroupModal(false)}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.createBtn}
+                  onPress={handleCreateGroup}
+                >
+                  <Text style={styles.createBtnText}>Add Group</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </Modal>
   );
@@ -314,13 +421,13 @@ const styles = StyleSheet.create({
     fontFamily: systemFont,
     color: themeColors.textMuted
   },
-  doneBtn: {
-    backgroundColor: '#059669',
-    paddingHorizontal: 16,
-    paddingVertical: 7,
+  saveHeaderBtn: {
+    backgroundColor: '#18181B',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 8
   },
-  doneBtnText: {
+  saveHeaderBtnText: {
     color: '#FFFFFF',
     fontSize: 12.5,
     fontFamily: systemFontBold
@@ -330,153 +437,113 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 20,
     gap: 16
   },
-  overviewCard: {
+  treeSectionCard: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: themeColors.border,
     padding: 16
   },
-  cardHeaderRow: {
+  treeHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 12
+    marginBottom: 16
   },
-  cardHeaderTitle: {
-    fontSize: 11.5,
+  treeHeaderTitle: {
+    fontSize: 12,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary,
     letterSpacing: 0.8
   },
-  treeWrap: {
-    alignItems: 'center',
-    paddingVertical: 8
-  },
-  treeRoot: {
-    backgroundColor: '#18181B',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 12
-  },
-  treeRootText: {
-    color: '#FFFFFF',
-    fontSize: 12.5,
-    fontFamily: systemFontBold
-  },
-  treeBranches: {
-    width: '100%',
-    gap: 10
-  },
-  treeGroupNode: {
-    backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
-    borderRadius: 10,
-    padding: 10
-  },
-  groupNodeBadge: {
+  treeBranchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 6
+    gap: 12
   },
-  groupNodeBadgeText: {
-    fontSize: 13,
+  roundRootNode: {
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1.5,
+    borderColor: themeColors.borderDark,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+    width: 90,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  roundRootNodeText: {
+    fontSize: 11,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary,
+    textAlign: 'center'
+  },
+  groupsBranchList: {
+    flex: 1,
+    gap: 12
+  },
+  groupBranchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  groupNodeBox: {
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1.5,
+    borderColor: themeColors.borderDark,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  groupNodeName: {
+    fontSize: 12,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary
   },
-  groupNodeCountText: {
-    fontSize: 11,
-    fontFamily: systemFont,
-    color: themeColors.textSecondary
+  teamsNodeColumn: {
+    flex: 1,
+    gap: 4
   },
-  groupTeamsPills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6
-  },
-  teamMiniPill: {
+  teamNodeBox: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: themeColors.borderDark,
+    borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6
+    paddingVertical: 4
   },
-  teamMiniPillText: {
+  teamNodeText: {
     fontSize: 11,
     fontFamily: systemFontMedium,
     color: themeColors.textPrimary
   },
-  noTeamsHintText: {
-    fontSize: 11,
-    fontFamily: systemFont,
-    color: themeColors.textMuted,
-    fontStyle: 'italic'
-  },
-  addNewGroupTriggerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  emptyGroupsCard: {
     backgroundColor: themeColors.surface,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#18181B',
-    borderRadius: 12,
-    paddingVertical: 12
-  },
-  addNewGroupTriggerText: {
-    fontSize: 13,
-    fontFamily: systemFontBold,
-    color: '#18181B'
-  },
-  addGroupInputCard: {
-    backgroundColor: themeColors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: themeColors.border,
-    padding: 14,
-    gap: 8
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontFamily: systemFontMedium,
-    color: themeColors.textSecondary
-  },
-  addGroupRow: {
-    flexDirection: 'row',
+    padding: 32,
     alignItems: 'center',
-    gap: 8
+    gap: 10,
+    marginTop: 20
   },
-  textInput: {
-    backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
-    fontFamily: systemFont,
+  emptyGroupsTitle: {
+    fontSize: 16,
+    fontFamily: systemFontBold,
     color: themeColors.textPrimary
   },
-  createGroupBtn: {
-    backgroundColor: '#18181B',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8
-  },
-  createGroupBtnText: {
-    color: '#FFFFFF',
+  emptyGroupsSub: {
     fontSize: 12.5,
-    fontFamily: systemFontBold
-  },
-  cancelAddGroupBtn: {
-    padding: 6
+    fontFamily: systemFont,
+    color: themeColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18
   },
   groupCard: {
     backgroundColor: themeColors.surface,
@@ -556,6 +623,139 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: systemFont,
     color: themeColors.textMuted
+  },
+  bottomBarContainer: {
+    backgroundColor: themeColors.surface,
+    borderTopWidth: 1,
+    borderTopColor: themeColors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    gap: 12
+  },
+  doneBottomBtn: {
+    flex: 1,
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1,
+    borderColor: themeColors.borderDark,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  doneBottomBtnText: {
+    fontSize: 13.5,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary
+  },
+  addGroupsBottomBtn: {
+    flex: 1.3,
+    backgroundColor: '#059669',
+    borderRadius: 10,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  addGroupsBottomBtnText: {
+    fontSize: 13.5,
+    fontFamily: systemFontBold,
+    color: '#FFFFFF'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20
+  },
+  addGroupDialog: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 360,
+    gap: 14
+  },
+  dialogHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  dialogTitle: {
+    fontSize: 16,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary
+  },
+  inputGroup: {
+    gap: 6
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontFamily: systemFontMedium,
+    color: themeColors.textSecondary
+  },
+  textInput: {
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1,
+    borderColor: themeColors.borderDark,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13.5,
+    fontFamily: systemFont,
+    color: themeColors.textPrimary
+  },
+  roundPill: {
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1,
+    borderColor: themeColors.borderDark,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16
+  },
+  roundPillActive: {
+    backgroundColor: '#18181B',
+    borderColor: '#18181B'
+  },
+  roundPillText: {
+    fontSize: 11.5,
+    fontFamily: systemFontMedium,
+    color: themeColors.textSecondary
+  },
+  roundPillTextActive: {
+    color: '#FFFFFF'
+  },
+  dialogActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 8,
+    backgroundColor: themeColors.surfaceOffWhite,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  cancelBtnText: {
+    fontSize: 13,
+    fontFamily: systemFontMedium,
+    color: themeColors.textSecondary
+  },
+  createBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 8,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  createBtnText: {
+    fontSize: 13,
+    fontFamily: systemFontBold,
+    color: '#FFFFFF'
   }
 });
 

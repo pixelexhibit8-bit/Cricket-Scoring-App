@@ -1405,6 +1405,7 @@ export function PublicSeriesViewScreen(props = {}) {
           onClose={() => setGroupsModalVisible(false)}
           tournament={tournament}
           onTournamentUpdated={handleTournamentUpdated}
+          onOpenRounds={() => setRoundsModalVisible(true)}
         />
 
         {/* ── MODAL 10: TOURNAMENT RULES MODAL ── */}
