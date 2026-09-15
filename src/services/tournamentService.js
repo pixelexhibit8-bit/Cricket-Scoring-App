@@ -233,17 +233,31 @@ function mapSupabaseRowToTournament(row) {
   };
 }
 
+import { buildRajasthanLeagueTournament } from './seedRajasthanLeague.js';
+
 /**
  * Fetch all tournaments from Local Storage (Offline-First)
  */
 export async function getTournamentsFromStorage() {
   try {
     const raw = await AsyncStorage.getItem(TOURNAMENTS_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    let list = [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+    }
+
+    // Guarantee Rajasthan League 2026 is always available
+    const rpl = buildRajasthanLeagueTournament();
+    const existingIdx = list.findIndex(t => t.id === rpl.id || t.name === rpl.name);
+    if (existingIdx === -1) {
+      list = [rpl, ...list];
+      await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+    }
+
+    return list;
   } catch (err) {
-    return [];
+    return [buildRajasthanLeagueTournament()];
   }
 }
 
@@ -265,9 +279,13 @@ export async function getTournaments() {
 
     if (!error && Array.isArray(data)) {
       const cloudTournaments = data.map(mapSupabaseRowToTournament).filter(Boolean);
+      const rpl = buildRajasthanLeagueTournament();
+      const hasRPL = cloudTournaments.some(t => t.id === rpl.id || t.name === rpl.name);
+      const merged = hasRPL ? cloudTournaments : [rpl, ...cloudTournaments];
+
       // Sync local storage with latest cloud snapshot
-      await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(cloudTournaments));
-      return cloudTournaments;
+      await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(merged));
+      return merged;
     } else if (error) {
       console.warn('[TournamentService] Supabase fetch error, fallback to local:', error.message);
     }

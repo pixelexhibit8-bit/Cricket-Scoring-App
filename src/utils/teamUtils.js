@@ -178,6 +178,18 @@ export const getTeamLogoSource = (team, tournamentTeams = []) => {
   ));
   if (foundPreset) return { uri: foundPreset.url };
 
+  // 1.5. Rajasthan League 2026 Official Team Logos
+  if (key === 'jpr' || key.includes('jaipur royal') || key.includes('jaipur')) return require('../../assets/team_logos/rpl/jpr.jpg');
+  if (key === 'jsr' || key.includes('jodhpur sun') || key.includes('jodhpur')) return require('../../assets/team_logos/rpl/jsr.jpg');
+  if (key === 'ngt' || key.includes('nagaur titan') || key.includes('nagaur')) return require('../../assets/team_logos/rpl/ngt.jpg');
+  if (key === 'bkr' || key.includes('bikaner king') || key.includes('bikaner')) return require('../../assets/team_logos/rpl/bkr.jpg');
+  if (key === 'udw' || key.includes('udaipur warrior') || key.includes('udaipur')) return require('../../assets/team_logos/rpl/udw.jpg');
+  if (key === 'kts' || key.includes('kota striker') || key.includes('kota')) return require('../../assets/team_logos/rpl/kts.jpg');
+  if (key === 'ssg' || key.includes('sikar super') || key.includes('sikar')) return require('../../assets/team_logos/rpl/ssg.jpg');
+  if (key === 'ajb' || key.includes('ajmer blaster') || key.includes('ajmer')) return require('../../assets/team_logos/rpl/ajb.jpg');
+  if (key === 'bms' || key.includes('barmer super') || key.includes('barmer')) return require('../../assets/team_logos/rpl/bms.jpg');
+  if (key === 'mwc' || key.includes('marwar champion') || key.includes('marwar')) return require('../../assets/team_logos/rpl/mwc.jpg');
+
   // 2. Sadokan Premier League Keyword matching
   if (key.includes('super king') || key.includes('sadokan super') || key.includes('ssk')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469238/spl_team_ssk_logo.jpg' };
   if (key.includes('striker') || key.includes('sangwa striker') || key.includes('str')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469241/spl_team_str_logo.jpg' };

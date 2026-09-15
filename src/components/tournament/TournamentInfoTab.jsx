@@ -54,6 +54,20 @@ export const TournamentInfoTab = React.memo(function TournamentInfoTab({
     });
   }
 
+  if (tournament?.entryFee) {
+    infoRows.push({
+      key: 'Entry Fee',
+      val: `₹${tournament.entryFee}`
+    });
+  }
+
+  if (Array.isArray(tournament?.venues) && tournament.venues.length > 0) {
+    infoRows.push({
+      key: 'Venues',
+      val: tournament.venues.join(' • ')
+    });
+  }
+
   if (tournament?.organiserName) {
     infoRows.push({
       key: 'Organiser',
