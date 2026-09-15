@@ -16,7 +16,7 @@ import {
   systemFontBold
 } from '../../theme.js';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
-import { resolveTeamWithRoster } from '../../utils/teamUtils.js';
+import { resolveTeamWithRoster, formatMatchResult } from '../../utils/teamUtils.js';
 
 function getOrdinal(n) {
   const num = parseInt(n, 10);
@@ -190,9 +190,7 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
               const t2OversClean = String(t2Overs).replace(/[()]/g, '').trim();
 
               const headerTitle = formatMatchHeaderTitle(m, tournament, idx);
-
-              const winner = m.winner || m.winnerTeamName || `${t2Name} Won`;
-              const resultMargin = m.result || 'by 5 wickets';
+              const { winnerHeadline, marginText } = formatMatchResult(m, t1Resolved, t2Resolved, teams);
 
               return (
                 <TouchableOpacity
@@ -241,10 +239,10 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                     {/* Right Result Block */}
                     <View style={styles.resultRightBlock}>
                       <Text style={styles.resultWonHeadline} numberOfLines={1}>
-                        {winner}
+                        {winnerHeadline}
                       </Text>
                       <Text style={styles.resultWonMarginText} numberOfLines={2}>
-                        {resultMargin}
+                        {marginText}
                       </Text>
                     </View>
                   </View>

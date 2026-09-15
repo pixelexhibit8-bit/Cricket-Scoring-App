@@ -16,7 +16,7 @@ import {
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
 import { PointsTableSection } from './PointsTableSection.jsx';
-import { resolveTeamWithRoster } from '../../utils/teamUtils.js';
+import { resolveTeamWithRoster, formatMatchResult } from '../../utils/teamUtils.js';
 
 function isKnockoutStage(stage) {
   if (!stage || typeof stage !== 'string') return false;
@@ -157,14 +157,19 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
                   {/* Center Status / Time / Result */}
                   <View style={styles.matchCenterBlock}>
                     {isFinished ? (
-                      <View style={styles.finishedResultCenter}>
-                        <Text style={styles.winnerHeadline} numberOfLines={1}>
-                          {m.winner || m.winnerTeamName || `${t1Code} Won`}
-                        </Text>
-                        <Text style={styles.winnerSubMargin} numberOfLines={1}>
-                          {m.result || 'by 5 wickets'}
-                        </Text>
-                      </View>
+                      (() => {
+                        const { winnerHeadline, marginText } = formatMatchResult(m, t1Resolved, t2Resolved, teams);
+                        return (
+                          <View style={styles.finishedResultCenter}>
+                            <Text style={styles.winnerHeadline} numberOfLines={1}>
+                              {winnerHeadline}
+                            </Text>
+                            <Text style={styles.winnerSubMargin} numberOfLines={1}>
+                              {marginText}
+                            </Text>
+                          </View>
+                        );
+                      })()
                     ) : isLive ? (
                       <View style={styles.liveCenterBlock}>
                         <View style={styles.liveBadge}>

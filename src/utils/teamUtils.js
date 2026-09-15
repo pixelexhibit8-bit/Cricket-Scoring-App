@@ -220,3 +220,68 @@ export const getScorePartsFromText = (scoreText = '') => {
 
   return { score: raw, overs: '' };
 };
+
+/**
+ * Format match winner short headline and margin cleanly (e.g. "GAW-W Won", "by 5 wickets")
+ */
+export const formatMatchResult = (match, t1Resolved, t2Resolved, teams = []) => {
+  if (!match) return { winnerHeadline: 'Completed', marginText: '' };
+
+  const rawWinner = String(match.winnerTeamName || match.winner || match.resultText || match.result || '').trim();
+  const rawResult = String(match.resultText || match.result || match.winner || '').trim();
+
+  // If match was tied
+  if (rawResult.toLowerCase().includes('tied') || rawResult.toLowerCase().includes('tie')) {
+    return {
+      winnerHeadline: 'Match Tied',
+      marginText: rawResult.toLowerCase().includes('super') ? 'Super Over' : 'Tied'
+    };
+  }
+
+  // If match had no result or was abandoned
+  if (rawResult.toLowerCase().includes('no result') || rawResult.toLowerCase().includes('abandoned') || rawResult.toLowerCase().includes('rain')) {
+    return {
+      winnerHeadline: 'No Result',
+      marginText: 'Abandoned'
+    };
+  }
+
+  const t1Code = t1Resolved?.shortName || (t1Resolved?.name ? makeTeamCode(t1Resolved.name) : 'T1');
+  const t2Code = t2Resolved?.shortName || (t2Resolved?.name ? makeTeamCode(t2Resolved.name) : 'T2');
+
+  const wNorm = rawWinner.toLowerCase();
+  const t1Norm = String(t1Resolved?.name || '').toLowerCase();
+  const t2Norm = String(t2Resolved?.name || '').toLowerCase();
+  const t1CodeNorm = String(t1Code).toLowerCase();
+  const t2CodeNorm = String(t2Code).toLowerCase();
+
+  let winnerShortCode = t2Code;
+
+  if (wNorm.includes(t1CodeNorm) || (t1Norm && wNorm.includes(t1Norm)) || (t1Norm.length >= 4 && wNorm.includes(t1Norm.slice(0, 4)))) {
+    winnerShortCode = t1Code;
+  } else if (wNorm.includes(t2CodeNorm) || (t2Norm && wNorm.includes(t2Norm)) || (t2Norm.length >= 4 && wNorm.includes(t2Norm.slice(0, 4)))) {
+    winnerShortCode = t2Code;
+  } else if (match.winnerTeamName) {
+    const matched = teams.find(t => 
+      t.name?.toLowerCase() === match.winnerTeamName.toLowerCase() ||
+      t.shortName?.toLowerCase() === match.winnerTeamName.toLowerCase()
+    );
+    winnerShortCode = matched?.shortName || makeTeamCode(match.winnerTeamName);
+  }
+
+  // Extract clean margin (e.g. "by 5 wickets", "by 24 runs")
+  let marginText = 'by 5 wickets';
+  if (rawResult) {
+    const byMatch = rawResult.match(/by\s+\d+\s+(?:wickets?|runs?|wkts?)/i) || rawResult.match(/by\s+[\w\s]+/i);
+    if (byMatch) {
+      marginText = byMatch[0].trim();
+    } else if (!rawResult.toLowerCase().includes('won') && !rawResult.toLowerCase().includes('win')) {
+      marginText = rawResult;
+    }
+  }
+
+  return {
+    winnerHeadline: `${winnerShortCode} Won`,
+    marginText
+  };
+};
