@@ -821,37 +821,6 @@ export async function getAllUpcomingTournamentMatches() {
   }
 }
 
-/**
- * True realtime WebSocket subscription for tournaments table
- */
-export function subscribeToTournamentsLive(onUpdate) {
-  if (!supabase || typeof onUpdate !== 'function') {
-    return () => {};
-  }
 
-  try {
-    const channelName = `tournaments_live_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const channel = supabase.channel(channelName);
-
-    channel
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tournaments' },
-        (payload) => {
-          onUpdate(payload);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      try {
-        supabase.removeChannel(channel);
-      } catch (e) {}
-    };
-  } catch (err) {
-    console.warn('[TournamentService] subscribeToTournamentsLive error:', err);
-    return () => {};
-  }
-}
 
 
