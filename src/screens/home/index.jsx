@@ -351,7 +351,6 @@ export function HomeScreen(props = {}) {
                       if (setBottomNavTab) setBottomNavTab('matches');
                       if (setMatchesSubTab) setMatchesSubTab('upcoming');
                     }}
-                    onScorePress={handleStartUpcomingMatch}
                   />
                 ))}
               </FadeSlideIn>

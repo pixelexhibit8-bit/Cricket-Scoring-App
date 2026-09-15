@@ -38,6 +38,7 @@ import { PublicSeriesViewScreen } from './PublicSeriesViewScreen.jsx';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { MatchListScoreCard } from '../components/MatchListScoreCard.jsx';
+import { UpcomingFixtureCardItem } from '../components/home/UpcomingFixtureCardItem.jsx';
 import { GroundSpotlightSection } from '../components/GroundSpotlightSection.jsx';
 import { formatOvers, getTossWinnerName, getTossDecisionText, getScorePartsFromText, getFinishedResultCardText } from '../utils/cricketUtils.js';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -699,92 +700,12 @@ export function MatchesScreen(props = {}) {
                       <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
                         {dateKey}
                       </Text>
-                      {groups[dateKey].map((m, idx) => {
-                        const t1Name = m.team1?.name || m.team1Name || m.teams?.[0]?.name || 'Team A';
-                        const t2Name = m.team2?.name || m.team2Name || m.teams?.[1]?.name || 'Team B';
-                        const schedTime = m.timeText || m.time || (m.matchDate && m.matchDate.includes('•') ? m.matchDate.split('•')[1]?.trim() : 'Scheduled');
-                        const venue = m.venueName || m.venue || 'Sadokan Ground';
-                        const tourName = m.tournamentName || m.tournamentTitle || m.seriesName || '';
-                        const stage = m.stage || '';
-                        const subtitleText = [tourName, stage, venue].filter(Boolean).join(' • ');
-
-                        return (
-                          <View
-                            key={`upcoming-${m.id || idx}`}
-                            style={{
-                              backgroundColor: '#FFFFFF',
-                              borderRadius: 16,
-                              padding: 16,
-                              marginBottom: 10,
-                              borderWidth: 1,
-                              borderColor: '#F1F5F9',
-                              gap: 12
-                            }}
-                          >
-                            {/* Card Header Subtitle */}
-                            <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: systemFontMedium }} numberOfLines={1}>
-                              {subtitleText}
-                            </Text>
-
-                            {/* Center Matchup Row */}
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                              {/* Left Teams Column */}
-                              <View style={{ flex: 1, gap: 12 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                  <TeamIdentityMark
-                                    team={m.team1 || { name: t1Name }}
-                                    tournamentTeams={m.tournament?.teams || []}
-                                    size={26}
-                                  />
-                                  <Text style={{ fontSize: 15.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
-                                    {t1Name}
-                                  </Text>
-                                </View>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                  <TeamIdentityMark
-                                    team={m.team2 || { name: t2Name }}
-                                    tournamentTeams={m.tournament?.teams || []}
-                                    size={26}
-                                  />
-                                  <Text style={{ fontSize: 15.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
-                                    {t2Name}
-                                  </Text>
-                                </View>
-                              </View>
-
-                              {/* Divider */}
-                              <View style={{ width: 1, height: 50, backgroundColor: '#F1F5F9', marginHorizontal: 14 }} />
-
-                              {/* Right Column: Time & Start Button */}
-                              <View style={{ minWidth: 105, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                                <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#0284C7' }}>
-                                  {schedTime}
-                                </Text>
-                                {onStartUpcomingMatch ? (
-                                  <TouchableOpacity
-                                    onPress={() => onStartUpcomingMatch(m)}
-                                    activeOpacity={0.8}
-                                    style={{
-                                      backgroundColor: '#0284C7',
-                                      paddingHorizontal: 12,
-                                      paddingVertical: 6,
-                                      borderRadius: 8,
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      gap: 4
-                                    }}
-                                  >
-                                    <MaterialCommunityIcons name="cricket" size={13} color="#FFFFFF" />
-                                    <Text style={{ color: '#FFFFFF', fontSize: 11, fontFamily: systemFontMedium }}>
-                                      SCORE
-                                    </Text>
-                                  </TouchableOpacity>
-                                ) : null}
-                              </View>
-                            </View>
-                          </View>
-                        );
-                      })}
+                      {groups[dateKey].map((m, idx) => (
+                        <UpcomingFixtureCardItem
+                          key={`upcoming-${m.id || idx}`}
+                          fixture={m}
+                        />
+                      ))}
                     </View>
                   ));
                 })()
