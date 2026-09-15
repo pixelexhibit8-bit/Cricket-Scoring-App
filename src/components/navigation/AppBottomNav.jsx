@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { systemFontMedium, systemFontBold } from '../../theme.js';
+import { useMatch } from '../../context/MatchContext.jsx';
 
 import { ScalePressable } from '../motion/MotionSystem.jsx';
 
@@ -10,6 +11,24 @@ export function AppBottomNav(props) {
   const { activeTab, onTabChange, state, navigation } = props;
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 6 : 4);
+
+  const matchCtx = useMatch();
+  const activeTournament = matchCtx?.activeTournament;
+
+  const dynamicSeriesLabel = useMemo(() => {
+    if (!activeTournament) return 'Series';
+    if (activeTournament.shortCode) return String(activeTournament.shortCode).toUpperCase();
+    if (activeTournament.shortName) return String(activeTournament.shortName).toUpperCase();
+
+    const name = String(activeTournament.name || activeTournament.title || '').trim();
+    if (!name) return 'Series';
+
+    const words = name.split(/\s+/).filter(Boolean);
+    if (words.length >= 2) {
+      return words.map(w => w[0].toUpperCase()).join('').slice(0, 4);
+    }
+    return name.length <= 6 ? name : name.slice(0, 4).toUpperCase();
+  }, [activeTournament]);
 
   const isReactNavigation = Boolean(state && navigation);
   const currentTab = isReactNavigation
@@ -35,7 +54,7 @@ export function AppBottomNav(props) {
     },
     {
       id: 'series',
-      label: 'Series',
+      label: dynamicSeriesLabel,
       routeName: 'Series',
       activeIcon: 'trophy',
       inactiveIcon: 'trophy-outline',

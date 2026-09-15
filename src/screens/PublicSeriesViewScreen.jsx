@@ -242,11 +242,20 @@ export function PublicSeriesViewScreen(props = {}) {
   const handleSelectTournament = (selectedItem) => {
     if (!selectedItem) return;
     setTournament(selectedItem);
+    if (matchCtx?.setActiveTournament) {
+      matchCtx.setActiveTournament(selectedItem);
+    }
     if (selectedItem.id) {
       saveActiveTournamentId(selectedItem.id);
     }
     setSelectSeriesModalVisible(false);
   };
+
+  useEffect(() => {
+    if (tournament && matchCtx?.setActiveTournament) {
+      matchCtx.setActiveTournament(tournament);
+    }
+  }, [tournament, matchCtx?.setActiveTournament]);
 
   // Filtered Tournaments in Drawer
   const filteredSheetTournaments = useMemo(() => {
@@ -1600,15 +1609,15 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   carouselCard: {
-    width: 140,
-    height: 86,
+    width: 104,
+    height: 112,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     position: 'relative',
-    marginRight: 12,
+    marginRight: 8,
     elevation: 2,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },

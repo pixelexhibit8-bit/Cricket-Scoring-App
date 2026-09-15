@@ -29,6 +29,7 @@ export function MatchProvider({ children }) {
   const [selectedPlayerName, setSelectedPlayerName] = useState(null);
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState(null);
   const [savedTeamsList, setSavedTeamsList] = useState([]);
+  const [activeTournament, setActiveTournament] = useState(null);
   const [extrasSheetVisible, setExtrasSheetVisible] = useState(false);
   const [playingXiVisible, setPlayingXiVisible] = useState(false);
 
@@ -489,7 +490,11 @@ export function MatchProvider({ children }) {
     leaderboardRankings,
     TOP_BATTERS: leaderboardRankings.topBatters,
     TOP_BOWLERS: leaderboardRankings.topBowlers,
-    TOP_ALLROUNDERS: leaderboardRankings.topAllRounders
+    TOP_ALLROUNDERS: leaderboardRankings.topAllRounders,
+
+    // Active Tournament
+    activeTournament,
+    setActiveTournament
   };
 
   return (

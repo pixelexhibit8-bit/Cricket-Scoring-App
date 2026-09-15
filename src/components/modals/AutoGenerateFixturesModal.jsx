@@ -9,7 +9,8 @@ import {
   Switch,
   Pressable,
   StyleSheet,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
@@ -42,36 +43,33 @@ export function AutoGenerateFixturesModal({
   const numTeams = teams.length;
   const numLeagueMatches = (numTeams * Math.max(1, numTeams - 1)) / 2;
 
-  // Step: 'guidelines' (Screenshot 1) -> 'form' (Fixture config)
+  // Step: 'guidelines' (Screenshot 1)
   const [step, setStep] = useState('guidelines');
-
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    const day = d.getDate();
-    const m = d.toLocaleDateString('en-GB', { month: 'short' });
-    return `${day} ${m} ${d.getFullYear()}`;
-  });
 
   const tournamentVenues = Array.isArray(tournament?.venues) && tournament.venues.length > 0
     ? tournament.venues
     : [tournament?.venue || tournament?.ground || (tournament?.city ? `${tournament.city} Cricket Ground` : 'Cricket Ground')];
 
-  const [venue, setVenue] = useState(tournamentVenues[0] || 'Cricket Ground');
-  const [overs, setOvers] = useState(String(tournament?.overs || 10));
+  const defaultVenue = tournamentVenues[0] || tournament?.ground || tournament?.venue || (tournament?.city ? `${tournament.city} Cricket Ground` : 'Cricket Ground');
+  const defaultOvers = parseInt(tournament?.overs || tournament?.matchOvers || tournament?.oversPerMatch || 10, 10);
+  const defaultStartDate = tournament?.startDate || new Date().toISOString();
+
+  const [venue, setVenue] = useState(defaultVenue);
+  const [overs, setOvers] = useState(String(defaultOvers));
   const [includePlayoffs, setIncludePlayoffs] = useState(numTeams >= 4);
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setStep('guidelines');
-      setVenue(tournamentVenues[0] || 'Cricket Ground');
-      setOvers(String(tournament?.overs || 10));
+      setVenue(defaultVenue);
+      setOvers(String(defaultOvers));
       setIncludePlayoffs(numTeams >= 4);
+      setIsGenerating(false);
     }
   }, [visible, tournament]);
 
-  const handleProceedFromGuidelines = () => {
+  const handleGenerate = async () => {
     if (numTeams < 2) {
       Alert.alert(
         'Add Teams First',
@@ -80,25 +78,19 @@ export function AutoGenerateFixturesModal({
       );
       return;
     }
-    setStep('form');
-  };
-
-  const totalMatches = numLeagueMatches + (includePlayoffs ? (numTeams >= 5 ? 3 : 1) : 0);
-
-  const handleGenerate = async () => {
-    if (numTeams < 2) {
-      showToast('At least 2 participating teams are required.', 'error', 'Need More Teams');
-      return;
-    }
 
     setIsGenerating(true);
     try {
+      const targetVenue = tournamentVenues[0] || tournament?.ground || tournament?.venue || (tournament?.city ? `${tournament.city} Cricket Ground` : 'Cricket Ground');
+      const targetOvers = parseInt(tournament?.overs || tournament?.matchOvers || tournament?.oversPerMatch || overs || 10, 10);
+      const targetStartDate = tournament?.startDate || defaultStartDate;
+
       const generated = generateRoundRobinFixtures(teams, {
-        startDate: startDate || new Date().toISOString(),
+        startDate: targetStartDate,
         matchTimes: ['09:30 AM', '02:00 PM', '05:30 PM'],
-        venue: venue || tournamentVenues[0] || 'Cricket Ground',
-        overs: parseInt(overs, 10) || 10,
-        includePlayoffs: includePlayoffs,
+        venue: targetVenue,
+        overs: targetOvers,
+        includePlayoffs: numTeams >= 4,
         tournamentId: tournament.id,
         tournamentName: tournament.name || tournament.title || 'Tournament'
       });
@@ -136,6 +128,10 @@ export function AutoGenerateFixturesModal({
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleProceedFromGuidelines = () => {
+    handleGenerate();
   };
 
   return (
@@ -180,11 +176,16 @@ export function AutoGenerateFixturesModal({
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.dialogOkBtn}
+                style={[styles.dialogOkBtn, isGenerating && { opacity: 0.7 }]}
                 onPress={handleProceedFromGuidelines}
+                disabled={isGenerating}
                 activeOpacity={0.85}
               >
-                <Text style={styles.dialogOkText}>Ok</Text>
+                {isGenerating ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.dialogOkText}>Ok</Text>
+                )}
               </TouchableOpacity>
             </View>
           </Pressable>
