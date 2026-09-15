@@ -1,16 +1,25 @@
 export const makeTeamCode = (name = '') => {
   const clean = String(name || '').trim();
   if (!clean) return 'TM';
-  // If team name is up to 4 characters (e.g. CSK, GT, LSG, MI, SRH, DC, PBKS, RR, RCB, KKR, IND, AUS), DO NOT shorten it!
-  if (clean.length <= 4) return clean.toUpperCase();
-  const words = clean.split(/\s+/).filter(Boolean);
+  if (isPlaceholderTeam(clean)) return 'TBC';
+  // Strip all punctuation, parentheses, brackets, special chars
+  const sanitized = clean.replace(/[()[\]{}.,:;!?'"`~@#$%^&*+=|\\/<>_-]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!sanitized) return 'TM';
+  // If team name is up to 4 characters (e.g. CSK, GT, LSG, MI, SRH, DC, PBKS, RR, RCB, KKR, IND, AUS, TBC), DO NOT shorten it!
+  if (sanitized.length <= 4) return sanitized.toUpperCase();
+  const words = sanitized.split(/\s+/).filter(Boolean);
   if (words.length >= 2) return words.slice(0, 3).map(word => word[0]).join('').toUpperCase();
-  return clean.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'TM';
+  return sanitized.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'TM';
 };
 
 export const getTeamShortCode = (team, fallbackName = '') => {
-  const savedCode = String(team?.code || '').trim();
-  return savedCode || makeTeamCode(team?.name || fallbackName);
+  if (isPlaceholderTeam(team)) return 'TBC';
+  const savedCode = String(team?.shortName || team?.code || '').trim();
+  if (savedCode) {
+    if (isPlaceholderTeam(savedCode)) return 'TBC';
+    return savedCode;
+  }
+  return makeTeamCode(typeof team === 'string' ? team : (team?.name || fallbackName));
 };
 
 export const DEFAULT_TEAM_1_LOGO_URL = 'https://res.cloudinary.com/aov9a8tl/image/upload/v1786749090/cricflow_default_team_1.png';
@@ -58,7 +67,7 @@ export const PRESET_TEAM_LOGOS = [
 export const isPlaceholderTeam = (team) => {
   if (!team) return false;
   if (typeof team === 'object' && team.isPlaceholder) return true;
-  const str = String(typeof team === 'string' ? team : (team.name || team.shortName || '')).trim().toLowerCase();
+  const str = String(typeof team === 'string' ? team : (team.name || team.shortName || team.code || '')).trim().toLowerCase();
   if (!str) return false;
   return (
     str === 'tbc' ||
@@ -71,9 +80,15 @@ export const isPlaceholderTeam = (team) => {
     str.includes('rank 2') ||
     str.includes('rank 3') ||
     str.includes('rank 4') ||
+    str.startsWith('r1') ||
+    str.startsWith('r2') ||
+    str.startsWith('r3') ||
+    str.startsWith('r4') ||
     str.includes('qualifier') ||
     str.includes('eliminator') ||
-    str.includes('semi-final')
+    str.includes('semi-final') ||
+    str.includes('final') ||
+    str.includes('playoff')
   );
 };
 

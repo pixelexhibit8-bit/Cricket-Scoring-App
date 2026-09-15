@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { MatchListScoreCard } from '../MatchListScoreCard.jsx';
 import { getCleanMatchStageBadge } from '../../utils/cricketUtils.js';
+import { resolveTeamWithRoster } from '../../utils/teamUtils.js';
 
 export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardItem({
   fixture,
@@ -11,8 +12,9 @@ export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardIt
 }) {
   if (!fixture) return null;
 
-  const t1 = fixture.team1 || { name: fixture.team1Name || fixture.teams?.[0]?.name || 'Team 1' };
-  const t2 = fixture.team2 || { name: fixture.team2Name || fixture.teams?.[1]?.name || 'Team 2' };
+  const tournamentTeams = fixture.tournament?.teams || [];
+  const t1 = resolveTeamWithRoster(fixture.team1 || { name: fixture.team1Name || fixture.teams?.[0]?.name || 'Team 1' }, tournamentTeams);
+  const t2 = resolveTeamWithRoster(fixture.team2 || { name: fixture.team2Name || fixture.teams?.[1]?.name || 'Team 2' }, tournamentTeams);
   const tourName = fixture.tournamentName || fixture.tournamentTitle || fixture.seriesName || '';
   const cleanStage = getCleanMatchStageBadge(fixture.stage, fixture.matchNumber || fixture.matchNo);
   const venue = fixture.venue || fixture.venueName || 'Sadokan Ground';
