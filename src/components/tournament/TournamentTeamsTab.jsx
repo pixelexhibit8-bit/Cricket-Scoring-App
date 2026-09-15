@@ -31,28 +31,8 @@ export const TournamentTeamsTab = React.memo(function TournamentTeamsTab({
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── ORGANISER ACTIONS / INVITE ── */}
-      {isUserOrganiser ? (
-        <View style={styles.organiserBar}>
-          <TouchableOpacity
-            style={styles.inviteCaptainsBtn}
-            onPress={onShareInvite}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="logo-whatsapp" size={16} color="#16A34A" />
-            <Text style={styles.inviteCaptainsText}>Invite Captains</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.addTeamBtn}
-            onPress={onAddTeam}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add-circle-outline" size={16} color={themeColors.textPrimary} />
-            <Text style={styles.addTeamText}>+ Add Team</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
+      {/* Clean Captain Registration Bar if Open Registrations */}
+      {!isUserOrganiser && tournament?.needMoreTeams && (
         <View style={styles.captainActionBar}>
           <TouchableOpacity
             style={styles.captainRegisterBtn}
