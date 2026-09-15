@@ -985,6 +985,45 @@ export async function getAllUpcomingTournamentMatches() {
   }
 }
 
+/**
+ * Delete a tournament (Offline storage + Supabase Cloud Delete)
+ */
+export async function deleteTournament(tournamentId) {
+  try {
+    if (!tournamentId) return false;
 
+    // 1. Remove from local storage
+    const existingList = await getTournamentsFromStorage();
+    const updatedList = existingList.filter(t => t.id !== tournamentId);
+    await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(updatedList));
 
+    // 2. Remove from hosted IDs
+    const hostedIds = await getMyHostedTournamentIds();
+    const updatedHosted = hostedIds.filter(id => id !== tournamentId);
+    await AsyncStorage.setItem(MY_HOSTED_TOURNAMENTS_KEY, JSON.stringify(updatedHosted));
 
+    // 3. Clear active tournament if it was the deleted one
+    const activeId = await getActiveTournamentId();
+    if (activeId === tournamentId) {
+      if (updatedList.length > 0) {
+        await saveActiveTournamentId(updatedList[0].id);
+      } else {
+        await AsyncStorage.removeItem(ACTIVE_TOURNAMENT_ID_KEY);
+      }
+    }
+
+    // 4. Delete from Supabase Cloud
+    if (supabase) {
+      try {
+        await supabase.from('tournaments').delete().eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase delete error:', cloudErr);
+      }
+    }
+
+    return true;
+  } catch (err) {
+    console.error('[TournamentService] deleteTournament error:', err);
+    return false;
+  }
+}

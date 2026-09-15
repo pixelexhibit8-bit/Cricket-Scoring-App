@@ -52,6 +52,11 @@ import { BulkSquadPasteModal } from '../components/modals/BulkSquadPasteModal.js
 import { CaptainTeamRegistrationModal } from '../components/modals/CaptainTeamRegistrationModal.jsx';
 import { AutoGenerateFixturesModal } from '../components/modals/AutoGenerateFixturesModal.jsx';
 import { PhoneLoginModal } from '../components/modals/PhoneLoginModal.jsx';
+import { TournamentAdminMenuModal } from '../components/modals/TournamentAdminMenuModal.jsx';
+import { EditTournamentModal } from '../components/modals/EditTournamentModal.jsx';
+import { TournamentRoundsModal } from '../components/modals/TournamentRoundsModal.jsx';
+import { TournamentGroupsModal } from '../components/modals/TournamentGroupsModal.jsx';
+import { TournamentRulesModal } from '../components/modals/TournamentRulesModal.jsx';
 import { getCurrentUser } from '../services/authService.js';
 import { useMatch } from '../context/MatchContext.jsx';
 import {
@@ -134,6 +139,13 @@ export function PublicSeriesViewScreen(props = {}) {
   const [schedTeam1, setSchedTeam1] = useState('');
   const [schedTeam2, setSchedTeam2] = useState('');
   const [schedDateStr, setSchedDateStr] = useState('Tomorrow • 07:30 PM');
+
+  // Admin Settings Modals
+  const [adminMenuModalVisible, setAdminMenuModalVisible] = useState(false);
+  const [editTournamentModalVisible, setEditTournamentModalVisible] = useState(false);
+  const [roundsModalVisible, setRoundsModalVisible] = useState(false);
+  const [groupsModalVisible, setGroupsModalVisible] = useState(false);
+  const [rulesModalVisible, setRulesModalVisible] = useState(false);
 
   // Load tournaments data
   const loadTournamentsData = useCallback(async () => {
@@ -644,6 +656,72 @@ export function PublicSeriesViewScreen(props = {}) {
     setScheduleModalVisible(false);
   };
 
+  // Tournament Admin Handlers
+  const handleTournamentUpdated = (updatedTournament) => {
+    if (!updatedTournament) return;
+    setTournament(updatedTournament);
+    setTournamentsList(prev => prev.map(t => t.id === updatedTournament.id ? updatedTournament : t));
+    showToast('Tournament updated successfully', 'success');
+  };
+
+  const handleTournamentDeleted = (deletedId) => {
+    setTournamentsList(prev => prev.filter(t => t.id !== deletedId));
+    showToast('Tournament deleted successfully', 'info');
+    if (onBack) {
+      onBack();
+    } else if (navigation && navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigate('home');
+    }
+  };
+
+  const handleDeleteSchedule = async () => {
+    if (!tournament?.id) return;
+    const currentMatches = Array.isArray(tournament.matches) ? tournament.matches : [];
+    const keptMatches = currentMatches.filter(m => m.status === 'FINISHED' || m.status === 'LIVE');
+    const updated = await saveTournamentFixtures(tournament.id, keptMatches);
+    if (updated) {
+      setTournament(updated);
+    } else {
+      setTournament(prev => ({ ...(prev || {}), matches: keptMatches }));
+    }
+    showToast('Scheduled fixtures cleared', 'info');
+  };
+
+  const handleOpenStartMatch = () => {
+    const matches = Array.isArray(tournament.matches) ? tournament.matches : [];
+    const upcoming = matches.find(m => m.status !== 'FINISHED' && m.status !== 'LIVE');
+    if (upcoming) {
+      handleStartMatchScoring(upcoming);
+    } else if (matches.length > 0) {
+      handleStartMatchScoring(matches[0]);
+    } else {
+      Alert.alert(
+        'No Matches Scheduled',
+        'Please schedule a match fixture or generate auto fixtures before starting match scoring.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Schedule Match', onPress: () => setScheduleModalVisible(true) }
+        ]
+      );
+    }
+  };
+
+  const handleOpenScorers = () => {
+    Alert.alert(
+      'Assign Scorer Admin',
+      `Current assigned scorer: ${tournament.assignedScorerPhone || 'None'}\n\nYou can edit or assign scorer phone numbers anytime through "Edit/delete tournament" in Settings.`
+    );
+  };
+
+  const handleOpenOfficials = () => {
+    Alert.alert(
+      'Officials & Live Stream',
+      `Tournament Category: ${tournament.category || 'OPEN'}\nBall Type: ${tournament.ballType || 'Tennis'}\nAssigned Scorer: ${tournament.assignedScorerPhone || 'Host'}\n\nTo link YouTube Live Stream or register official umpires, contact CricFlow Support.`
+    );
+  };
+
   // Empty State View if no tournament
   if (!tournament || !tournament.id) {
     return (
@@ -798,9 +876,19 @@ export function PublicSeriesViewScreen(props = {}) {
           </TouchableOpacity>
 
           {isUserOrganiser ? (
-            <View style={styles.organiserPill}>
-              <MaterialCommunityIcons name="shield-crown-outline" size={13} color="#FFFFFF" />
-              <Text style={styles.organiserPillText}>Host</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={styles.organiserPill}>
+                <MaterialCommunityIcons name="shield-crown-outline" size={13} color="#FFFFFF" />
+                <Text style={styles.organiserPillText}>Host</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.settingsHeaderBtn}
+                onPress={() => setAdminMenuModalVisible(true)}
+                activeOpacity={0.7}
+                accessibilityLabel="Tournament Admin Settings"
+              >
+                <Ionicons name="settings-outline" size={20} color={themeColors.textPrimary} />
+              </TouchableOpacity>
             </View>
           ) : !currentUser ? (
             <TouchableOpacity
@@ -1277,6 +1365,56 @@ export function PublicSeriesViewScreen(props = {}) {
           }}
         />
 
+        {/* ── MODAL 6: TOURNAMENT ADMIN MENU MODAL ── */}
+        <TournamentAdminMenuModal
+          visible={adminMenuModalVisible}
+          onClose={() => setAdminMenuModalVisible(false)}
+          tournament={tournament}
+          onOpenEdit={() => setEditTournamentModalVisible(true)}
+          onOpenAddTeams={() => setAddTeamModalVisible(true)}
+          onOpenRounds={() => setRoundsModalVisible(true)}
+          onOpenGroups={() => setGroupsModalVisible(true)}
+          onOpenStartMatch={handleOpenStartMatch}
+          onOpenSchedule={() => setScheduleModalVisible(true)}
+          onDeleteSchedule={handleDeleteSchedule}
+          onOpenScorers={handleOpenScorers}
+          onOpenOfficials={handleOpenOfficials}
+          onOpenRules={() => setRulesModalVisible(true)}
+        />
+
+        {/* ── MODAL 7: EDIT / DELETE TOURNAMENT MODAL ── */}
+        <EditTournamentModal
+          visible={editTournamentModalVisible}
+          onClose={() => setEditTournamentModalVisible(false)}
+          tournament={tournament}
+          onTournamentUpdated={handleTournamentUpdated}
+          onTournamentDeleted={handleTournamentDeleted}
+        />
+
+        {/* ── MODAL 8: TOURNAMENT ROUNDS MODAL ── */}
+        <TournamentRoundsModal
+          visible={roundsModalVisible}
+          onClose={() => setRoundsModalVisible(false)}
+          tournament={tournament}
+          onTournamentUpdated={handleTournamentUpdated}
+        />
+
+        {/* ── MODAL 9: TOURNAMENT GROUPS MODAL ── */}
+        <TournamentGroupsModal
+          visible={groupsModalVisible}
+          onClose={() => setGroupsModalVisible(false)}
+          tournament={tournament}
+          onTournamentUpdated={handleTournamentUpdated}
+        />
+
+        {/* ── MODAL 10: TOURNAMENT RULES MODAL ── */}
+        <TournamentRulesModal
+          visible={rulesModalVisible}
+          onClose={() => setRulesModalVisible(false)}
+          tournament={tournament}
+          onTournamentUpdated={handleTournamentUpdated}
+        />
+
         {/* ── MODAL 5: SELECT SERIES BOTTOM SHEET DRAWER ── */}
         <Modal
           visible={selectSeriesModalVisible}
@@ -1593,6 +1731,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10.5,
     fontFamily: systemFontMedium
+  },
+  settingsHeaderBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1,
+    borderColor: themeColors.borderDark,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   loginOrganizerBtn: {
     flexDirection: 'row',
