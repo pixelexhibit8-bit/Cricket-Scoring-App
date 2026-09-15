@@ -4,6 +4,10 @@ import { getCurrentUser } from '../services/authService.js';
 import { syncMatchToSupabase } from '../services/matchService.js';
 import { showToast } from '../services/toastService.js';
 import {
+  syncFinishedMatchToTournament,
+  syncLiveMatchToTournament
+} from '../services/tournamentService.js';
+import {
   markMatchAsCreatedByMe,
   getMyCreatedMatchIds,
   isUserMatchCreator
@@ -46,6 +50,7 @@ export function useScorerWorkflow({
     }
   }, [activeMatch?.phase, activeMatch?.resultText, currentScreen]);
 
+  // ── Scorer Access Lock Enforcement ──
   const openScorerScreen = async (matchToScore = null) => {
     const user = await getCurrentUser();
     if (!user) {
@@ -95,6 +100,9 @@ export function useScorerWorkflow({
 
   const handleStartQuickMatch = (config) => {
     const {
+      tournamentId,
+      tournamentMatchId,
+      tournamentName,
       team1Name: t1,
       team2Name: t2,
       team1LogoKey: lk1,
@@ -144,6 +152,9 @@ export function useScorerWorkflow({
         supabaseId: matchUUID,
         creatorId,
         creatorName,
+        tournamentId: tournamentId || null,
+        tournamentMatchId: tournamentMatchId || null,
+        tournamentName: tournamentName || null,
         _isLocalCreator: true,
         matchCode: autoMatchCode,
         matchTitle: `${t1} vs ${t2}`,
@@ -175,6 +186,11 @@ export function useScorerWorkflow({
       };
 
       if (setActiveMatch) setActiveMatch(newMatch);
+      syncMatchToSupabase(newMatch).catch(() => {});
+      if (tournamentId) {
+        syncLiveMatchToTournament(tournamentId, newMatch).catch(() => {});
+      }
+
       if (setLiveMatches) {
         setLiveMatches(prev => {
           const filtered = (prev || []).filter(m => (m.id !== newMatch.id && m.supabaseId !== newMatch.id));
@@ -213,6 +229,14 @@ export function useScorerWorkflow({
         winnerTeamName: finishedSnapshot.winnerTeamName,
         resultText: finishedSnapshot.winner
       }).catch(() => { });
+
+      const tourId = target.tournamentId || finishedSnapshot.tournamentId || target.sourceMatch?.tournamentId;
+      if (tourId) {
+        syncFinishedMatchToTournament(tourId, {
+          ...finishedSnapshot,
+          tournamentMatchId: target.tournamentMatchId || finishedSnapshot.tournamentMatchId || target.sourceMatch?.tournamentMatchId
+        }).catch(err => console.warn('[useScorerWorkflow] Tournament rematch sync error:', err));
+      }
     }
 
     setRematchSetup({

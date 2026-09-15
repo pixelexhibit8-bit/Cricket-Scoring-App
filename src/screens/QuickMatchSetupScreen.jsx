@@ -48,9 +48,13 @@ const nameFitProps = {
 
 export function QuickMatchSetupScreen(props = {}) {
   const matchCtx = useMatch();
+  const routeParams = props.route?.params || {};
+  const initialSetupProp = props.initialSetup !== undefined ? props.initialSetup : (matchCtx.rematchSetup || null);
+  const effectiveSetup = initialSetupProp || (Object.keys(routeParams).length > 0 ? routeParams : null);
+
   const {
     savedTeamsList = matchCtx.savedTeamsList || [],
-    initialSetup = props.initialSetup !== undefined ? props.initialSetup : (matchCtx.rematchSetup || null),
+    initialSetup = effectiveSetup,
     onStartMatch = (setupData) => {
       if (matchCtx.setRematchSetup) matchCtx.setRematchSetup(null);
       if (matchCtx.handleStartQuickMatch) matchCtx.handleStartQuickMatch(setupData);
@@ -62,31 +66,36 @@ export function QuickMatchSetupScreen(props = {}) {
   } = props;
   const step1ScrollRef = useRef(null);
   // Wizard Step: 1 = Build Teams & Setup, 2 = Coin Toss, 3 = Select Openers
-  const [wizardStep, setWizardStep] = useState(initialSetup?.startAtStep || 1);
+  const [wizardStep, setWizardStep] = useState(effectiveSetup?.startAtStep || 1);
+
+  // Tournament Linking State
+  const [tournamentId, setTournamentId] = useState(props.tournamentId || routeParams.tournamentId || effectiveSetup?.tournamentId || null);
+  const [tournamentMatchId, setTournamentMatchId] = useState(props.tournamentMatchId || routeParams.tournamentMatchId || effectiveSetup?.tournamentMatchId || null);
+  const [tournamentName, setTournamentName] = useState(props.tournamentName || routeParams.tournamentName || effectiveSetup?.tournamentName || null);
 
   // Default Team Names & Logos
-  const [team1Name, setTeam1Name] = useState(initialSetup?.team1Name || 'Team 1');
-  const [team2Name, setTeam2Name] = useState(initialSetup?.team2Name || 'Team 2');
-  const [team1LogoKey, setTeam1LogoKey] = useState(initialSetup?.team1LogoKey || 'default_1');
-  const [team2LogoKey, setTeam2LogoKey] = useState(initialSetup?.team2LogoKey || 'default_2');
+  const [team1Name, setTeam1Name] = useState(effectiveSetup?.team1Name || effectiveSetup?.presetTeam1 || 'Team 1');
+  const [team2Name, setTeam2Name] = useState(effectiveSetup?.team2Name || effectiveSetup?.presetTeam2 || 'Team 2');
+  const [team1LogoKey, setTeam1LogoKey] = useState(effectiveSetup?.team1LogoKey || 'default_1');
+  const [team2LogoKey, setTeam2LogoKey] = useState(effectiveSetup?.team2LogoKey || 'default_2');
   const [logoPickerModalVisible, setLogoPickerModalVisible] = useState(false);
   const [logoPickerTargetTeam, setLogoPickerTargetTeam] = useState('team1');
 
-  const [team1Roster, setTeam1Roster] = useState(initialSetup?.team1Roster || DEFAULT_TEAM_A_ROSTER);
-  const [team2Roster, setTeam2Roster] = useState(initialSetup?.team2Roster || DEFAULT_TEAM_B_ROSTER);
+  const [team1Roster, setTeam1Roster] = useState(effectiveSetup?.team1Roster || DEFAULT_TEAM_A_ROSTER);
+  const [team2Roster, setTeam2Roster] = useState(effectiveSetup?.team2Roster || DEFAULT_TEAM_B_ROSTER);
   const [playerPool, setPlayerPool] = useState([]);
   const [localPlayersDb, setLocalPlayersDb] = useState([]);
 
-  const [ballType, setBallType] = useState(initialSetup?.ballType || 'tennis');
-  const [totalOvers, setTotalOvers] = useState(initialSetup?.totalOvers ? String(initialSetup.totalOvers) : '5');
-  const [pitchType, setPitchType] = useState(initialSetup?.pitchType || 'turf');
-  const [umpireName, setUmpireName] = useState(initialSetup?.umpireName || 'Cric Scorer');
-  const [venueName, setVenueName] = useState(initialSetup?.venueName || '');
-  const [scorerPin, setScorerPin] = useState(initialSetup?.scorerPin || '');
+  const [ballType, setBallType] = useState(effectiveSetup?.ballType || 'tennis');
+  const [totalOvers, setTotalOvers] = useState(effectiveSetup?.totalOvers ? String(effectiveSetup.totalOvers) : '5');
+  const [pitchType, setPitchType] = useState(effectiveSetup?.pitchType || 'turf');
+  const [umpireName, setUmpireName] = useState(effectiveSetup?.umpireName || 'Cric Scorer');
+  const [venueName, setVenueName] = useState(effectiveSetup?.venueName || '');
+  const [scorerPin, setScorerPin] = useState(effectiveSetup?.scorerPin || '');
 
   // Toss State (Null initially until user selects)
-  const [tossWinner, setTossWinner] = useState(initialSetup?.tossWinner || null);
-  const [tossDecision, setTossDecision] = useState(initialSetup?.tossDecision || null);
+  const [tossWinner, setTossWinner] = useState(effectiveSetup?.tossWinner || null);
+  const [tossDecision, setTossDecision] = useState(effectiveSetup?.tossDecision || null);
 
   // Auto-generate 6-digit PIN if empty
   useEffect(() => {
@@ -105,8 +114,11 @@ export function QuickMatchSetupScreen(props = {}) {
   // Synchronize when initialSetup is updated dynamically
   useEffect(() => {
     if (initialSetup) {
-      if (initialSetup.team1Name) setTeam1Name(initialSetup.team1Name);
-      if (initialSetup.team2Name) setTeam2Name(initialSetup.team2Name);
+      if (initialSetup.tournamentId) setTournamentId(initialSetup.tournamentId);
+      if (initialSetup.tournamentMatchId) setTournamentMatchId(initialSetup.tournamentMatchId);
+      if (initialSetup.tournamentName) setTournamentName(initialSetup.tournamentName);
+      if (initialSetup.team1Name || initialSetup.presetTeam1) setTeam1Name(initialSetup.team1Name || initialSetup.presetTeam1);
+      if (initialSetup.team2Name || initialSetup.presetTeam2) setTeam2Name(initialSetup.team2Name || initialSetup.presetTeam2);
       if (initialSetup.team1LogoKey) setTeam1LogoKey(initialSetup.team1LogoKey);
       if (initialSetup.team2LogoKey) setTeam2LogoKey(initialSetup.team2LogoKey);
       if (Array.isArray(initialSetup.team1Roster) && initialSetup.team1Roster.length > 0) setTeam1Roster(initialSetup.team1Roster);
@@ -447,6 +459,9 @@ export function QuickMatchSetupScreen(props = {}) {
 
     if (onStartMatch) {
       onStartMatch({
+        tournamentId: tournamentId || null,
+        tournamentMatchId: tournamentMatchId || null,
+        tournamentName: tournamentName || null,
         team1Name: finalTeam1,
         team2Name: finalTeam2,
         team1LogoKey,

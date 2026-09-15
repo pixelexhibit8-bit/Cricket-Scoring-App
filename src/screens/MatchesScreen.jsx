@@ -136,8 +136,9 @@ export function MatchesScreen(props = {}) {
     const inn2 = m.innings?.[1];
 
     const oversNum = m.maxOvers || m.totalOvers || 20;
+    const tourName = m.tournamentName || m.tournamentTitle || m.seriesName || '';
     const venueText = m.venue ? ` - ${m.venue}` : '';
-    const subtitle = `${oversNum}-over match${venueText}`;
+    const subtitle = tourName ? `${tourName} • ${oversNum} Overs` : `${oversNum}-over match${venueText}`;
 
     const t1Score = inn1?.battingTeam ? `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}` : '0-0';
     const t1Overs = inn1 ? formatOvers(inn1.totalLegalBalls || 0) : '0.0';

@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  StatusBar
+  StatusBar,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   themeColors,
@@ -16,6 +18,9 @@ import {
   systemFontBold
 } from '../theme.js';
 import { useMatch } from '../context/MatchContext.jsx';
+import { getCurrentUser, signOutUser, getPlayerProfile } from '../services/authService.js';
+import { PhoneLoginModal } from '../components/modals/PhoneLoginModal.jsx';
+import { showToast } from '../services/toastService.js';
 
 export function MenuScreen(props = {}) {
   const matchCtx = useMatch();
@@ -48,12 +53,107 @@ export function MenuScreen(props = {}) {
       } else if (matchCtx.setCurrentScreen) {
         matchCtx.setCurrentScreen('createTournament');
       }
-    }),
-    userProfile = props.userProfile || {
-      name: 'Bastiram Suthar',
-      phoneOrEmail: 'bastisuthar@gmail.com'
-    }
+    })
   } = props;
+
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [userProfileState, setUserProfileState] = useState({
+    name: 'Guest User',
+    isLoggedIn: false
+  });
+
+  const loadActiveUser = useCallback(async () => {
+    try {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+      if (user) {
+        const p = await getPlayerProfile(user.id, user.phone);
+        setUserProfileState({
+          name: p?.name || user.name || 'CricFlow Player',
+          isLoggedIn: true
+        });
+      } else {
+        setUserProfileState({
+          name: 'Guest User',
+          isLoggedIn: false
+        });
+      }
+    } catch (e) {}
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadActiveUser();
+    }, [loadActiveUser])
+  );
+
+  const handleProfileClick = () => {
+    if (currentUser) {
+      if (onProfilePress) {
+        onProfilePress();
+      } else if (navigation) {
+        navigation.navigate('PlayerProfile');
+      }
+    } else {
+      setPendingAction('profile');
+      setLoginModalVisible(true);
+    }
+  };
+
+  const handleHostTournamentClick = () => {
+    if (currentUser) {
+      if (onCreateTournamentPress) {
+        onCreateTournamentPress();
+      } else if (navigation) {
+        navigation.navigate('CreateTournament');
+      }
+    } else {
+      setPendingAction('createTournament');
+      setLoginModalVisible(true);
+    }
+  };
+
+  const handleLogoutClick = () => {
+    if (!currentUser) {
+      setLoginModalVisible(true);
+      return;
+    }
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await signOutUser();
+          setCurrentUser(null);
+          setUserProfileState({
+            name: 'Guest User',
+            isLoggedIn: false
+          });
+          showToast('Signed out successfully', 'info');
+        }
+      }
+    ]);
+  };
+
+  const handleLoginSuccess = async (result) => {
+    setCurrentUser(result?.user || null);
+    await loadActiveUser();
+    if (pendingAction === 'createTournament') {
+      setPendingAction(null);
+      if (navigation) {
+        navigation.navigate('CreateTournament');
+      }
+    } else if (pendingAction === 'profile') {
+      setPendingAction(null);
+      if (navigation) {
+        navigation.navigate('PlayerProfile');
+      }
+    }
+  };
+
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -89,24 +189,20 @@ export function MenuScreen(props = {}) {
           <TouchableOpacity
             style={styles.profileRow}
             activeOpacity={0.7}
-            onPress={() => {
-              if (onProfilePress) {
-                onProfilePress();
-              } else if (navigation) {
-                navigation.navigate('PlayerProfile');
-              }
-            }}
+            onPress={handleProfileClick}
           >
             <View style={styles.avatarWrap}>
               <Ionicons name="person-circle-outline" size={48} color="#475569" />
             </View>
             <View style={styles.profileTextWrap}>
               <Text style={styles.profileName} numberOfLines={1}>
-                {userProfile.name}
+                {userProfileState.name}
               </Text>
-              <Text style={styles.profileEmail} numberOfLines={1}>
-                {userProfile.phoneOrEmail}
-              </Text>
+              {!userProfileState.isLoggedIn ? (
+                <Text style={[styles.profileEmail, { color: '#2563EB' }]} numberOfLines={1}>
+                  Tap to sign in with mobile OTP
+                </Text>
+              ) : null}
             </View>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </TouchableOpacity>
@@ -144,13 +240,7 @@ export function MenuScreen(props = {}) {
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.7}
-              onPress={() => {
-                if (onCreateTournamentPress) {
-                  onCreateTournamentPress();
-                } else if (navigation) {
-                  navigation.navigate('CreateTournament');
-                }
-              }}
+              onPress={handleHostTournamentClick}
             >
               <View style={styles.itemIconWrap}>
                 <MaterialCommunityIcons name="trophy" size={20} color="#D97706" />
@@ -255,11 +345,11 @@ export function MenuScreen(props = {}) {
               <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={handleLogoutClick}>
               <View style={styles.itemIconWrap}>
-                <Ionicons name="log-out-outline" size={20} color="#475569" />
+                <Ionicons name={currentUser ? "log-out-outline" : "log-in-outline"} size={20} color="#475569" />
               </View>
-              <Text style={styles.itemLabel}>Logout</Text>
+              <Text style={styles.itemLabel}>{currentUser ? "Logout" : "Sign In with Mobile OTP"}</Text>
               <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
           </View>
@@ -269,6 +359,14 @@ export function MenuScreen(props = {}) {
             <Text style={styles.versionText}>v 26.08.04 (645)</Text>
           </View>
         </ScrollView>
+
+        <PhoneLoginModal
+          visible={loginModalVisible}
+          onClose={() => setLoginModalVisible(false)}
+          onSuccess={handleLoginSuccess}
+          title={pendingAction === 'createTournament' ? 'Host a Tournament' : 'Sign In to CricFlow'}
+          subtitle={pendingAction === 'createTournament' ? 'Please verify your mobile number to host and organize tournaments.' : 'Login with mobile OTP to manage your profile and tournaments.'}
+        />
       </View>
     </SafeAreaView>
   );

@@ -29,12 +29,18 @@ export function calculateNetRunRate(runsScored = 0, ballsFaced = 0, runsConceded
 export function autoCalculatePointsTable(teams = [], matches = []) {
   if (!teams || teams.length === 0) return [];
 
+  const norm = (str) => String(str || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
   const tableMap = {};
+  const teamLookup = new Map(); // normalized key -> standard teamName
 
   // 1. Initialize 0 stats for every team
   teams.forEach(t => {
     const teamName = typeof t === 'string' ? t : (t.name || t.shortName || 'Team');
     const teamCode = t.shortName || t.shortCode || teamName.slice(0, 4).toUpperCase();
+    const teamKey = norm(teamName);
+    const shortKey = norm(t.shortName || t.shortCode || '');
+
     tableMap[teamName] = {
       team: teamName,
       shortName: teamCode,
@@ -50,49 +56,129 @@ export function autoCalculatePointsTable(teams = [], matches = []) {
       nrr: '+0.000',
       form: [] // Last 5 matches ['W', 'L', 'W']
     };
+
+    teamLookup.set(teamKey, teamName);
+    if (shortKey) teamLookup.set(shortKey, teamName);
+    if (t.id) teamLookup.set(norm(t.id), teamName);
   });
+
+  const resolveTeamName = (val) => {
+    if (!val) return null;
+    if (typeof val === 'object') {
+      const byName = resolveTeamName(val.name);
+      if (byName) return byName;
+      const byShort = resolveTeamName(val.shortName || val.code);
+      if (byShort) return byShort;
+      const byId = resolveTeamName(val.id);
+      if (byId) return byId;
+    }
+    const k = norm(val);
+    if (teamLookup.has(k)) return teamLookup.get(k);
+    for (const [knownKey, standardName] of teamLookup.entries()) {
+      if (k.includes(knownKey) || knownKey.includes(k)) {
+        return standardName;
+      }
+    }
+    return null;
+  };
 
   // 2. Compute from finished matches
   (matches || []).forEach(m => {
-    if (!m || (m.status !== 'FINISHED' && m.phase !== 'finished' && m.phase !== 'result')) return;
+    if (!m) return;
+    const isFinished = m.status === 'FINISHED' || m.phase === 'result' || m.phase === 'finished' || Boolean(m.result) || Boolean(m.resultText) || Boolean(m.winner);
+    if (!isFinished) return;
 
-    const t1Name = m.team1?.name || m.team1;
-    const t2Name = m.team2?.name || m.team2;
+    const t1Resolved = resolveTeamName(m.team1);
+    const t2Resolved = resolveTeamName(m.team2);
 
-    if (!tableMap[t1Name] || !tableMap[t2Name]) return;
+    if (!t1Resolved || !t2Resolved || t1Resolved === t2Resolved) return;
+    if (!tableMap[t1Resolved] || !tableMap[t2Resolved]) return;
 
-    tableMap[t1Name].p += 1;
-    tableMap[t2Name].p += 1;
+    tableMap[t1Resolved].p += 1;
+    tableMap[t2Resolved].p += 1;
 
-    const winnerName = m.winnerTeamName || m.winner;
-    if (winnerName === t1Name) {
-      tableMap[t1Name].w += 1;
-      tableMap[t1Name].pts += 2;
-      tableMap[t1Name].form.unshift('W');
+    // Detect Winner
+    const rawWinner = String(m.winnerTeamName || m.winner || m.resultText || m.result || '').trim();
+    const wNorm = norm(rawWinner);
+    const t1Norm = norm(t1Resolved);
+    const t2Norm = norm(t2Resolved);
 
-      tableMap[t2Name].l += 1;
-      tableMap[t2Name].form.unshift('L');
-    } else if (winnerName === t2Name) {
-      tableMap[t2Name].w += 1;
-      tableMap[t2Name].pts += 2;
-      tableMap[t2Name].form.unshift('W');
+    let winnerResolved = null;
+    if (m.winnerTeamName && resolveTeamName(m.winnerTeamName)) {
+      winnerResolved = resolveTeamName(m.winnerTeamName);
+    } else if (wNorm.includes(t1Norm) || (t1Norm.length >= 4 && wNorm.includes(t1Norm.slice(0, 4)))) {
+      winnerResolved = t1Resolved;
+    } else if (wNorm.includes(t2Norm) || (t2Norm.length >= 4 && wNorm.includes(t2Norm.slice(0, 4)))) {
+      winnerResolved = t2Resolved;
+    } else if (m.team1?.runs != null && m.team2?.runs != null) {
+      if (Number(m.team1.runs) > Number(m.team2.runs)) winnerResolved = t1Resolved;
+      else if (Number(m.team2.runs) > Number(m.team1.runs)) winnerResolved = t2Resolved;
+    }
 
-      tableMap[t1Name].l += 1;
-      tableMap[t1Name].form.unshift('L');
+    if (winnerResolved === t1Resolved) {
+      tableMap[t1Resolved].w += 1;
+      tableMap[t1Resolved].pts += 2;
+      tableMap[t1Resolved].form.unshift('W');
+
+      tableMap[t2Resolved].l += 1;
+      tableMap[t2Resolved].form.unshift('L');
+    } else if (winnerResolved === t2Resolved) {
+      tableMap[t2Resolved].w += 1;
+      tableMap[t2Resolved].pts += 2;
+      tableMap[t2Resolved].form.unshift('W');
+
+      tableMap[t1Resolved].l += 1;
+      tableMap[t1Resolved].form.unshift('L');
     } else {
       // Tie or No Result
-      tableMap[t1Name].nr += 1;
-      tableMap[t1Name].pts += 1;
-      tableMap[t1Name].form.unshift('NR');
+      tableMap[t1Resolved].nr += 1;
+      tableMap[t1Resolved].pts += 1;
+      tableMap[t1Resolved].form.unshift('NR');
 
-      tableMap[t2Name].nr += 1;
-      tableMap[t2Name].pts += 1;
-      tableMap[t2Name].form.unshift('NR');
+      tableMap[t2Resolved].nr += 1;
+      tableMap[t2Resolved].pts += 1;
+      tableMap[t2Resolved].form.unshift('NR');
     }
 
     // Keep only last 5 form results
-    tableMap[t1Name].form = tableMap[t1Name].form.slice(0, 5);
-    tableMap[t2Name].form = tableMap[t2Name].form.slice(0, 5);
+    tableMap[t1Resolved].form = tableMap[t1Resolved].form.slice(0, 5);
+    tableMap[t2Resolved].form = tableMap[t2Resolved].form.slice(0, 5);
+
+    // Compute Net Run Rate (NRR) data
+    const parseScoreData = (inning, teamObj) => {
+      let runs = 0;
+      let balls = 0;
+      if (inning) {
+        runs = Number(inning.battingTeam?.runs ?? inning.runs ?? 0);
+        balls = Number(inning.totalLegalBalls ?? inning.legalBalls ?? 0);
+      } else if (teamObj) {
+        runs = Number(teamObj.runs || 0);
+        balls = Number(teamObj.legalBalls || 0);
+        if (!runs && teamObj.score) {
+          const match = String(teamObj.score).match(/(\d+)\s*[-/]\s*(\d+)/);
+          if (match) runs = parseInt(match[1], 10);
+        }
+      }
+      return { runs, balls };
+    };
+
+    const inn1 = m.rawMatchData?.innings?.[0] || m.innings?.[0];
+    const inn2 = m.rawMatchData?.innings?.[1] || m.innings?.[1];
+
+    const d1 = parseScoreData(inn1, m.team1);
+    const d2 = parseScoreData(inn2, m.team2);
+
+    if (d1.runs > 0 || d1.balls > 0 || d2.runs > 0 || d2.balls > 0) {
+      tableMap[t1Resolved].runsScored += d1.runs;
+      tableMap[t1Resolved].ballsFaced += (d1.balls || 30);
+      tableMap[t1Resolved].runsConceded += d2.runs;
+      tableMap[t1Resolved].ballsBowled += (d2.balls || 30);
+
+      tableMap[t2Resolved].runsScored += d2.runs;
+      tableMap[t2Resolved].ballsFaced += (d2.balls || 30);
+      tableMap[t2Resolved].runsConceded += d1.runs;
+      tableMap[t2Resolved].ballsBowled += (d1.balls || 30);
+    }
   });
 
   // 3. Format NRR and sort by PTS desc, then NRR desc
@@ -126,7 +212,7 @@ function mapSupabaseRowToTournament(row) {
     category: row.category || raw.category || 'OPEN',
     format: row.format || raw.format || 'LIMITED OVERS',
     ballType: row.ball_type || raw.ballType || 'tennis',
-    pitchType: row.pitch_type || raw.pitchType || 'turf',
+    organiserId: row.organiser_id || raw.organiserId || raw.organiser_id || '',
     organiserName: row.organiser_name || raw.organiserName || '',
     organiserPhone: row.organiser_phone || raw.organiserPhone || '',
     organiserEmail: row.organiser_email || raw.organiserEmail || '',
@@ -192,14 +278,30 @@ export async function getTournaments() {
 }
 
 /**
+/**
  * Get IDs of tournaments hosted by the current user
+ * Dynamically resolved against the authenticated user account (Phone / ID / Email)
  */
 export async function getMyHostedTournamentIds() {
   try {
-    const raw = await AsyncStorage.getItem(MY_HOSTED_TOURNAMENTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const rawUser = await AsyncStorage.getItem('cricflow.auth_user.v1');
+    if (!rawUser) return [];
+    const user = JSON.parse(rawUser);
+    if (!user) return [];
+
+    const list = await getTournamentsFromStorage();
+    const userPhone = user.phone ? String(user.phone).trim() : null;
+    const userId = user.id ? String(user.id).trim() : null;
+    const userEmail = user.email ? String(user.email).trim().toLowerCase() : null;
+
+    const myTournaments = list.filter(t => {
+      const matchPhone = userPhone && t.organiserPhone && String(t.organiserPhone).trim() === userPhone;
+      const matchId = userId && t.organiserId && String(t.organiserId).trim() === userId;
+      const matchEmail = userEmail && t.organiserEmail && String(t.organiserEmail).trim().toLowerCase() === userEmail;
+      return Boolean(matchPhone || matchId || matchEmail);
+    });
+
+    return myTournaments.map(t => t.id);
   } catch (err) {
     return [];
   }
@@ -312,7 +414,12 @@ export async function saveTournament(tournamentData) {
           matches: tournamentData.matches || [],
           points_table: tournamentData.pointsTable || [],
           stats: tournamentData.stats || {},
-          raw_data: tournamentData,
+          raw_data: {
+            ...tournamentData,
+            organiserId: tournamentData.organiserId || null,
+            organiserPhone: tournamentData.organiserPhone || null,
+            organiserEmail: tournamentData.organiserEmail || null
+          },
           updated_at: new Date().toISOString()
         };
 
@@ -469,3 +576,159 @@ export function subscribeToTournamentsLive(onUpdate) {
     return () => {};
   }
 }
+
+/**
+ * Sync a finished match back to its parent tournament
+ * Updates matches list, recalculates points table, and syncs to Supabase
+ */
+export async function syncFinishedMatchToTournament(tournamentId, finishedMatch) {
+  if (!tournamentId || !finishedMatch) return null;
+  try {
+    let list = await getTournamentsFromStorage();
+    let target = list.find(t => t.id === tournamentId);
+
+    // If target not in local cache, fetch from Supabase
+    if (!target && supabase) {
+      try {
+        const { data } = await supabase.from('tournaments').select('*').eq('id', tournamentId).single();
+        if (data) {
+          target = mapSupabaseRowToTournament(data);
+          if (target) {
+            list = [target, ...list];
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!target) return null;
+
+    const currentMatches = Array.isArray(target.matches) ? target.matches : [];
+    const matchId = finishedMatch.tournamentMatchId || finishedMatch.id;
+    
+    const t1Name = finishedMatch.team1?.name || finishedMatch.team1Name || finishedMatch.inn1BattingTeam || 'Team 1';
+    const t2Name = finishedMatch.team2?.name || finishedMatch.team2Name || finishedMatch.inn1BowlingTeam || 'Team 2';
+    const t1Norm = String(t1Name).trim().toLowerCase();
+    const t2Norm = String(t2Name).trim().toLowerCase();
+
+    // Match by ID, tournamentMatchId, or by team combination!
+    const matchIndex = currentMatches.findIndex(m => {
+      if (m.id && (m.id === matchId || m.id === finishedMatch.id)) return true;
+      if (m.tournamentMatchId && m.tournamentMatchId === matchId) return true;
+      const m1 = String(m.team1?.name || m.team1 || '').trim().toLowerCase();
+      const m2 = String(m.team2?.name || m.team2 || '').trim().toLowerCase();
+      return (m1 === t1Norm && m2 === t2Norm) || (m1 === t2Norm && m2 === t1Norm);
+    });
+
+    const t1Score = finishedMatch.team1?.score || (finishedMatch.innings?.[0]?.battingTeam?.runs != null ? `${finishedMatch.innings[0].battingTeam.runs}/${finishedMatch.innings[0].battingTeam.wickets || 0} (${finishedMatch.innings[0].overs || '0.0'})` : '');
+    const t2Score = finishedMatch.team2?.score || (finishedMatch.innings?.[1]?.battingTeam?.runs != null ? `${finishedMatch.innings[1].battingTeam.runs}/${finishedMatch.innings[1].battingTeam.wickets || 0} (${finishedMatch.innings[1].overs || '0.0'})` : '');
+
+    const existingMatch = matchIndex >= 0 ? currentMatches[matchIndex] : null;
+
+    const updatedMatchObj = {
+      ...(existingMatch || {}),
+      id: existingMatch?.id || matchId,
+      matchNumber: existingMatch?.matchNumber || existingMatch?.matchNo || currentMatches.length + 1,
+      stage: existingMatch?.stage || 'LEAGUE',
+      team1: { name: t1Name, score: t1Score, ...(existingMatch?.team1 || {}) },
+      team2: { name: t2Name, score: t2Score, ...(existingMatch?.team2 || {}) },
+      dateStr: finishedMatch.matchDate || finishedMatch.dateStr || existingMatch?.dateStr || 'Completed',
+      status: 'FINISHED',
+      phase: 'result',
+      winnerTeamName: finishedMatch.winnerTeamName || '',
+      winner: finishedMatch.winnerTeamName || finishedMatch.resultText || finishedMatch.winner || '',
+      result: finishedMatch.resultText || finishedMatch.winner || 'Match Completed',
+      venue: finishedMatch.venue || target.city || 'Local Ground',
+      rawMatchData: finishedMatch
+    };
+
+    let newMatchesList;
+    if (matchIndex >= 0) {
+      newMatchesList = [...currentMatches];
+      newMatchesList[matchIndex] = updatedMatchObj;
+    } else {
+      newMatchesList = [...currentMatches, updatedMatchObj];
+    }
+
+    target.matches = newMatchesList;
+
+    // Auto-calculate Points Table with newly finished match
+    const updatedPointsTable = autoCalculatePointsTable(target.teams || [], newMatchesList);
+    target.pointsTable = updatedPointsTable;
+    target.updatedAt = new Date().toISOString();
+
+    if (target.raw_data && typeof target.raw_data === 'object') {
+      target.raw_data.matches = newMatchesList;
+      target.raw_data.pointsTable = updatedPointsTable;
+    }
+
+    await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+
+    // Supabase Cloud Sync
+    if (supabase) {
+      try {
+        await supabase
+          .from('tournaments')
+          .update({
+            matches: newMatchesList,
+            points_table: updatedPointsTable,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase sync error on finished match:', cloudErr);
+      }
+    }
+
+    return target;
+  } catch (err) {
+    console.error('[TournamentService] syncFinishedMatchToTournament error:', err);
+    return null;
+  }
+}
+
+/**
+ * Sync a live match state to its parent tournament
+ */
+export async function syncLiveMatchToTournament(tournamentId, liveMatch) {
+  if (!tournamentId || !liveMatch) return null;
+  try {
+    const list = await getTournamentsFromStorage();
+    const target = list.find(t => t.id === tournamentId);
+    if (!target) return null;
+
+    const currentMatches = Array.isArray(target.matches) ? target.matches : [];
+    const matchId = liveMatch.tournamentMatchId || liveMatch.id;
+    const matchIndex = currentMatches.findIndex(m => m.id === matchId);
+
+    const t1Name = liveMatch.team1?.name || liveMatch.teams?.[0]?.name || 'Team 1';
+    const t2Name = liveMatch.team2?.name || liveMatch.teams?.[1]?.name || 'Team 2';
+
+    const liveMatchObj = {
+      id: matchId,
+      team1: { name: t1Name, score: liveMatch.team1?.score || '' },
+      team2: { name: t2Name, score: liveMatch.team2?.score || '' },
+      dateStr: liveMatch.matchDate || 'Live Now',
+      status: 'LIVE',
+      phase: 'playing',
+      venue: liveMatch.venue || target.city || 'Local Ground',
+      rawMatchData: liveMatch
+    };
+
+    let newMatchesList;
+    if (matchIndex >= 0) {
+      newMatchesList = [...currentMatches];
+      newMatchesList[matchIndex] = { ...newMatchesList[matchIndex], ...liveMatchObj };
+    } else {
+      newMatchesList = [...currentMatches, liveMatchObj];
+    }
+
+    target.matches = newMatchesList;
+    target.updatedAt = new Date().toISOString();
+
+    await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+    return target;
+  } catch (err) {
+    return null;
+  }
+}
+

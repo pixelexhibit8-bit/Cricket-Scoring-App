@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,9 @@ import {
   saveHostedTournamentId,
   saveActiveTournamentId
 } from '../services/tournamentService.js';
+import { getCurrentUser } from '../services/authService.js';
+import { PhoneLoginModal } from '../components/modals/PhoneLoginModal.jsx';
+import { CricCalendarModal, formatCricDate } from '../components/modals/CricCalendarModal.jsx';
 import { useMatch } from '../context/MatchContext.jsx';
 
 export function CreateTournamentScreen(props = {}) {
@@ -54,6 +57,25 @@ export function CreateTournamentScreen(props = {}) {
   // Stepper State (1 | 2 | 3)
   const [currentStep, setCurrentStep] = useState(1);
 
+  // Authenticated User State
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        setLoginModalVisible(true);
+      } else {
+        setCurrentUser(user);
+        if (user.name) setOrganiserName(user.name);
+        if (user.phone) setOrganiserPhone(user.phone);
+        if (user.email) setOrganiserEmail(user.email);
+      }
+    };
+    checkAuth();
+  }, []);
+
   // Step 1 State: Overview & Organiser
   const [bannerUri, setBannerUri] = useState(null);
   const [logoUri, setLogoUri] = useState(null);
@@ -62,8 +84,16 @@ export function CreateTournamentScreen(props = {}) {
   const [organiserName, setOrganiserName] = useState('');
   const [organiserPhone, setOrganiserPhone] = useState('');
   const [organiserEmail, setOrganiserEmail] = useState('');
-  const [startDate, setStartDate] = useState('01 Dec 2026');
-  const [endDate, setEndDate] = useState('10 Dec 2026');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    return formatCricDate(d);
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 9);
+    return formatCricDate(d);
+  });
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
 
   // Step 2 State: Match Rules & Format
   const categories = [
@@ -203,6 +233,11 @@ export function CreateTournamentScreen(props = {}) {
 
   // Final Form Submission
   const handleSubmit = async () => {
+    if (!currentUser) {
+      setLoginModalVisible(true);
+      return;
+    }
+
     const tournamentData = {
       id: `t_${Date.now()}`,
       name: tournamentName.trim(),
@@ -210,9 +245,10 @@ export function CreateTournamentScreen(props = {}) {
       fullName: tournamentName.trim(),
       city: city.trim(),
       host: city.trim() || 'Local Ground',
-      organiserName: organiserName.trim(),
-      organiserPhone: organiserPhone.trim(),
-      organiserEmail: organiserEmail.trim(),
+      organiserId: currentUser?.id || `usr_${organiserPhone.trim()}`,
+      organiserName: organiserName.trim() || currentUser?.name || 'Organiser',
+      organiserPhone: organiserPhone.trim() || currentUser?.phone || '',
+      organiserEmail: organiserEmail.trim() || currentUser?.email || '',
       startDate,
       endDate,
       duration: `${startDate} - ${endDate}`,
@@ -401,21 +437,27 @@ export function CreateTournamentScreen(props = {}) {
 
                 <View style={styles.rowInputs}>
                   <View style={[styles.inputGroup, { flex: 1 }]}>
-                    <Text style={styles.inputLabel}>Start Date</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={startDate}
-                      onChangeText={setStartDate}
-                    />
+                    <Text style={styles.inputLabel}>Start Date *</Text>
+                    <TouchableOpacity
+                      style={styles.datePickerInputBtn}
+                      onPress={() => setCalendarModalVisible(true)}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="calendar-month-outline" size={18} color="#18181B" />
+                      <Text style={styles.datePickerText}>{startDate || 'Select Date'}</Text>
+                    </TouchableOpacity>
                   </View>
 
                   <View style={[styles.inputGroup, { flex: 1 }]}>
-                    <Text style={styles.inputLabel}>End Date</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={endDate}
-                      onChangeText={setEndDate}
-                    />
+                    <Text style={styles.inputLabel}>End Date *</Text>
+                    <TouchableOpacity
+                      style={styles.datePickerInputBtn}
+                      onPress={() => setCalendarModalVisible(true)}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="calendar-check-outline" size={18} color="#059669" />
+                      <Text style={styles.datePickerText}>{endDate || 'Select Date'}</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -762,6 +804,38 @@ export function CreateTournamentScreen(props = {}) {
             </View>
           )}
         </ScrollView>
+
+        <PhoneLoginModal
+          visible={loginModalVisible}
+          onClose={() => {
+            setLoginModalVisible(false);
+            if (!currentUser) {
+              onBack();
+            }
+          }}
+          onSuccess={(res) => {
+            const loggedInUser = res?.user || null;
+            setCurrentUser(loggedInUser);
+            if (loggedInUser?.name) setOrganiserName(loggedInUser.name);
+            if (loggedInUser?.phone) setOrganiserPhone(loggedInUser.phone);
+          }}
+          title="Host a Tournament"
+          subtitle="Please verify your mobile number to create and manage this tournament."
+        />
+
+        <CricCalendarModal
+          visible={calendarModalVisible}
+          mode="range"
+          initialStartDate={startDate}
+          initialEndDate={endDate}
+          title="Tournament Dates"
+          subtitle="Choose tournament starting & ending dates"
+          onClose={() => setCalendarModalVisible(false)}
+          onSelectRange={({ startDate: sDate, endDate: eDate }) => {
+            setStartDate(sDate);
+            setEndDate(eDate);
+          }}
+        />
       </View>
     </SafeAreaView>
   );
@@ -1022,6 +1096,23 @@ const styles = StyleSheet.create({
   rowInputs: {
     flexDirection: 'row',
     gap: 12
+  },
+  datePickerInputBtn: {
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1,
+    borderColor: themeColors.borderDark,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 44
+  },
+  datePickerText: {
+    fontSize: 13,
+    fontFamily: systemFontMedium,
+    color: themeColors.textPrimary
   },
   presetsCard: {
     backgroundColor: '#0F2744',

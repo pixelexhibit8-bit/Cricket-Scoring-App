@@ -37,6 +37,7 @@ import {
 } from '../services/tournamentService.js';
 import { navigate } from '../navigation/navigationService.js';
 import { AddTeamHubModal } from '../components/modals/AddTeamHubModal.jsx';
+import { getCurrentUser } from '../services/authService.js';
 
 export function PublicSeriesViewScreen(props = {}) {
   const routeParams = props.route?.params || {};
@@ -59,6 +60,7 @@ export function PublicSeriesViewScreen(props = {}) {
   // Tournaments List & User Hosted State
   const [tournamentsList, setTournamentsList] = useState([]);
   const [myHostedIds, setMyHostedIds] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Select Series Modal Drawer State & Search
   const [selectSeriesModalVisible, setSelectSeriesModalVisible] = useState(false);
@@ -74,16 +76,18 @@ export function PublicSeriesViewScreen(props = {}) {
     let isMounted = true;
     const loadTournamentsData = async () => {
       try {
-        const [allTourns, hosted, savedActiveId] = await Promise.all([
+        const [allTourns, hosted, savedActiveId, loggedUser] = await Promise.all([
           getTournaments(),
           getMyHostedTournamentIds(),
-          getActiveTournamentId()
+          getActiveTournamentId(),
+          getCurrentUser()
         ]);
         if (!isMounted) return;
 
         const list = Array.isArray(allTourns) ? allTourns : [];
         setTournamentsList(list);
         setMyHostedIds(Array.isArray(hosted) ? hosted : []);
+        setCurrentUser(loggedUser || null);
 
         if (seriesData) {
           setTournament(prev => ({
@@ -138,8 +142,15 @@ export function PublicSeriesViewScreen(props = {}) {
     };
   }, []);
 
-  // Smart Role Detection: Is current user the host/organizer of this tournament?
-  const isUserOrganiser = isOrganiser || (tournament?.id ? myHostedIds.includes(tournament.id) : false) || Boolean(seriesData?.isOrganiser) || Boolean(tournament?.isOrganiser);
+  // Smart Role Detection: Only authenticated hosts who created this tournament get organiser permissions.
+  // Logged-out users and normal spectators always see the Public Spectator View.
+  const isUserOrganiser = Boolean(
+    currentUser && (
+      (currentUser.phone && tournament?.organiserPhone && String(tournament.organiserPhone).trim() === String(currentUser.phone).trim()) ||
+      (currentUser.id && tournament?.organiserId && String(tournament.organiserId).trim() === String(currentUser.id).trim()) ||
+      (currentUser.email && tournament?.organiserEmail && String(tournament.organiserEmail).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase())
+    )
+  );
 
   // Switch Active Tournament
   const handleSelectTournament = (selectedItem) => {
@@ -164,8 +175,14 @@ export function PublicSeriesViewScreen(props = {}) {
   }, [tournamentsList, searchQuery]);
 
   const userHostedTournaments = useMemo(() => {
-    return filteredSheetTournaments.filter(t => myHostedIds.includes(t.id));
-  }, [filteredSheetTournaments, myHostedIds]);
+    if (!currentUser) return [];
+    return filteredSheetTournaments.filter(t => {
+      const matchPhone = currentUser.phone && t.organiserPhone && String(t.organiserPhone).trim() === String(currentUser.phone).trim();
+      const matchId = currentUser.id && t.organiserId && String(t.organiserId).trim() === String(currentUser.id).trim();
+      const matchEmail = currentUser.email && t.organiserEmail && String(t.organiserEmail).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase();
+      return Boolean(matchPhone || matchId || matchEmail);
+    });
+  }, [filteredSheetTournaments, currentUser]);
 
   // Tabs: Overview | Matches | Teams | Points Table | Stats | Venues | News | Info
   const tabs = [
@@ -217,11 +234,14 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Squad Players for Bottom Sheet Drawer from selected team
   const squadPlayers = useMemo(() => {
-    if (selectedTeamDrawer?.players && selectedTeamDrawer.players.length > 0) {
-      return selectedTeamDrawer.players.map((p, idx) => ({
+    const list = selectedTeamDrawer?.players || selectedTeamDrawer?.squad || [];
+    if (list.length > 0) {
+      return list.map((p, idx) => ({
         id: p.id || `sp_${idx}`,
         name: typeof p === 'string' ? p : (p.name || `Player ${idx + 1}`),
         role: p.role || 'Player',
+        isCaptain: Boolean(p.isCaptain || (selectedTeamDrawer?.captain && String(selectedTeamDrawer.captain).trim() === (p.name || '').trim()) || (selectedTeamDrawer?.captainName && String(selectedTeamDrawer.captainName).trim() === (p.name || '').trim())),
+        isWicketKeeper: Boolean(p.isWicketKeeper || p.role === 'Wicket Keeper'),
         runs: p.runs != null ? p.runs : null,
         wickets: p.wickets != null ? p.wickets : null
       }));
@@ -229,28 +249,105 @@ export function PublicSeriesViewScreen(props = {}) {
     return [];
   }, [selectedTeamDrawer]);
 
-  // Key Stats derived dynamically from tournament teams
+  // Dynamic Tournament Leaders (Top Batter, Top Bowler, MVP)
+  const tournamentLeaders = useMemo(() => {
+    const matches = tournament?.matches || [];
+    let topBatter = null;
+    let topBowler = null;
+    let topMVP = null;
+
+    let maxRuns = -1;
+    let maxWkts = -1;
+
+    matches.forEach(m => {
+      const raw = m.rawMatchData;
+      if (!raw) return;
+
+      const innList = raw.innings || [];
+      innList.forEach(inn => {
+        const batsmen = inn.batsmen || inn.batters || [];
+        batsmen.forEach(b => {
+          const r = Number(b.runs || 0);
+          if (r > maxRuns) {
+            maxRuns = r;
+            topBatter = {
+              name: b.name || 'Batter',
+              team: b.team || m.team1?.name || '',
+              runs: r,
+              sr: b.balls ? ((r / b.balls) * 100).toFixed(1) : '0.0'
+            };
+          }
+        });
+
+        const bowlers = inn.bowlers || [];
+        bowlers.forEach(bw => {
+          const w = Number(bw.wickets || bw.wkts || 0);
+          if (w > maxWkts) {
+            maxWkts = w;
+            topBowler = {
+              name: bw.name || 'Bowler',
+              team: bw.team || m.team2?.name || '',
+              wickets: w,
+              econ: bw.econ || bw.economy || '0.0'
+            };
+          }
+        });
+      });
+    });
+
+    if (!topBatter) {
+      const captain1 = tournament?.teams?.[0]?.captainName || tournament?.teams?.[0]?.players?.[0]?.name || 'Top Batter';
+      topBatter = {
+        name: captain1,
+        team: tournament?.teams?.[0]?.name || 'Registered Team',
+        runs: 0,
+        sr: '0.0'
+      };
+    }
+
+    if (!topBowler) {
+      const captain2 = tournament?.teams?.[1]?.captainName || tournament?.teams?.[1]?.players?.[1]?.name || 'Strike Bowler';
+      topBowler = {
+        name: captain2,
+        team: tournament?.teams?.[1]?.name || 'Registered Team',
+        wickets: 0,
+        econ: '0.0'
+      };
+    }
+
+    if (!topMVP) {
+      const mvpCandidate = tournament?.teams?.[0]?.players?.[1]?.name || tournament?.teams?.[0]?.captainName || 'Tournament MVP';
+      const finishedMatchesCount = matches.filter(m => m.status === 'FINISHED').length;
+      topMVP = {
+        name: mvpCandidate,
+        team: tournament?.teams?.[0]?.name || 'Registered Team',
+        points: (topBatter.runs ? topBatter.runs * 2 : 0) + (topBowler.wickets ? topBowler.wickets * 25 : 0),
+        matchesCount: finishedMatchesCount
+      };
+    }
+
+    return { topBatter, topBowler, topMVP };
+  }, [tournament?.matches, tournament?.teams]);
+
   const keyStatsTop = useMemo(() => {
     return {
       label: 'Most Runs',
-      player: tournament?.teams?.[0]?.captainName || 'Leaderboard',
-      fullName: tournament?.teams?.[0]?.captainName || 'Tournament Leader',
-      team: tournament?.teams?.[0]?.name || 'Pending Matches',
-      val: '-',
-      unit: '',
-      color: '#FFF1F2',
-      borderColor: '#FFE4E6'
+      player: tournamentLeaders.topBatter.name,
+      fullName: tournamentLeaders.topBatter.name,
+      team: tournamentLeaders.topBatter.team,
+      val: tournamentLeaders.topBatter.runs > 0 ? String(tournamentLeaders.topBatter.runs) : '-',
+      unit: tournamentLeaders.topBatter.runs > 0 ? 'Runs' : ''
     };
-  }, [tournament]);
+  }, [tournamentLeaders]);
 
   const keyStatsGrid = useMemo(() => {
     return [
-      { label: 'Most Wickets', player: tournament?.teams?.[1]?.captainName || 'Top Bowler', team: tournament?.teams?.[1]?.name || 'Pending Matches', val: '-', unit: '', color: '#FFF1F2', borderColor: '#FFE4E6' },
-      { label: 'Best Bowling', player: '-', team: 'Pending Matches', val: '-', unit: '', color: '#F0FDF4', borderColor: '#DCFCE7' },
-      { label: 'Highest Score', player: '-', team: 'Pending Matches', val: '-', unit: '', color: '#FFF1F2', borderColor: '#FFE4E6' },
-      { label: 'Most Sixes', player: '-', team: 'Pending Matches', val: '-', unit: '', color: '#F0FDF4', borderColor: '#DCFCE7' }
+      { label: 'Most Wickets', player: tournamentLeaders.topBowler.name, team: tournamentLeaders.topBowler.team, val: tournamentLeaders.topBowler.wickets > 0 ? String(tournamentLeaders.topBowler.wickets) : '-' },
+      { label: 'Best Bowling', player: tournamentLeaders.topBowler.name, team: tournamentLeaders.topBowler.team, val: tournamentLeaders.topBowler.wickets > 0 ? `${tournamentLeaders.topBowler.wickets} wkts` : '-' },
+      { label: 'Highest Score', player: tournamentLeaders.topBatter.name, team: tournamentLeaders.topBatter.team, val: tournamentLeaders.topBatter.runs > 0 ? `${tournamentLeaders.topBatter.runs}*` : '-' },
+      { label: 'Tournament MVP', player: tournamentLeaders.topMVP.name, team: tournamentLeaders.topMVP.team, val: tournamentLeaders.topMVP.points > 0 ? `${tournamentLeaders.topMVP.points} pts` : '-' }
     ];
-  }, [tournament]);
+  }, [tournamentLeaders]);
 
   // Handle Share WhatsApp Ground Invite
   const handleShareInvite = async () => {
@@ -314,14 +411,32 @@ export function PublicSeriesViewScreen(props = {}) {
     setScheduleModalVisible(false);
   };
 
-  // Start Instant Scoring
+  // Start Instant Scoring with full tournament context and team squads
   const handleStartMatchScoring = (match = null) => {
+    const t1Name = match?.team1?.name || match?.team1 || tournament?.teams?.[0]?.name || 'Team 1';
+    const t2Name = match?.team2?.name || match?.team2 || tournament?.teams?.[1]?.name || 'Team 2';
+
+    const t1Obj = tournament?.teams?.find(t => (t.name || '').trim().toLowerCase() === String(t1Name).trim().toLowerCase());
+    const t2Obj = tournament?.teams?.find(t => (t.name || '').trim().toLowerCase() === String(t2Name).trim().toLowerCase());
+
+    const t1Roster = Array.isArray(t1Obj?.players) ? t1Obj.players.map(p => typeof p === 'string' ? p : p.name) : [];
+    const t2Roster = Array.isArray(t2Obj?.players) ? t2Obj.players.map(p => typeof p === 'string' ? p : p.name) : [];
+
     if (navigation) {
       navigation.navigate('QuickMatchSetup', {
         tournamentId: tournament.id,
+        tournamentMatchId: match?.id || `tm_${Date.now()}`,
         tournamentName: tournament.name || tournament.title,
-        presetTeam1: match?.team1?.name || tournament.teams?.[0]?.name,
-        presetTeam2: match?.team2?.name || tournament.teams?.[1]?.name
+        presetTeam1: t1Name,
+        presetTeam2: t2Name,
+        team1Name: t1Name,
+        team2Name: t2Name,
+        team1Roster: t1Roster.length > 0 ? t1Roster : undefined,
+        team2Roster: t2Roster.length > 0 ? t2Roster : undefined,
+        totalOvers: match?.overs || tournament.overs || 5,
+        ballType: tournament.ballType || 'tennis',
+        pitchType: tournament.pitchType || 'turf',
+        venueName: match?.venue || tournament.city || ''
       });
     }
   };
@@ -504,26 +619,24 @@ export function PublicSeriesViewScreen(props = {}) {
                         style={styles.carouselCardImage}
                       />
                     ) : (
-                      <View style={[styles.carouselCardFallback, { backgroundColor: isSelected ? '#18181B' : '#334155' }]}>
+                      <View style={[styles.carouselCardFallback, { backgroundColor: isSelected ? '#18181B' : '#F8FAFC' }]}>
                         <MaterialCommunityIcons
                           name="trophy"
-                          size={24}
-                          color={isSelected ? '#FFFFFF' : '#CBD5E1'}
+                          size={30}
+                          color={isSelected ? '#FFFFFF' : '#64748B'}
                         />
+                        <Text
+                          style={[styles.fallbackCardTitle, isSelected && styles.fallbackCardTitleSelected]}
+                          numberOfLines={2}
+                        >
+                          {tItem.name || tItem.title}
+                        </Text>
                       </View>
                     )}
-                    <View style={styles.carouselCardOverlay}>
-                      <Text
-                        style={[styles.carouselCardTitle, isSelected && styles.carouselCardTitleSelected]}
-                        numberOfLines={2}
-                      >
-                        {tItem.name || tItem.title}
-                      </Text>
-                    </View>
 
                     {isSelected ? (
                       <View style={styles.carouselCheckmarkBadge}>
-                        <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+                        <Ionicons name="checkmark-circle" size={19} color="#0284C7" />
                       </View>
                     ) : null}
                   </TouchableOpacity>
@@ -567,15 +680,6 @@ export function PublicSeriesViewScreen(props = {}) {
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <TouchableOpacity
-              style={styles.shareHeaderBtn}
-              onPress={() => setSelectSeriesModalVisible(true)}
-              activeOpacity={0.7}
-              accessibilityLabel="Select Series Drawer"
-            >
-              <MaterialCommunityIcons name="format-list-bulleted-square" size={20} color={themeColors.textPrimary} />
-            </TouchableOpacity>
-
             {isUserOrganiser ? (
               <View style={styles.organiserPill}>
                 <MaterialCommunityIcons name="shield-crown-outline" size={13} color="#FFFFFF" />
@@ -642,24 +746,23 @@ export function PublicSeriesViewScreen(props = {}) {
           <View key="overview" style={{ flex: 1 }}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.tabScrollPadding} showsVerticalScrollIndicator={false}>
 
-              {/* Tournament Identity Card (Supports Cover Banner & Circular Logo) */}
+              {/* Tournament Identity Card (Clean Logo & Identity Header, No Cover Banner) */}
               <View style={styles.heroIdentityCard}>
-                {tournament.bannerUri ? (
-                  <View style={styles.heroBannerWrap}>
-                    <Image source={{ uri: tournament.bannerUri }} style={styles.heroBannerImage} />
-                  </View>
-                ) : null}
-
-                <View style={[styles.heroBodyPadding, tournament.bannerUri && { paddingTop: 0 }]}>
-                  {tournament.logoUri ? (
-                    <View style={[styles.heroLogoWrap, tournament.bannerUri && styles.heroLogoOverlap]}>
-                      <Image source={{ uri: tournament.logoUri }} style={styles.heroLogoImage} />
-                    </View>
-                  ) : null}
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: (tournament.logoUri && tournament.bannerUri) ? 4 : 0 }}>
-                    <View style={styles.categoryChip}>
-                      <Text style={styles.categoryChipText}>{tournament.category || 'OPEN GROUND CRICKET'}</Text>
+                <View style={styles.heroBodyPadding}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      {tournament.logoUri ? (
+                        <View style={styles.heroLogoWrap}>
+                          <Image source={{ uri: tournament.logoUri }} style={styles.heroLogoImage} />
+                        </View>
+                      ) : (
+                        <View style={styles.heroLogoFallback}>
+                          <MaterialCommunityIcons name="trophy" size={22} color="#0284C7" />
+                        </View>
+                      )}
+                      <View style={styles.categoryChip}>
+                        <Text style={styles.categoryChipText}>{tournament.category || 'OPEN GROUND CRICKET'}</Text>
+                      </View>
                     </View>
                     <Text style={styles.durationBadgeText}>{tournament.duration || tournament.startDate || 'Season 2026'}</Text>
                   </View>
@@ -787,42 +890,90 @@ export function PublicSeriesViewScreen(props = {}) {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.statsGridContainer}>
-                <View style={[styles.topKeyStatCard, { backgroundColor: keyStatsTop.color, borderColor: keyStatsTop.borderColor }]}>
-                  <PlayerAvatar name={keyStatsTop.player} size={38} />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.statCategoryLabel}>{keyStatsTop.label}</Text>
-                    <Text style={styles.statPlayerNameBold}>{keyStatsTop.player}</Text>
-                    <Text style={styles.statPlayerTeamSub}>{keyStatsTop.team}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.topStatValueNum}>{keyStatsTop.val}</Text>
-                    <Text style={styles.topStatUnitText}>{keyStatsTop.unit}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.gridTwoColRow}>
-                  {keyStatsGrid.map((st) => (
-                    <View key={st.label} style={[styles.gridKeyStatCard, { backgroundColor: st.color, borderColor: st.borderColor }]}>
-                      <View style={styles.gridCardHeaderRow}>
-                        <PlayerAvatar name={st.player} size={24} />
-                        <View style={{ flex: 1, marginLeft: 6 }}>
-                          <Text style={styles.statCategoryLabelSmall}>{st.label}</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.gridCardBodyRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.statPlayerNameBold}>{st.player}</Text>
-                          <Text style={styles.statPlayerTeamSub}>{st.team}</Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={styles.gridStatValueNum}>{st.val}</Text>
-                        </View>
-                      </View>
+              <View style={styles.spotlightLeadersRow}>
+                {/* 1. TOP BATTER CARD (Navy Blue) */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={[styles.spotlightCard, styles.batterSpotlightCard]}
+                  onPress={() => handleTabPress('stats', 4)}
+                >
+                  <View style={styles.spotlightAvatarWrap}>
+                    <PlayerAvatar name={tournamentLeaders.topBatter.name} size={40} />
+                    <View style={[styles.spotlightRankBadge, styles.batterRankBadge]}>
+                      <Text style={styles.spotlightRankText}>#1</Text>
                     </View>
-                  ))}
-                </View>
+                  </View>
+                  <Text style={[styles.spotlightPlayerName, { color: '#FFFFFF' }]} numberOfLines={1}>
+                    {tournamentLeaders.topBatter.name}
+                  </Text>
+                  <View style={[styles.spotlightRoleChip, styles.batterRoleChip]}>
+                    <Text style={[styles.spotlightRoleText, { color: '#BAE6FD' }]}>BATTER</Text>
+                  </View>
+                  <View style={[styles.spotlightStatBottom, styles.batterStatBorder]}>
+                    <Text style={[styles.spotlightStatPrimary, { color: '#FFFFFF' }]}>
+                      {tournamentLeaders.topBatter.runs} <Text style={styles.spotlightStatUnit}>Runs</Text>
+                    </Text>
+                    <Text style={styles.spotlightStatSecondary} numberOfLines={1}>
+                      SR: {tournamentLeaders.topBatter.sr}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* 2. TOP BOWLER CARD (Vibrant Orange) */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={[styles.spotlightCard, styles.bowlerSpotlightCard]}
+                  onPress={() => handleTabPress('stats', 4)}
+                >
+                  <View style={styles.spotlightAvatarWrap}>
+                    <PlayerAvatar name={tournamentLeaders.topBowler.name} size={40} />
+                    <View style={[styles.spotlightRankBadge, styles.bowlerRankBadge]}>
+                      <Text style={styles.spotlightRankText}>#1</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.spotlightPlayerName, { color: '#FFFFFF' }]} numberOfLines={1}>
+                    {tournamentLeaders.topBowler.name}
+                  </Text>
+                  <View style={[styles.spotlightRoleChip, styles.bowlerRoleChip]}>
+                    <Text style={[styles.spotlightRoleText, { color: '#FFEDD5' }]}>BOWLER</Text>
+                  </View>
+                  <View style={[styles.spotlightStatBottom, styles.bowlerStatBorder]}>
+                    <Text style={[styles.spotlightStatPrimary, { color: '#FFFFFF' }]}>
+                      {tournamentLeaders.topBowler.wickets} <Text style={styles.spotlightStatUnit}>Wkts</Text>
+                    </Text>
+                    <Text style={styles.spotlightStatSecondary} numberOfLines={1}>
+                      Eco: {tournamentLeaders.topBowler.econ}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* 3. TOURNAMENT MVP CARD (Sleek Black) */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={[styles.spotlightCard, styles.mvpSpotlightCard]}
+                  onPress={() => handleTabPress('stats', 4)}
+                >
+                  <View style={styles.spotlightAvatarWrap}>
+                    <PlayerAvatar name={tournamentLeaders.topMVP.name} size={40} />
+                    <View style={[styles.spotlightRankBadge, styles.mvpRankBadge]}>
+                      <Text style={styles.spotlightRankText}>#1</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.spotlightPlayerName, { color: '#FFFFFF' }]} numberOfLines={1}>
+                    {tournamentLeaders.topMVP.name}
+                  </Text>
+                  <View style={[styles.spotlightRoleChip, styles.mvpRoleChip]}>
+                    <Text style={[styles.spotlightRoleText, { color: '#E2E8F0' }]}>MVP</Text>
+                  </View>
+                  <View style={[styles.spotlightStatBottom, styles.mvpStatBorder]}>
+                    <Text style={[styles.spotlightStatPrimary, { color: '#FFFFFF' }]}>
+                      {tournamentLeaders.topMVP.points} <Text style={styles.spotlightStatUnit}>Pts</Text>
+                    </Text>
+                    <Text style={styles.spotlightStatSecondary} numberOfLines={1}>
+                      {tournamentLeaders.topMVP.matchesCount} Matches
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               </View>
 
               {/* Embedded Points Table Section */}
@@ -919,8 +1070,17 @@ export function PublicSeriesViewScreen(props = {}) {
               {filteredMatches.length > 0 ? (
                 filteredMatches.map((item, idx) => (
                   <View key={item.id || idx} style={styles.dateMatchCard}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <Text style={styles.groupDateTitle}>{item.dateStr || 'Upcoming Match'}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {item.stage ? (
+                          <View style={{ backgroundColor: '#18181B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontBold }}>{item.stage}</Text>
+                          </View>
+                        ) : null}
+                        <Text style={styles.groupDateTitle}>
+                          {item.dateStr || item.date || 'Upcoming Match'} {item.time ? `• ${item.time}` : ''}
+                        </Text>
+                      </View>
                       {item.status === 'LIVE' ? (
                         <View style={styles.liveTagBadge}>
                           <View style={styles.liveDot} />
@@ -1032,7 +1192,7 @@ export function PublicSeriesViewScreen(props = {}) {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.teamRowName}>{team.name}</Text>
                       <Text style={styles.teamRowSub}>
-                        {team.count || '11 Players'} {team.captainName ? `• Capt: ${team.captainName}` : ''}
+                        {team.count || `${(team.players || team.squad || []).length} Players`} {team.captainName || team.captain ? `• Capt: ${team.captainName || team.captain}` : ''}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={themeColors.textSubtle} />
@@ -1367,16 +1527,26 @@ export function PublicSeriesViewScreen(props = {}) {
               </View>
 
               <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
-                {(selectedTeamDrawer?.players && selectedTeamDrawer.players.length > 0) ? (
-                  selectedTeamDrawer.players.map((player, pIdx) => {
-                    const pName = typeof player === 'string' ? player : (player.name || `Player ${pIdx + 1}`);
-                    const pRole = player.role || 'Player';
+                {squadPlayers.length > 0 ? (
+                  squadPlayers.map((player, pIdx) => {
                     return (
                       <View key={player.id || pIdx} style={styles.squadPlayerRow}>
-                        <PlayerAvatar name={pName} size={34} />
+                        <PlayerAvatar name={player.name} size={34} />
                         <View style={{ flex: 1, marginLeft: 10 }}>
-                          <Text style={styles.squadPlayerName}>{pName}</Text>
-                          <Text style={styles.squadPlayerRole}>{pRole}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={styles.squadPlayerName}>{player.name}</Text>
+                            {player.isCaptain ? (
+                              <View style={{ backgroundColor: '#18181B', paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 4 }}>
+                                <Text style={{ fontSize: 9, color: '#FFFFFF', fontFamily: systemFontBold }}>C</Text>
+                              </View>
+                            ) : null}
+                            {player.isWicketKeeper ? (
+                              <View style={{ backgroundColor: '#0284C7', paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 4 }}>
+                                <Text style={{ fontSize: 9, color: '#FFFFFF', fontFamily: systemFontBold }}>WK</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          <Text style={styles.squadPlayerRole}>{player.role}</Text>
                         </View>
                         {player.runs != null || player.wickets != null ? (
                           <Text style={styles.squadPlayerStat}>
@@ -1604,20 +1774,22 @@ const styles = StyleSheet.create({
   },
   topCarouselContent: {
     paddingHorizontal: 16,
-    gap: 10
+    gap: 12,
+    paddingVertical: 10
   },
   carouselCard: {
-    width: 88,
-    height: 88,
-    borderRadius: 14,
+    width: 120,
+    height: 132,
+    borderRadius: 12,
     backgroundColor: '#18181B',
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1.2,
+    borderColor: themeColors.border,
     position: 'relative'
   },
   carouselCardSelected: {
-    borderColor: '#0284C7'
+    borderColor: '#0284C7',
+    borderWidth: 1.5
   },
   carouselCardImage: {
     width: '100%',
@@ -1627,38 +1799,33 @@ const styles = StyleSheet.create({
     left: 0,
     resizeMode: 'cover'
   },
-  carouselCardOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
-    justifyContent: 'flex-end',
-    padding: 6
-  },
   carouselCardFallback: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1E293B',
-    padding: 6
+    backgroundColor: '#F8FAFC',
+    padding: 8
   },
-  carouselCardTitle: {
-    color: '#FFFFFF',
-    fontSize: 10,
+  fallbackCardTitle: {
+    color: '#0F172A',
+    fontSize: 11,
     fontFamily: systemFontMedium,
     textAlign: 'center',
-    lineHeight: 12
+    lineHeight: 14,
+    marginTop: 6
   },
-  carouselCardTitleSelected: {
-    color: '#38BDF8',
-    fontFamily: systemFontBold
+  fallbackCardTitleSelected: {
+    color: '#FFFFFF',
+    fontFamily: systemFontMedium
   },
   carouselCheckmarkBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 6,
+    right: 6,
     backgroundColor: '#FFFFFF',
-    borderRadius: 9,
-    width: 18,
-    height: 18,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 2,
@@ -1765,35 +1932,29 @@ const styles = StyleSheet.create({
     borderColor: themeColors.border,
     overflow: 'hidden'
   },
-  heroBannerWrap: {
-    width: '100%',
-    height: 120,
-    backgroundColor: themeColors.surfaceOffWhite,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border
-  },
-  heroBannerImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover'
-  },
   heroBodyPadding: {
     padding: 16,
-    gap: 8
+    gap: 10
   },
   heroLogoWrap: {
-    alignSelf: 'flex-start'
+    alignSelf: 'center'
   },
-  heroLogoOverlap: {
-    marginTop: -36,
-    marginBottom: 4
+  heroLogoFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   heroLogoImage: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: themeColors.border,
     backgroundColor: themeColors.surface,
     resizeMode: 'cover'
   },
@@ -1925,70 +2086,116 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: systemFontBold
   },
-  statsGridContainer: {
-    gap: 10
-  },
-  topKeyStatCard: {
+  spotlightLeadersRow: {
     flexDirection: 'row',
+    gap: 8,
+    marginTop: 6
+  },
+  spotlightCard: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderWidth: 1,
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
+    gap: 5
+  },
+  batterSpotlightCard: {
+    backgroundColor: '#0F2744',
+    borderColor: '#1E3A8A'
+  },
+  batterRankBadge: {
+    backgroundColor: '#0284C7'
+  },
+  batterRoleChip: {
+    backgroundColor: 'rgba(56, 189, 248, 0.18)',
+    borderColor: 'rgba(56, 189, 248, 0.35)'
+  },
+  batterStatBorder: {
+    borderTopColor: 'rgba(255, 255, 255, 0.12)'
+  },
+  bowlerSpotlightCard: {
+    backgroundColor: '#EA580C',
+    borderColor: '#C2410C'
+  },
+  bowlerRankBadge: {
+    backgroundColor: '#9A3412'
+  },
+  bowlerRoleChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderColor: 'rgba(255, 255, 255, 0.4)'
+  },
+  bowlerStatBorder: {
+    borderTopColor: 'rgba(255, 255, 255, 0.2)'
+  },
+  mvpSpotlightCard: {
+    backgroundColor: '#18181B',
+    borderColor: '#27272A'
+  },
+  mvpRankBadge: {
+    backgroundColor: '#3F3F46'
+  },
+  mvpRoleChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.25)'
+  },
+  mvpStatBorder: {
+    borderTopColor: 'rgba(255, 255, 255, 0.12)'
+  },
+  spotlightAvatarWrap: {
+    position: 'relative'
+  },
+  spotlightRankBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF'
+  },
+  spotlightRankText: {
+    color: '#FFFFFF',
+    fontSize: 8.5,
+    fontFamily: systemFontMedium
+  },
+  spotlightPlayerName: {
+    fontSize: 11.5,
+    fontFamily: systemFontMedium,
+    textAlign: 'center'
+  },
+  spotlightRoleChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
     borderWidth: 1
   },
-  statCategoryLabel: {
-    fontSize: 10,
-    fontFamily: systemFontMedium,
-    color: themeColors.textMuted
-  },
-  statPlayerNameBold: {
-    fontSize: 13,
+  spotlightRoleText: {
+    fontSize: 8.5,
     fontFamily: systemFontBold,
-    color: themeColors.textPrimary
+    letterSpacing: 0.5
   },
-  statPlayerTeamSub: {
-    fontSize: 11,
-    fontFamily: systemFont,
-    color: themeColors.textMuted
-  },
-  topStatValueNum: {
-    fontSize: 18,
-    fontFamily: systemFontBold,
-    color: themeColors.textPrimary
-  },
-  topStatUnitText: {
-    fontSize: 10,
-    fontFamily: systemFont,
-    color: themeColors.textMuted
-  },
-  gridTwoColRow: {
-    flexDirection: 'row',
-    gap: 10
-  },
-  gridKeyStatCard: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 4
-  },
-  gridCardHeaderRow: {
-    flexDirection: 'row',
+  spotlightStatBottom: {
+    width: '100%',
+    borderTopWidth: 1,
+    paddingTop: 5,
+    marginTop: 2,
     alignItems: 'center'
   },
-  statCategoryLabelSmall: {
+  spotlightStatPrimary: {
+    fontSize: 12,
+    fontFamily: systemFontBold
+  },
+  spotlightStatUnit: {
     fontSize: 9.5,
-    fontFamily: systemFontMedium,
-    color: themeColors.textMuted
+    fontFamily: systemFont
   },
-  gridCardBodyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  gridStatValueNum: {
-    fontSize: 14,
-    fontFamily: systemFontBold,
-    color: themeColors.textPrimary
+  spotlightStatSecondary: {
+    fontSize: 9.5,
+    fontFamily: systemFont,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 1
   },
   embeddedPointsTableCard: {
     backgroundColor: themeColors.surface,

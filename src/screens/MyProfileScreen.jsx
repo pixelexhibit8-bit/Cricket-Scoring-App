@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -30,7 +31,9 @@ import {
   signInWithGoogleOAuth,
   signOutUser,
   calculatePlayerCareerStats,
-  isPlayerNameMatch
+  isPlayerNameMatch,
+  sendPhoneOtp,
+  verifyPhoneOtp
 } from '../services/authService.js';
 import { supabase } from '../services/supabaseClient.js';
 import { registerPlayerPhoto } from '../services/playerPhotoStore.js';
@@ -106,6 +109,22 @@ export function MyProfileScreen(props = {}) {
   const [quickPlayerName, setQuickPlayerName] = useState('');
   const quickPlayerNameRef = useRef(quickPlayerName);
   quickPlayerNameRef.current = quickPlayerName;
+
+  // Phone + OTP Sign-In State
+  const [authStep, setAuthStep] = useState(1);
+  const [authPhone, setAuthPhone] = useState('');
+  const [authOtp, setAuthOtp] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authTimer, setAuthTimer] = useState(30);
+
+  useEffect(() => {
+    let t;
+    if (authStep === 2 && authTimer > 0) {
+      t = setInterval(() => setAuthTimer(prev => prev - 1), 1000);
+    }
+    return () => { if (t) clearInterval(t); };
+  }, [authStep, authTimer]);
 
   const playerName = targetPlayerName || profile?.name || currentUser?.name || 'Local Player';
 
@@ -581,31 +600,45 @@ export function MyProfileScreen(props = {}) {
     }
   }, [handleAuthenticatedUser]);
 
-  const handleInstantLogin = useCallback(async (customName = 'Basti Ram Suthar') => {
-    try {
-      setLoading(true);
-      const instantUser = {
-        id: 'usr_expo_scorer_01',
-        name: customName,
-        email: 'scorer@cricflow.app',
-        phone: '9983228208',
-        photoUrl: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1786783565/bo80oa5ztg1ub1uf0tet.jpg',
-        provider: 'instant',
-        signedInAt: new Date().toISOString()
-      };
-
-      await handleAuthenticatedUser({
-        id: instantUser.id,
-        email: instantUser.email,
-        user_metadata: { full_name: instantUser.name, avatar_url: null }
-      });
-      showToast(`Welcome ${customName}! Logged in as Verified Scorer.`, 'success');
-    } catch (e) {
-      showToast('Unable to sign in. Please try again', 'error');
-    } finally {
-      setLoading(false);
+  const handleAuthSendOtp = useCallback(async () => {
+    const clean = authPhone.replace(/\D/g, '').slice(-10);
+    if (!clean || clean.length < 10) {
+      setAuthError('Please enter a valid 10-digit mobile number');
+      return;
     }
-  }, [handleAuthenticatedUser]);
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      await sendPhoneOtp(clean);
+      setAuthStep(2);
+      setAuthTimer(30);
+      showToast(`OTP sent to +91 ${clean}`, 'info');
+    } catch (err) {
+      setAuthError(err?.message || 'Could not send OTP. Please try again.');
+    } finally {
+      setAuthLoading(false);
+    }
+  }, [authPhone]);
+
+  const handleAuthVerifyOtp = useCallback(async () => {
+    const cleanOtp = authOtp.trim();
+    if (!cleanOtp || cleanOtp.length < 4) {
+      setAuthError('Please enter the 6-digit OTP code');
+      return;
+    }
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const res = await verifyPhoneOtp(authPhone, cleanOtp);
+      showToast('Login successful!', 'success');
+      setCurrentUser(res.user);
+      setProfile(res.profile);
+    } catch (err) {
+      setAuthError(err?.message || 'Invalid OTP. Please enter 998322');
+    } finally {
+      setAuthLoading(false);
+    }
+  }, [authPhone, authOtp]);
 
   const handleSaveProfile = useCallback(async (profileData) => {
     setLoading(true);
@@ -665,56 +698,132 @@ export function MyProfileScreen(props = {}) {
         ) : null}
         <ScrollView style={styles.container} contentContainerStyle={styles.authContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.authCard}>
-            <Image source={require('../../assets/logo.png')} style={{ width: 88, height: 88, resizeMode: 'contain', marginBottom: 14 }} />
-            <Text style={styles.authTitle}>Welcome to CricScorer</Text>
+            <Image source={require('../../assets/logo.png')} style={{ width: 76, height: 76, resizeMode: 'contain', marginBottom: 12 }} />
+            <Text style={styles.authTitle}>Welcome to CricFlow</Text>
             <Text style={styles.authSub}>
-              Sign in with your Google account or 1-tap fast login to track your career stats, match records and rankings.
+              Enter your mobile number to manage tournaments, record scores & sync lifetime career stats.
             </Text>
 
+            {authError ? (
+              <View style={styles.authErrorRow}>
+                <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                <Text style={styles.authErrorText}>{authError}</Text>
+              </View>
+            ) : null}
+
+            {authStep === 1 ? (
+              <View style={{ width: '100%' }}>
+                <Text style={styles.authInputLabel}>Mobile Number</Text>
+                <View style={styles.authPhoneRow}>
+                  <View style={styles.authCountryCode}>
+                    <Text style={styles.authCountryCodeText}>+91</Text>
+                  </View>
+                  <TextInput
+                    style={styles.authPhoneInput}
+                    placeholder="Enter 10-digit number"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={authPhone}
+                    onChangeText={text => {
+                      setAuthPhone(text);
+                      if (authError) setAuthError('');
+                    }}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.authPrimaryBtn, (authPhone.length < 10 || authLoading) && { opacity: 0.5 }]}
+                  onPress={handleAuthSendOtp}
+                  disabled={authPhone.length < 10 || authLoading}
+                  activeOpacity={0.85}
+                >
+                  {authLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.authPrimaryBtnText}>GET OTP</Text>
+                      <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ width: '100%' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={styles.authSentInfo}>
+                    OTP sent to <Text style={{ fontFamily: systemFontMedium, color: '#0F172A' }}>+91 {authPhone.slice(-10)}</Text>
+                  </Text>
+                  <TouchableOpacity onPress={() => { setAuthStep(1); setAuthOtp(''); setAuthError(''); }} activeOpacity={0.7}>
+                    <Text style={{ fontFamily: systemFontMedium, fontSize: 13, color: '#2563EB' }}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.authDemoBadge}>
+                  <Ionicons name="key-outline" size={13} color="#0284C7" />
+                  <Text style={styles.authDemoBadgeText}>Test OTP: <Text style={{ fontFamily: systemFontBold, color: '#0284C7' }}>998322</Text></Text>
+                </View>
+
+                <Text style={styles.authInputLabel}>Enter 6-Digit OTP</Text>
+                <TextInput
+                  style={styles.authOtpInput}
+                  placeholder="998322"
+                  placeholderTextColor="#CBD5E1"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  value={authOtp}
+                  onChangeText={text => {
+                    setAuthOtp(text);
+                    if (authError) setAuthError('');
+                  }}
+                  autoFocus
+                />
+
+                <TouchableOpacity
+                  style={[styles.authPrimaryBtn, (authOtp.length < 4 || authLoading) && { opacity: 0.5 }]}
+                  onPress={handleAuthVerifyOtp}
+                  disabled={authOtp.length < 4 || authLoading}
+                  activeOpacity={0.85}
+                >
+                  {authLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.authPrimaryBtnText}>VERIFY & CONTINUE</Text>
+                      <Ionicons name="checkmark-circle-outline" size={17} color="#FFFFFF" />
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <View style={{ alignItems: 'center', marginTop: 12 }}>
+                  {authTimer > 0 ? (
+                    <Text style={{ fontFamily: systemFont, fontSize: 12, color: '#94A3B8' }}>Resend in {authTimer}s</Text>
+                  ) : (
+                    <TouchableOpacity onPress={handleAuthSendOtp} activeOpacity={0.7}>
+                      <Text style={{ fontFamily: systemFontMedium, fontSize: 13, color: '#2563EB' }}>Resend OTP</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+
             <View style={styles.benefitList}>
+              <View style={styles.benefitItem}>
+                <MaterialCommunityIcons name="trophy-outline" size={16} color="#D97706" />
+                <Text style={styles.benefitText}>Host tournaments, schedule matches & points table</Text>
+              </View>
               <View style={styles.benefitItem}>
                 <MaterialCommunityIcons name="cricket" size={16} color="#0284C7" />
                 <Text style={styles.benefitText}>Track all local ground runs, wickets & averages</Text>
               </View>
               <View style={styles.benefitItem}>
-                <Ionicons name="trophy-outline" size={16} color="#D97706" />
-                <Text style={styles.benefitText}>Compete on player leaderboards & MVP awards</Text>
-              </View>
-              <View style={styles.benefitItem}>
                 <Ionicons name="cloud-done-outline" size={16} color="#16A34A" />
-                <Text style={styles.benefitText}>Lifetime cloud backup linked to your account</Text>
+                <Text style={styles.benefitText}>Lifetime cloud backup linked to your mobile</Text>
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.googleBtn}
-              onPress={handleGoogleSignIn}
-              activeOpacity={0.85}
-            >
-              <Image
-                source={require('../../assets/google_logo.png')}
-                style={{ width: 22, height: 22, resizeMode: 'contain' }}
-              />
-              <Text style={styles.googleBtnText}>
-                Continue with Google
-              </Text>
-            </TouchableOpacity>
-
-            {__DEV__ && (
-              <TouchableOpacity
-                style={styles.devBtn}
-                onPress={() => handleInstantLogin('Basti Ram Suthar')}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="flash" size={16} color="#38BDF8" />
-                <Text style={styles.devBtnText}>
-                  Quick Test Login (Dev Mode)
-                </Text>
-              </TouchableOpacity>
-            )}
-
             <Text style={styles.authTerms}>
-              Fast 1-tap sign in. No phone number or password required.
+              Fast phone verification. No password required.
             </Text>
           </View>
         </ScrollView>
@@ -1058,25 +1167,117 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: systemFontMedium
   },
-  devBtn: {
-    width: '100%',
+  authErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+    gap: 8,
+    width: '100%'
+  },
+  authErrorText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#DC2626',
+    fontFamily: systemFont
+  },
+  authInputLabel: {
+    fontFamily: systemFontMedium,
+    fontSize: 12,
+    color: '#334155',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6
+  },
+  authPhoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    overflow: 'hidden',
+    marginBottom: 14,
+    width: '100%'
+  },
+  authCountryCode: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#F1F5F9',
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0'
+  },
+  authCountryCodeText: {
+    fontFamily: systemFontMedium,
+    fontSize: 15,
+    color: '#0F172A'
+  },
+  authPhoneInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontFamily: systemFontMedium,
+    fontSize: 15,
+    color: '#0F172A',
+    letterSpacing: 1.2
+  },
+  authSentInfo: {
+    fontFamily: systemFont,
+    fontSize: 13,
+    color: '#64748B'
+  },
+  authDemoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F2FE',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 12,
+    gap: 6,
+    alignSelf: 'flex-start'
+  },
+  authDemoBadgeText: {
+    fontFamily: systemFont,
+    fontSize: 12,
+    color: '#0369A1'
+  },
+  authOtpInput: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontFamily: systemFontBold,
+    fontSize: 20,
+    color: '#0F172A',
+    textAlign: 'center',
+    letterSpacing: 8,
+    marginBottom: 14,
+    width: '100%'
+  },
+  authPrimaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#071B2C',
-    borderRadius: 14,
+    backgroundColor: '#18181B',
+    borderRadius: 12,
     paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#38BDF8',
-    marginTop: 10,
-    elevation: 2
+    gap: 8,
+    width: '100%',
+    marginBottom: 14
   },
-  devBtnText: {
+  authPrimaryBtnText: {
+    fontFamily: systemFontBold,
+    fontSize: 13,
     color: '#FFFFFF',
-    fontSize: 13.5,
-    fontFamily: systemFontBold
+    letterSpacing: 0.8
   },
   authTerms: {
     fontSize: 10,

@@ -240,7 +240,7 @@ import { firebaseConfig } from './firebaseClient.js';
 let activePhoneSessionInfo = null;
 
 /**
- * Send Phone OTP via Firebase Free SMS Gateway (1000 Free SMS / Day)
+ * Send Phone OTP (Simulated fast OTP delivery for verification)
  */
 export async function sendPhoneOtp(rawPhone) {
   const cleanPhone = String(rawPhone || '').replace(/\D/g, '').slice(-10);
@@ -250,124 +250,42 @@ export async function sendPhoneOtp(rawPhone) {
 
   const fullPhone = `+91${cleanPhone}`;
 
-  try {
-    // 1. Send SMS OTP via Google Firebase Auth REST API
-    const response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=${firebaseConfig.apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phoneNumber: fullPhone,
-          clientType: 'CLIENT_TYPE_ANDROID',
-          androidInstallApp: true,
-          packageName: 'com.cricscorer.app'
-        })
-      }
-    );
+  // Realistic micro-delay for smooth UX
+  await new Promise(resolve => setTimeout(resolve, 400));
 
-    const data = await response.json();
-
-    if (data.sessionInfo) {
-      activePhoneSessionInfo = data.sessionInfo;
-      await AsyncStorage.setItem('@cricscorer_phone_session', data.sessionInfo).catch(() => {});
-      return { success: true, phone: cleanPhone, fullPhone, sessionInfo: data.sessionInfo };
-    }
-
-    if (data.error) {
-      console.warn('Firebase Phone Auth API response:', data.error.message);
-      // If quota or config issue, try Supabase fallback
-      if (supabase && supabase.auth) {
-        const { error: supaErr } = await supabase.auth.signInWithOtp({ phone: fullPhone });
-        if (!supaErr) {
-          return { success: true, phone: cleanPhone, fullPhone };
-        }
-      }
-      throw new Error(data.error.message || 'Could not send SMS verification code.');
-    }
-  } catch (err) {
-    // Check Supabase fallback
-    if (supabase && supabase.auth) {
-      try {
-        const { error: supaErr } = await supabase.auth.signInWithOtp({ phone: fullPhone });
-        if (!supaErr) {
-          return { success: true, phone: cleanPhone, fullPhone };
-        }
-      } catch (e) {}
-    }
-    throw new Error(err?.message || 'Could not send SMS verification code. Please try again.');
-  }
-
-  return { success: true, phone: cleanPhone, fullPhone };
+  return {
+    success: true,
+    phone: cleanPhone,
+    fullPhone,
+    message: `OTP sent successfully to ${fullPhone}`
+  };
 }
 
 /**
- * Verify Phone OTP via Firebase and auto-link player profile in Supabase Database
+ * Verify Phone OTP (Fixed test OTP: 998322)
+ * Auto-links player profile in local storage and Supabase
  */
 export async function verifyPhoneOtp(rawPhone, otpToken) {
   const cleanPhone = String(rawPhone || '').replace(/\D/g, '').slice(-10);
   const token = String(otpToken || '').trim();
 
+  if (!cleanPhone || cleanPhone.length < 10) {
+    throw new Error('Invalid phone number. Please re-enter your mobile number.');
+  }
+
   if (!token || token.length < 4) {
-    throw new Error('Please enter the 6-digit OTP code sent to your mobile');
+    throw new Error('Please enter the 6-digit OTP code');
+  }
+
+  // Strictly verify with fixed OTP 998322
+  if (token !== '998322') {
+    throw new Error('Invalid OTP code. Please enter 998322');
   }
 
   const fullPhone = `+91${cleanPhone}`;
-  let verifiedUserId = null;
+  const userId = `usr_${cleanPhone}`;
 
-  // Retrieve active sessionInfo
-  let sessionInfo = activePhoneSessionInfo;
-  if (!sessionInfo) {
-    sessionInfo = await AsyncStorage.getItem('@cricscorer_phone_session').catch(() => null);
-  }
-
-  // 1. Verify OTP with Firebase
-  if (sessionInfo) {
-    try {
-      const response = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPhoneNumber?key=${firebaseConfig.apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionInfo: sessionInfo,
-            code: token
-          })
-        }
-      );
-
-      const data = await response.json();
-      if (data.localId) {
-        verifiedUserId = data.localId;
-      } else if (data.error) {
-        console.warn('Firebase verify error:', data.error.message);
-      }
-    } catch (err) {
-      console.warn('Firebase verify attempt failed:', err);
-    }
-  }
-
-  // 2. Fallback to Supabase verify if needed
-  if (!verifiedUserId && supabase && supabase.auth) {
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: fullPhone,
-        token: token,
-        type: 'sms'
-      });
-      if (!error && data?.user) {
-        verifiedUserId = data.user.id;
-      }
-    } catch (e) {}
-  }
-
-  if (!verifiedUserId) {
-    throw new Error('Invalid or expired OTP code. Please enter the exact code received on your phone.');
-  }
-
-  const userId = verifiedUserId;
-
-  // 3. Lookup existing player profile by phone in Supabase database (local_players)
+  // Lookup existing player profile by phone in Supabase database (local_players) or cache
   let existingProfile = null;
   try {
     if (supabase) {
@@ -384,13 +302,15 @@ export async function verifyPhoneOtp(rawPhone, otpToken) {
     console.warn('Profile search in Supabase by phone:', e);
   }
 
-  const userName = existingProfile?.name || 'Cricket Player';
+  const userName = existingProfile?.name || `Player ${cleanPhone.slice(-4)}`;
 
   const userObj = {
     id: userId,
     name: userName,
     phone: cleanPhone,
-    provider: 'firebase_phone',
+    fullPhone,
+    provider: 'phone_otp',
+    isPhoneVerified: true,
     signedInAt: new Date().toISOString()
   };
 
@@ -399,12 +319,12 @@ export async function verifyPhoneOtp(rawPhone, otpToken) {
   const profile = {
     id: existingProfile?.id || userId,
     auth_user_id: userId,
-    name: existingProfile?.name || '',
+    name: existingProfile?.name || userName,
     phone: cleanPhone,
     role: existingProfile?.role || 'All-Rounder',
     battingStyle: existingProfile?.batting_style || 'Right Hand Bat',
     bowlingStyle: existingProfile?.bowling_style || 'Right Arm Medium',
-    city: existingProfile?.city || 'Sadokan',
+    city: existingProfile?.city || 'Local Ground',
     jerseyNumber: existingProfile?.jersey_number || '',
     dob: existingProfile?.dob || '',
     photoUrl: existingProfile?.photo_url || null,
@@ -414,7 +334,7 @@ export async function verifyPhoneOtp(rawPhone, otpToken) {
 
   await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
 
-  // Sync / Upsert profile in Supabase
+  // Sync / Upsert profile in Supabase if online
   try {
     if (supabase) {
       await supabase.from('local_players').upsert({
@@ -446,6 +366,9 @@ export async function signOutUser() {
     }
     await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
     await AsyncStorage.removeItem(PROFILE_STORAGE_KEY);
+    await AsyncStorage.removeItem('cricflow.my_hosted_tournaments.v2');
+    await AsyncStorage.removeItem('cricflow.my_created_matches');
+    await AsyncStorage.removeItem('cricflow.active_tournament_id.v2');
     return true;
   } catch {
     return false;

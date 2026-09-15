@@ -17,7 +17,10 @@ export const FinishedMatchCardItem = React.memo(function FinishedMatchCardItem({
   const teamTwoScore = getScorePartsFromText(match.team2?.score);
   const resultCardText = getFinishedResultCardText(match);
   const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
-  const subtitleText = `${match.maxOvers || 5} Overs • ${match.venue || 'Sadokan Ground'}`;
+  const tourName = match.tournamentName || match.tournamentTitle || match.seriesName || '';
+  const subtitleText = tourName
+    ? `${tourName} • ${match.maxOvers || 5} Overs`
+    : `${match.maxOvers || 5} Overs • ${match.venue || 'Sadokan Ground'}`;
 
   return (
     <View style={[{ marginBottom: 10 }, style]}>

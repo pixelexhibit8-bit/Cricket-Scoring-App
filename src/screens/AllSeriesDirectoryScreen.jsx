@@ -19,6 +19,8 @@ import {
   systemFontBold
 } from '../theme.js';
 import { getTournaments } from '../services/tournamentService.js';
+import { getCurrentUser } from '../services/authService.js';
+import { PhoneLoginModal } from '../components/modals/PhoneLoginModal.jsx';
 import { useMatch } from '../context/MatchContext.jsx';
 
 export function AllSeriesDirectoryScreen(props = {}) {
@@ -47,6 +49,7 @@ export function AllSeriesDirectoryScreen(props = {}) {
   // Custom Tournaments from Database / Storage
   const [customTournaments, setCustomTournaments] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
 
   const loadTournaments = React.useCallback(async () => {
     try {
@@ -87,7 +90,16 @@ export function AllSeriesDirectoryScreen(props = {}) {
     }
   };
 
-  const handleHostTournament = () => {
+  const handleHostTournament = async () => {
+    const user = await getCurrentUser();
+    if (!user) {
+      setLoginModalVisible(true);
+    } else if (navigation) {
+      navigation.navigate('CreateTournament');
+    }
+  };
+
+  const handleLoginSuccess = () => {
     if (navigation) {
       navigation.navigate('CreateTournament');
     }
@@ -222,6 +234,14 @@ export function AllSeriesDirectoryScreen(props = {}) {
             </View>
           )}
         </ScrollView>
+
+        <PhoneLoginModal
+          visible={loginModalVisible}
+          onClose={() => setLoginModalVisible(false)}
+          onSuccess={handleLoginSuccess}
+          title="Host a Tournament"
+          subtitle="Please verify your mobile number to host tournaments and manage points tables."
+        />
       </View>
     </SafeAreaView>
   );

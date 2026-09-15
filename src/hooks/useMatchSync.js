@@ -12,6 +12,10 @@ import {
 import { buildFinishedMatch } from '../utils/cricketUtils.js';
 import { aggregateMatchToPlayerStats } from '../services/localPlayerService.js';
 import { showToast } from '../services/toastService.js';
+import {
+  syncFinishedMatchToTournament,
+  syncLiveMatchToTournament
+} from '../services/tournamentService.js';
 
 const STORAGE_KEY = '@cricflow_app_state_v3';
 
@@ -245,6 +249,14 @@ export function useMatchSync({
         return [finishedMatch, ...current];
       });
       aggregateMatchToPlayerStats(finishedMatch).catch(() => { });
+
+      // Automatically sync finished match to parent tournament and recalculate Points Table
+      if (activeMatch.tournamentId) {
+        syncFinishedMatchToTournament(activeMatch.tournamentId, {
+          ...finishedMatch,
+          tournamentMatchId: activeMatch.tournamentMatchId || finishedMatch.id
+        }).catch(err => console.warn('[useMatchSync] Tournament auto-sync error:', err));
+      }
     }
   }, [activeMatch?.phase]);
 
