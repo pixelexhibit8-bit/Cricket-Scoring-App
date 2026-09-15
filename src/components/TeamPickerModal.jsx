@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,6 +15,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { systemFont, systemFontMedium, systemFontBold } from '../theme';
 import { MatchTabBar } from './MatchTabBar';
 import { capitalizeWords } from '../utils/textUtils.js';
+import { fetchGlobalTeams, saveGlobalTeam, searchGlobalTeams } from '../services/teamService.js';
 
 const PRESET_LOGOS = [
   { id: 'logo_default', name: 'CricFlow Logo', source: require('../../assets/logo.png') },
@@ -36,6 +37,17 @@ export function TeamPickerModal({
   const [activeTab, setActiveTab] = useState('yourTeams'); // 'yourTeams' | 'opponents' | 'add'
   const [searchQuery, setSearchQuery] = useState('');
   const [tabLayouts, setTabLayouts] = useState({});
+  const [directoryTeams, setDirectoryTeams] = useState([]);
+
+  useEffect(() => {
+    if (visible) {
+      fetchGlobalTeams().then(teams => {
+        if (Array.isArray(teams)) {
+          setDirectoryTeams(teams);
+        }
+      }).catch(() => {});
+    }
+  }, [visible]);
 
   // Form state for Create Team (Add tab)
   const [newTeamName, setNewTeamName] = useState('');
@@ -60,6 +72,8 @@ export function TeamPickerModal({
       logoUri: selectedLogo
     };
 
+    saveGlobalTeam(newTeamObj).catch(() => {});
+
     if (typeof onCreateTeam === 'function') {
       onCreateTeam(newTeamObj, targetSlot);
     }
@@ -70,12 +84,18 @@ export function TeamPickerModal({
     setAddSelf(false);
   };
 
-  const filteredYourTeams = savedTeams.filter(t =>
-    t.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredOpponents = opponentTeams.filter(t =>
-    t.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const allCombinedTeams = [...(Array.isArray(savedTeams) ? savedTeams : []), ...directoryTeams];
+  const uniqueTeamsMap = new Map();
+  allCombinedTeams.forEach(t => {
+    if (t && t.name) {
+      const k = t.name.trim().toLowerCase();
+      if (!uniqueTeamsMap.has(k)) uniqueTeamsMap.set(k, t);
+    }
+  });
+  const allUniqueTeams = Array.from(uniqueTeamsMap.values());
+
+  const filteredYourTeams = searchGlobalTeams(searchQuery, allUniqueTeams);
+  const filteredOpponents = searchGlobalTeams(searchQuery, opponentTeams.length > 0 ? opponentTeams : allUniqueTeams);
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>

@@ -20,6 +20,7 @@ export const TournamentTeamsTab = React.memo(function TournamentTeamsTab({
   onSelectTeam,
   onAddTeam,
   onShareInvite,
+  onOpenCaptainRegistration,
   isUserOrganiser
 }) {
   const teams = Array.isArray(tournament?.teams) ? tournament.teams : [];
@@ -48,10 +49,21 @@ export const TournamentTeamsTab = React.memo(function TournamentTeamsTab({
             activeOpacity={0.85}
           >
             <Ionicons name="add-circle-outline" size={16} color={themeColors.textPrimary} />
-            <Text style={styles.addTeamText}>Add Team</Text>
+            <Text style={styles.addTeamText}>+ Add Team</Text>
           </TouchableOpacity>
         </View>
-      ) : null}
+      ) : (
+        <View style={styles.captainActionBar}>
+          <TouchableOpacity
+            style={styles.captainRegisterBtn}
+            onPress={onOpenCaptainRegistration}
+            activeOpacity={0.85}
+          >
+            <MaterialCommunityIcons name="shield-plus-outline" size={18} color="#FFFFFF" />
+            <Text style={styles.captainRegisterBtnText}>Register Your Team (Captain)</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── TEAMS LIST ── */}
       {teams.length > 0 ? (
@@ -97,8 +109,8 @@ export const TournamentTeamsTab = React.memo(function TournamentTeamsTab({
           <Text style={styles.emptyTitle}>No Teams Registered Yet</Text>
           <Text style={styles.emptySubtitle}>
             {isUserOrganiser
-              ? 'Add teams manually or share the tournament link with team captains to let them register.'
-              : 'The organizer has not registered teams for this tournament yet.'}
+              ? 'Add teams manually, search saved ground teams, or share the tournament code with captains.'
+              : 'The organizer has not registered teams for this tournament yet. Captains can register their squad below.'}
           </Text>
           {isUserOrganiser ? (
             <TouchableOpacity
@@ -108,7 +120,15 @@ export const TournamentTeamsTab = React.memo(function TournamentTeamsTab({
             >
               <Text style={styles.emptyActionBtnText}>+ Add First Team</Text>
             </TouchableOpacity>
-          ) : null}
+          ) : (
+            <TouchableOpacity
+              style={styles.emptyActionBtn}
+              onPress={onOpenCaptainRegistration}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.emptyActionBtnText}>Register Team Now</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </ScrollView>
@@ -233,6 +253,23 @@ const styles = StyleSheet.create({
   emptyActionBtnText: {
     color: '#FFFFFF',
     fontSize: 12,
+    fontFamily: systemFontBold
+  },
+  captainActionBar: {
+    marginBottom: 12
+  },
+  captainRegisterBtn: {
+    backgroundColor: '#18181B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 42,
+    borderRadius: 10
+  },
+  captainRegisterBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontFamily: systemFontBold
   }
 });

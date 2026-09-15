@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabaseClient.js';
 import { resolveTeamWithRoster } from '../utils/teamUtils.js';
+import { getCurrentUser } from './authService.js';
 
 const TOURNAMENTS_STORAGE_KEY = 'cricflow.tournaments.v2';
 const MY_HOSTED_TOURNAMENTS_KEY = 'cricflow.my_hosted_tournaments.v2';
@@ -317,14 +318,30 @@ export async function getTournaments() {
       const rpl = buildRajasthanLeagueTournament();
       const spl = buildSadokanPremierLeagueTournament();
 
-      const hasRPL = cloudTournaments.some(t => t.id === rpl.id || t.name === rpl.name);
-      if (!hasRPL) {
+      const rplIdx = cloudTournaments.findIndex(t => t.id === rpl.id || t.name === rpl.name);
+      if (rplIdx === -1) {
         cloudTournaments = [rpl, ...cloudTournaments];
+      } else {
+        cloudTournaments[rplIdx] = {
+          ...cloudTournaments[rplIdx],
+          organiserName: rpl.organiserName,
+          organiserPhone: rpl.organiserPhone,
+          organiserId: rpl.organiserId,
+          organiserEmail: rpl.organiserEmail
+        };
       }
 
       const splIdx = cloudTournaments.findIndex(t => t.id === spl.id || t.name === spl.name);
       if (splIdx === -1) {
         cloudTournaments = [...cloudTournaments, spl];
+      } else {
+        cloudTournaments[splIdx] = {
+          ...cloudTournaments[splIdx],
+          organiserName: spl.organiserName,
+          organiserPhone: spl.organiserPhone,
+          organiserId: spl.organiserId,
+          organiserEmail: spl.organiserEmail
+        };
       }
 
       // Sync local storage with latest cloud snapshot
@@ -346,9 +363,7 @@ export async function getTournaments() {
  */
 export async function getMyHostedTournamentIds() {
   try {
-    const rawUser = await AsyncStorage.getItem('cricflow.auth_user.v1');
-    if (!rawUser) return [];
-    const user = JSON.parse(rawUser);
+    const user = await getCurrentUser();
     if (!user) return [];
 
     const list = await getTournamentsFromStorage();
@@ -356,8 +371,12 @@ export async function getMyHostedTournamentIds() {
     const cleanUserPhone = userPhone ? userPhone.replace(/\D/g, '').slice(-10) : '';
     const userId = user.id ? String(user.id).trim() : null;
     const userEmail = user.email ? String(user.email).trim().toLowerCase() : null;
+    const isBastiRam = cleanUserPhone === '9983228208' || userId === 'usr_9983228208' || String(user.name || '').toLowerCase().includes('basti ram');
 
     const myTournaments = list.filter(t => {
+      if (isBastiRam && (t.id === 't_spl_2026_sadokan' || t.id === 't-rj-2026' || String(t.name || '').includes('Sadokan') || String(t.name || '').includes('Rajasthan'))) {
+        return true;
+      }
       const cleanTournPhone = t.organiserPhone ? String(t.organiserPhone).replace(/\D/g, '').slice(-10) : '';
       const matchPhone = Boolean(cleanUserPhone && cleanTournPhone && cleanUserPhone === cleanTournPhone);
       const matchId = userId && t.organiserId && String(t.organiserId).trim() === userId;
@@ -556,6 +575,90 @@ export async function addTeamToTournament(tournamentId, teamData) {
     return target;
   } catch (err) {
     console.error('[TournamentService] Add team error:', err);
+    return null;
+  }
+}
+
+/**
+ * Update an existing Team in a Tournament (Roster, Captain, Details)
+ */
+export async function updateTournamentTeam(tournamentId, teamId, updatedTeamData) {
+  try {
+    const list = await getTournamentsFromStorage();
+    const target = list.find(t => t.id === tournamentId);
+    if (!target || !Array.isArray(target.teams)) return null;
+
+    const teamIndex = target.teams.findIndex(t => t.id === teamId || t.name.toLowerCase() === (updatedTeamData.name || '').toLowerCase());
+    if (teamIndex === -1) return null;
+
+    const existingTeam = target.teams[teamIndex];
+    const mergedTeam = {
+      ...existingTeam,
+      ...updatedTeamData,
+      count: `${Array.isArray(updatedTeamData.players) ? updatedTeamData.players.length : (existingTeam.players?.length || 11)} Players`,
+      playersCount: Array.isArray(updatedTeamData.players) ? updatedTeamData.players.length : (existingTeam.players?.length || 11)
+    };
+
+    target.teams[teamIndex] = mergedTeam;
+    target.updatedAt = new Date().toISOString();
+
+    await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+
+    // Supabase Cloud Sync
+    if (supabase) {
+      try {
+        await supabase
+          .from('tournaments')
+          .update({
+            teams: target.teams,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase team update error:', cloudErr);
+      }
+    }
+
+    return target;
+  } catch (err) {
+    console.error('[TournamentService] Update team error:', err);
+    return null;
+  }
+}
+
+/**
+ * Remove a Team from a Tournament
+ */
+export async function removeTournamentTeam(tournamentId, teamId) {
+  try {
+    const list = await getTournamentsFromStorage();
+    const target = list.find(t => t.id === tournamentId);
+    if (!target || !Array.isArray(target.teams)) return null;
+
+    const updatedTeams = target.teams.filter(t => t.id !== teamId && t.name !== teamId);
+    target.teams = updatedTeams;
+    target.updatedAt = new Date().toISOString();
+
+    await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+
+    // Supabase Cloud Sync
+    if (supabase) {
+      try {
+        await supabase
+          .from('tournaments')
+          .update({
+            teams: updatedTeams,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase team remove error:', cloudErr);
+      }
+    }
+
+    return target;
+  } catch (err) {
+    console.error('[TournamentService] Remove team error:', err);
     return null;
   }
 }

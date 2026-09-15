@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,9 @@ import {
   systemFontBold
 } from '../../theme.js';
 import { showToast } from '../../services/toastService.js';
+import { fetchGlobalTeams, saveGlobalTeam, searchGlobalTeams } from '../../services/teamService.js';
+import { BulkSquadPasteModal } from './BulkSquadPasteModal.jsx';
+import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 
 const DEFAULT_COLOR_SWATCHES = [
   '#18181B', // Jet Black
@@ -45,6 +48,9 @@ export function AddTeamHubModal({
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Global Teams Pool
+  const [globalTeams, setGlobalTeams] = useState([]);
+
   // Manual Form State
   const [teamName, setTeamName] = useState('');
   const [city, setCity] = useState(tournament?.city || tournament?.host || '');
@@ -52,6 +58,19 @@ export function AddTeamHubModal({
   const [captainPhone, setCaptainPhone] = useState('');
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLOR_SWATCHES[0]);
   const [logoUri, setLogoUri] = useState(null);
+  const [squadPlayers, setSquadPlayers] = useState([]);
+  const [bulkPasteModalVisible, setBulkPasteModalVisible] = useState(false);
+
+  // Load global teams directory on open
+  useEffect(() => {
+    if (visible) {
+      fetchGlobalTeams().then(teams => {
+        if (Array.isArray(teams)) {
+          setGlobalTeams(teams);
+        }
+      }).catch(() => {});
+    }
+  }, [visible]);
 
   // Tournament Code Generator
   const tournamentCode = useMemo(() => {
@@ -65,34 +84,23 @@ export function AddTeamHubModal({
     return `CF-${cleanPrefix}${cleanSuffix}`;
   }, [tournament]);
 
-  // Combined Saved Teams Pool (organizer's ground teams)
+  // Combined Saved Teams Pool (Global + Props)
   const allAvailableTeams = useMemo(() => {
-    const list = Array.isArray(savedTeams) ? savedTeams : [];
-    // Fallback default local teams if none saved
-    const defaults = [
-      { id: 'st_1', name: 'Sadokan Super Kings', shortName: 'SSK', city: tournament?.city || 'Jaipur', captainName: 'Bastiram', color: '#1D4ED8' },
-      { id: 'st_2', name: 'Nagaur Blasters', shortName: 'NGB', city: 'Nagaur', captainName: 'Virender', color: '#DC2626' },
-      { id: 'st_3', name: 'Turf Gladiators', shortName: 'TGL', city: 'Turf Club', captainName: 'Rahul', color: '#059669' },
-      { id: 'st_4', name: 'Royal Strikers CC', shortName: 'RSC', city: 'Local Ground', captainName: 'Pooja', color: '#D97706' }
-    ];
-    const combined = [...list];
-    defaults.forEach(d => {
-      if (!combined.some(c => (c.name || '').toLowerCase() === d.name.toLowerCase())) {
-        combined.push(d);
+    const combined = [...(Array.isArray(savedTeams) ? savedTeams : []), ...globalTeams];
+    const map = new Map();
+    combined.forEach(t => {
+      if (t && t.name) {
+        const key = t.name.trim().toLowerCase();
+        if (!map.has(key)) map.set(key, t);
       }
     });
-    return combined;
-  }, [savedTeams, tournament]);
+    return Array.from(map.values());
+  }, [savedTeams, globalTeams]);
 
   // Search Results
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase().trim();
-    return allAvailableTeams.filter(t => 
-      (t.name || '').toLowerCase().includes(q) ||
-      (t.city || '').toLowerCase().includes(q) ||
-      (t.captainName || '').toLowerCase().includes(q)
-    );
+    return searchGlobalTeams(searchQuery, allAvailableTeams);
   }, [searchQuery, allAvailableTeams]);
 
   // Pick Team Logo Image (1:1 Aspect Ratio)
@@ -126,7 +134,7 @@ export function AddTeamHubModal({
       const tourCity = tournament?.city || tournament?.host || 'Local Ground';
       const tourDates = tournament?.duration || tournament?.startDate || 'Season 2026';
       
-      const msg = `🏏 *Team Registration Open: ${tourName}*\n📍 *Location:* ${tourCity}\n📅 *Dates:* ${tourDates}\n\n📲 *Captains, register your team & squad directly on CricFlow:*\n👉 Registration Link: https://cricflow.live/join/${tournamentCode}\n🔑 In-App Join Code: *${tournamentCode}*\n\nTrack ball-by-ball live scoring, leaderboard stats, and points table in real-time!`;
+      const msg = `*Team Registration Open: ${tourName}*\n*Location:* ${tourCity}\n*Dates:* ${tourDates}\n\n*Captains, register your team & squad directly on CricFlow:*\nIn-App Join Code: *${tournamentCode}*\n\nTrack ball-by-ball live scoring, leaderboard stats, and points table in real-time!`;
 
       await Share.share({
         message: msg,
@@ -137,29 +145,48 @@ export function AddTeamHubModal({
     }
   };
 
+  // Handle WhatsApp squad paste result
+  const handleImportSquad = (parsedPlayers) => {
+    setSquadPlayers(parsedPlayers);
+    const capt = parsedPlayers.find(p => p.isCaptain);
+    if (capt && !captainName.trim()) {
+      setCaptainName(capt.name);
+    }
+    if (capt && capt.phone && !captainPhone.trim()) {
+      setCaptainPhone(capt.phone);
+    }
+  };
+
   // Handle Save Manual Team
-  const handleSaveTeam = (continueAdding = false) => {
+  const handleSaveTeam = async (continueAdding = false) => {
     if (!teamName.trim()) {
       Alert.alert('Required Field', 'Please enter Team Name.');
       return;
     }
 
     const cleanTeamName = teamName.trim();
+    const finalPlayers = squadPlayers.length > 0 ? squadPlayers : [
+      { id: `p_${Date.now()}_1`, name: captainName.trim() || 'Captain', role: 'All-Rounder', isCaptain: true, phone: captainPhone.trim() }
+    ];
+
     const newTeamData = {
       id: `team_${Date.now()}`,
       name: cleanTeamName,
       shortName: cleanTeamName.slice(0, 4).toUpperCase(),
       city: city.trim() || tournament?.city || 'Local Ground',
-      captainName: captainName.trim() || 'Captain',
-      captainPhone: captainPhone.trim() || '',
+      captainName: captainName.trim() || (finalPlayers[0]?.name || 'Captain'),
+      captainPhone: captainPhone.trim() || (finalPlayers[0]?.phone || ''),
       color: selectedColor,
       cardBg: `${selectedColor}15`,
       logoUri: logoUri,
       icon: 'shield-half-full',
-      count: '11 Players',
-      playersCount: 11,
-      players: []
+      count: `${finalPlayers.length} Players`,
+      playersCount: finalPlayers.length,
+      players: finalPlayers
     };
+
+    // Save to global directory
+    saveGlobalTeam(newTeamData).catch(() => {});
 
     if (onAddTeam) {
       onAddTeam(newTeamData);
@@ -173,6 +200,7 @@ export function AddTeamHubModal({
       setCaptainName('');
       setCaptainPhone('');
       setLogoUri(null);
+      setSquadPlayers([]);
     } else {
       // Close modal
       handleClose();
@@ -181,6 +209,7 @@ export function AddTeamHubModal({
 
   // Handle Quick Add from Search or Saved List
   const handleQuickAddTeam = (teamItem) => {
+    const rawPlayers = Array.isArray(teamItem.players) ? teamItem.players : [];
     const teamData = {
       id: teamItem.id || `team_${Date.now()}`,
       name: teamItem.name,
@@ -191,10 +220,11 @@ export function AddTeamHubModal({
       color: teamItem.color || selectedColor,
       cardBg: `${teamItem.color || selectedColor}15`,
       logoUri: teamItem.logoUri || null,
+      logoKey: teamItem.logoKey || null,
       icon: 'shield-half-full',
-      count: teamItem.count || '11 Players',
-      playersCount: 11,
-      players: teamItem.players || []
+      count: teamItem.count || `${rawPlayers.length || 11} Players`,
+      playersCount: rawPlayers.length || 11,
+      players: rawPlayers
     };
 
     if (onAddTeam) {
@@ -210,6 +240,7 @@ export function AddTeamHubModal({
     setCaptainName('');
     setCaptainPhone('');
     setLogoUri(null);
+    setSquadPlayers([]);
     setSearchQuery('');
     setActiveMode('MANUAL');
     if (onClose) onClose();
@@ -238,12 +269,12 @@ export function AddTeamHubModal({
             </TouchableOpacity>
           </View>
 
-          {/* ── 1. LIVE SEARCH BAR (Search Existing Ground Teams) ── */}
+          {/* ── 1. LIVE SEARCH BAR (Search All Global Ground Teams) ── */}
           <View style={styles.searchBarWrap}>
             <Ionicons name="search" size={18} color={themeColors.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search existing ground / club teams..."
+              placeholder="Search existing ground teams / clubs..."
               placeholderTextColor={themeColors.textSubtle}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -261,25 +292,30 @@ export function AddTeamHubModal({
             <View style={styles.searchResultsBox}>
               <Text style={styles.searchResultsLabel}>SEARCH RESULTS ({searchResults.length})</Text>
               {searchResults.length > 0 ? (
-                <ScrollView style={{ maxHeight: 180 }} showsVerticalScrollIndicator={false}>
-                  {searchResults.map((st) => (
-                    <View key={st.id || st.name} style={styles.searchResultRow}>
-                      <View style={[styles.teamMiniIcon, { backgroundColor: `${st.color || '#18181B'}15` }]}>
-                        <MaterialCommunityIcons name="shield-half-full" size={18} color={st.color || '#18181B'} />
+                <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
+                  {searchResults.map((st) => {
+                    const squadCount = Array.isArray(st.players) ? st.players.length : (st.playersCount || 11);
+                    return (
+                      <View key={st.id || st.name} style={styles.searchResultRow}>
+                        <View style={styles.teamMiniIcon}>
+                          <TeamIdentityMark team={st} size={32} />
+                        </View>
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <Text style={styles.searchResultName}>{st.name}</Text>
+                          <Text style={styles.searchResultSub}>
+                            {st.city || 'Local Ground'} • {squadCount} Players • Capt: {st.captainName || 'Captain'}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.quickAddBtn}
+                          onPress={() => handleQuickAddTeam(st)}
+                        >
+                          <Ionicons name="add" size={16} color="#FFFFFF" />
+                          <Text style={styles.quickAddBtnText}>Add</Text>
+                        </TouchableOpacity>
                       </View>
-                      <View style={{ flex: 1, marginLeft: 10 }}>
-                        <Text style={styles.searchResultName}>{st.name}</Text>
-                        <Text style={styles.searchResultSub}>{st.city || 'Local Ground'} • Capt: {st.captainName || 'Captain'}</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.quickAddBtn}
-                        onPress={() => handleQuickAddTeam(st)}
-                      >
-                        <Ionicons name="add" size={16} color="#FFFFFF" />
-                        <Text style={styles.quickAddBtnText}>Add</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </ScrollView>
               ) : (
                 <Text style={styles.noResultsText}>No existing team found. Add it manually below!</Text>
@@ -298,6 +334,14 @@ export function AddTeamHubModal({
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={[styles.modeTabPill, activeMode === 'SAVED' && styles.modeTabPillActive]}
+              onPress={() => setActiveMode('SAVED')}
+            >
+              <MaterialCommunityIcons name="star-outline" size={16} color={activeMode === 'SAVED' ? '#FFFFFF' : themeColors.textSecondary} />
+              <Text style={[styles.modeTabText, activeMode === 'SAVED' && styles.modeTabTextActive]}>Saved Teams ({allAvailableTeams.length})</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.modeTabPill, activeMode === 'SHARE' && styles.modeTabPillActive]}
               onPress={() => setActiveMode('SHARE')}
             >
@@ -306,19 +350,11 @@ export function AddTeamHubModal({
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.modeTabPill, activeMode === 'SAVED' && styles.modeTabPillActive]}
-              onPress={() => setActiveMode('SAVED')}
-            >
-              <MaterialCommunityIcons name="star-outline" size={16} color={activeMode === 'SAVED' ? '#FFFFFF' : themeColors.textSecondary} />
-              <Text style={[styles.modeTabText, activeMode === 'SAVED' && styles.modeTabTextActive]}>Your Teams</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={[styles.modeTabPill, activeMode === 'QR' && styles.modeTabPillActive]}
               onPress={() => setActiveMode('QR')}
             >
               <Ionicons name="qr-code-outline" size={15} color={activeMode === 'QR' ? '#FFFFFF' : themeColors.textSecondary} />
-              <Text style={[styles.modeTabText, activeMode === 'QR' && styles.modeTabTextActive]}>QR Scan</Text>
+              <Text style={[styles.modeTabText, activeMode === 'QR' && styles.modeTabTextActive]}>QR Code</Text>
             </TouchableOpacity>
           </View>
 
@@ -406,11 +442,51 @@ export function AddTeamHubModal({
                   <Text style={styles.inputLabel}>CAPTAIN NAME (OPTIONAL)</Text>
                   <TextInput
                     style={styles.modalTextInput}
-                    placeholder="e.g. Shivi Sharma"
+                    placeholder="e.g. Bastiram"
                     placeholderTextColor={themeColors.textSubtle}
                     value={captainName}
                     onChangeText={setCaptainName}
                   />
+                </View>
+
+                {/* ── SQUAD ROSTER / WHATSAPP BULK IMPORT BOX ── */}
+                <View style={styles.squadBoxSection}>
+                  <View style={styles.squadBoxHeader}>
+                    <View>
+                      <Text style={styles.inputLabel}>TEAM SQUAD PLAYERS</Text>
+                      <Text style={styles.squadCountSub}>
+                        {squadPlayers.length > 0 ? `${squadPlayers.length} Players in Roster` : 'Paste squad from WhatsApp in 1 click'}
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.pasteSquadBtn}
+                      onPress={() => setBulkPasteModalVisible(true)}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="logo-whatsapp" size={15} color="#16A34A" />
+                      <Text style={styles.pasteSquadBtnText}>
+                        {squadPlayers.length > 0 ? 'Edit / Paste Squad' : 'Paste WhatsApp Squad'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {squadPlayers.length > 0 && (
+                    <View style={styles.squadPreviewChipsList}>
+                      {squadPlayers.slice(0, 11).map((p, idx) => (
+                        <View key={p.id || idx} style={styles.playerChip}>
+                          <Text style={styles.playerChipName}>{p.name}</Text>
+                          {p.isCaptain && <Text style={styles.captainBadge}>C</Text>}
+                          {p.isWicketKeeper && <Text style={styles.wkBadge}>WK</Text>}
+                        </View>
+                      ))}
+                      {squadPlayers.length > 11 && (
+                        <View style={styles.morePlayersChip}>
+                          <Text style={styles.morePlayersText}>+{squadPlayers.length - 11} more</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </View>
 
                 {/* Color Swatches */}
@@ -498,27 +574,32 @@ export function AddTeamHubModal({
             {/* ── MODE 3: YOUR SAVED TEAMS ── */}
             {activeMode === 'SAVED' && (
               <View style={styles.savedTeamsContainer}>
-                <Text style={styles.savedTeamsHeading}>Previously Scored Ground Teams ({allAvailableTeams.length})</Text>
+                <Text style={styles.savedTeamsHeading}>Ground Teams Directory ({allAvailableTeams.length})</Text>
                 <View style={styles.savedTeamsList}>
-                  {allAvailableTeams.map((st) => (
-                    <View key={st.id || st.name} style={styles.savedTeamCard}>
-                      <View style={[styles.savedTeamIcon, { backgroundColor: `${st.color || '#18181B'}15` }]}>
-                        <MaterialCommunityIcons name="shield-half-full" size={20} color={st.color || '#18181B'} />
+                  {allAvailableTeams.map((st) => {
+                    const squadCount = Array.isArray(st.players) ? st.players.length : (st.playersCount || 11);
+                    return (
+                      <View key={st.id || st.name} style={styles.savedTeamCard}>
+                        <View style={styles.savedTeamIcon}>
+                          <TeamIdentityMark team={st} size={36} />
+                        </View>
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <Text style={styles.savedTeamName}>{st.name}</Text>
+                          <Text style={styles.savedTeamSub}>
+                            {st.city || 'Local Ground'} • {squadCount} Players • Capt: {st.captainName || 'Captain'}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.quickAddPillBtn}
+                          onPress={() => handleQuickAddTeam(st)}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="add" size={16} color="#FFFFFF" />
+                          <Text style={styles.quickAddPillBtnText}>Add</Text>
+                        </TouchableOpacity>
                       </View>
-                      <View style={{ flex: 1, marginLeft: 10 }}>
-                        <Text style={styles.savedTeamName}>{st.name}</Text>
-                        <Text style={styles.savedTeamSub}>{st.city || 'Local Ground'} • Capt: {st.captainName || 'Captain'}</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.quickAddPillBtn}
-                        onPress={() => handleQuickAddTeam(st)}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="add" size={16} color="#FFFFFF" />
-                        <Text style={styles.quickAddPillBtnText}>Add</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               </View>
             )}
@@ -548,6 +629,14 @@ export function AddTeamHubModal({
               </View>
             )}
           </ScrollView>
+
+          {/* WhatsApp Bulk Squad Paste Sub-Modal */}
+          <BulkSquadPasteModal
+            visible={bulkPasteModalVisible}
+            onClose={() => setBulkPasteModalVisible(false)}
+            onImportPlayers={handleImportSquad}
+            teamName={teamName || 'Your Team'}
+          />
         </Pressable>
       </Pressable>
     </Modal>
@@ -567,7 +656,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: 16,
     paddingBottom: 24,
-    maxHeight: '90%'
+    maxHeight: '92%'
   },
   modalHandle: {
     width: 40,
@@ -634,9 +723,8 @@ const styles = StyleSheet.create({
     borderBottomColor: themeColors.border
   },
   teamMiniIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -654,28 +742,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#18181B',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8
   },
   quickAddBtnText: {
     color: '#FFFFFF',
-    fontSize: 11.5,
+    fontSize: 12,
     fontFamily: systemFontBold
   },
   noResultsText: {
     fontSize: 12,
     fontFamily: systemFont,
     color: themeColors.textMuted,
-    textAlign: 'center',
-    paddingVertical: 8
+    paddingVertical: 8,
+    textAlign: 'center'
   },
   modeTabsRow: {
     flexDirection: 'row',
     gap: 6,
     marginTop: 10,
-    marginBottom: 6
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: themeColors.border
   },
   modeTabPill: {
     flex: 1,
@@ -683,11 +773,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    paddingVertical: 8,
+    borderRadius: 8,
     backgroundColor: themeColors.surfaceOffWhite,
     borderWidth: 1,
-    borderColor: themeColors.borderDark,
-    paddingVertical: 8,
-    borderRadius: 10
+    borderColor: themeColors.border
   },
   modeTabPillActive: {
     backgroundColor: '#18181B',
@@ -703,7 +793,7 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold
   },
   modalScrollBody: {
-    marginTop: 4
+    marginTop: 8
   },
   modalScrollContent: {
     paddingBottom: 20
@@ -714,26 +804,26 @@ const styles = StyleSheet.create({
   },
   logoPickerCenter: {
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6
+    marginBottom: 4
   },
   circularLogoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     borderWidth: 2,
+    overflow: 'visible',
+    position: 'relative',
     alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative'
+    justifyContent: 'center'
   },
   circularLogoImg: {
-    width: '100%',
-    height: '100%',
+    width: 64,
+    height: 64,
     borderRadius: 32
   },
   logoPlaceholder: {
-    width: '100%',
-    height: '100%',
+    width: 64,
+    height: 64,
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center'
@@ -744,35 +834,36 @@ const styles = StyleSheet.create({
   },
   cameraIconBadge: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
+    bottom: 0,
+    right: 0,
     backgroundColor: '#18181B',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#FFFFFF'
   },
   logoPickerHint: {
     fontSize: 11,
     fontFamily: systemFont,
-    color: themeColors.textMuted
+    color: themeColors.textMuted,
+    marginTop: 6
   },
   inputGroup: {
     gap: 4
   },
   inputLabel: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontFamily: systemFontBold,
-    color: themeColors.textMuted,
-    letterSpacing: 0.6
+    color: themeColors.textSecondary,
+    letterSpacing: 0.5
   },
   inputHint: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontFamily: systemFont,
-    color: '#059669'
+    color: themeColors.textMuted
   },
   modalTextInput: {
     backgroundColor: themeColors.surfaceOffWhite,
@@ -780,7 +871,7 @@ const styles = StyleSheet.create({
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    height: 42,
     fontSize: 13,
     fontFamily: systemFont,
     color: themeColors.textPrimary
@@ -793,48 +884,131 @@ const styles = StyleSheet.create({
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingHorizontal: 12,
+    height: 42,
     gap: 8
   },
   phoneTextInput: {
     flex: 1,
-    paddingVertical: 9,
     fontSize: 13,
     fontFamily: systemFont,
     color: themeColors.textPrimary
   },
+  squadBoxSection: {
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+    borderRadius: 12,
+    padding: 12
+  },
+  squadBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  squadCountSub: {
+    fontSize: 11,
+    fontFamily: systemFont,
+    color: themeColors.textMuted,
+    marginTop: 2
+  },
+  pasteSquadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8
+  },
+  pasteSquadBtnText: {
+    fontSize: 11.5,
+    fontFamily: systemFontBold,
+    color: '#16A34A'
+  },
+  squadPreviewChipsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10
+  },
+  playerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: themeColors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6
+  },
+  playerChipName: {
+    fontSize: 11.5,
+    fontFamily: systemFontMedium,
+    color: themeColors.textPrimary
+  },
+  captainBadge: {
+    backgroundColor: '#18181B',
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontFamily: systemFontBold,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3
+  },
+  wkBadge: {
+    backgroundColor: '#0284C7',
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontFamily: systemFontBold,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3
+  },
+  morePlayersChip: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6
+  },
+  morePlayersText: {
+    fontSize: 11,
+    fontFamily: systemFontMedium,
+    color: themeColors.textMuted
+  },
   swatchesRow: {
     flexDirection: 'row',
-    gap: 12,
-    paddingVertical: 4
+    gap: 10
   },
   colorSwatch: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center'
   },
   colorSwatchActive: {
     borderWidth: 2,
-    borderColor: '#0F172A',
-    transform: [{ scale: 1.1 }]
+    borderColor: '#0284C7'
   },
   dualActionRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 8
+    marginTop: 6
   },
   addMoreBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 6,
     backgroundColor: themeColors.surfaceOffWhite,
     borderWidth: 1,
     borderColor: themeColors.borderDark,
-    borderRadius: 10,
-    height: 44
+    height: 44,
+    borderRadius: 10
   },
   addMoreBtnText: {
     fontSize: 12.5,
@@ -842,14 +1016,14 @@ const styles = StyleSheet.create({
     color: themeColors.textPrimary
   },
   saveDoneBtn: {
-    flex: 1.2,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     backgroundColor: '#18181B',
-    borderRadius: 10,
-    height: 44
+    height: 44,
+    borderRadius: 10
   },
   saveDoneBtnText: {
     fontSize: 12.5,
@@ -857,47 +1031,49 @@ const styles = StyleSheet.create({
     color: '#FFFFFF'
   },
   shareCardContainer: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12
+    gap: 14,
+    paddingTop: 8
   },
   shareHeroBadge: {
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 14,
+    padding: 16,
+    gap: 6
   },
   shareHeroTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: systemFontBold,
-    color: themeColors.textPrimary
+    color: '#15803D'
   },
   shareHeroSubtitle: {
     fontSize: 12,
     fontFamily: systemFont,
-    color: themeColors.textMuted,
+    color: '#166534',
     textAlign: 'center',
     lineHeight: 17
   },
   codeBoxContainer: {
-    width: '100%',
+    alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
     borderWidth: 1,
     borderColor: themeColors.borderDark,
     borderRadius: 12,
     padding: 14,
-    alignItems: 'center',
     gap: 4
   },
   codeBoxLabel: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontFamily: systemFontBold,
     color: themeColors.textMuted,
-    letterSpacing: 0.8
+    letterSpacing: 0.6
   },
   codeBoxValue: {
     fontSize: 22,
     fontFamily: systemFontBold,
-    color: themeColors.primary,
+    color: themeColors.textPrimary,
     letterSpacing: 1.5
   },
   codeBoxHint: {
@@ -906,14 +1082,13 @@ const styles = StyleSheet.create({
     color: themeColors.textMuted
   },
   whatsappPrimaryBtn: {
-    width: '100%',
-    height: 46,
     backgroundColor: '#16A34A',
-    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8
+    gap: 8,
+    height: 46,
+    borderRadius: 10
   },
   whatsappPrimaryBtnText: {
     color: '#FFFFFF',
@@ -921,30 +1096,29 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold
   },
   copyLinkOutlineBtn: {
-    width: '100%',
-    height: 44,
-    backgroundColor: themeColors.surfaceOffWhite,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: themeColors.borderDark,
-    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6
+    gap: 8,
+    height: 44,
+    borderRadius: 10
   },
   copyLinkOutlineBtnText: {
     color: themeColors.textPrimary,
     fontSize: 12.5,
-    fontFamily: systemFontMedium
+    fontFamily: systemFontBold
   },
   savedTeamsContainer: {
-    gap: 10,
-    paddingVertical: 6
+    gap: 8,
+    paddingTop: 4
   },
   savedTeamsHeading: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontFamily: systemFontBold,
-    color: themeColors.textMuted
+    color: themeColors.textSecondary
   },
   savedTeamsList: {
     gap: 8
@@ -954,19 +1128,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
     borderWidth: 1,
-    borderColor: themeColors.borderDark,
-    borderRadius: 10,
+    borderColor: themeColors.border,
+    borderRadius: 12,
     padding: 10
   },
   savedTeamIcon: {
     width: 36,
     height: 36,
-    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center'
   },
   savedTeamName: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary
   },
@@ -979,33 +1152,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#18181B',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8
   },
   quickAddPillBtnText: {
     color: '#FFFFFF',
-    fontSize: 11.5,
+    fontSize: 12,
     fontFamily: systemFontBold
   },
   qrCodeContainer: {
     alignItems: 'center',
-    gap: 14,
-    paddingVertical: 12
+    gap: 16,
+    paddingTop: 10
   },
   qrBoxWrapper: {
+    alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
     borderWidth: 1,
-    borderColor: themeColors.borderDark,
-    borderRadius: 14,
-    padding: 20,
-    alignItems: 'center',
-    gap: 8,
+    borderColor: themeColors.border,
+    borderRadius: 16,
+    padding: 24,
+    gap: 10,
     width: '100%'
   },
   qrCodeTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary
   },
@@ -1014,21 +1187,19 @@ const styles = StyleSheet.create({
     fontFamily: systemFont,
     color: themeColors.textMuted,
     textAlign: 'center',
-    lineHeight: 16
+    lineHeight: 17
   },
   qrCodeTag: {
     backgroundColor: '#18181B',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
     marginTop: 4
   },
   qrCodeTagText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: systemFontBold,
-    letterSpacing: 0.8
+    letterSpacing: 1
   }
 });
-
-export default AddTeamHubModal;

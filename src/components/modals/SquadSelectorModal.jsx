@@ -15,6 +15,7 @@ import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
 import { getPlayerMatchStatus } from '../../utils/cricketUtils.js';
 import { showToast } from '../../services/toastService.js';
+import { BulkSquadPasteModal } from './BulkSquadPasteModal.jsx';
 
 export function SquadSelectorModal({
   visible,
@@ -36,6 +37,7 @@ export function SquadSelectorModal({
 }) {
   const [activeTab, setActiveTab] = useState('team1'); // 'team1' | 'team2'
   const [searchQuery, setSearchQuery] = useState('');
+  const [bulkPasteModalOpen, setBulkPasteModalOpen] = useState(false);
 
   const moveHandler = onMoveToTeam || onMovePlayer;
 
@@ -66,6 +68,14 @@ export function SquadSelectorModal({
 
     return matchName || matchPhoneRaw || matchPhoneClean;
   });
+
+  const handleBulkImport = (parsedPlayers) => {
+    if (!Array.isArray(parsedPlayers) || !moveHandler) return;
+    parsedPlayers.forEach(p => {
+      moveHandler(p.name, activeTab);
+    });
+    showToast(`Added ${parsedPlayers.length} players to ${activeTeamName} squad!`, 'success');
+  };
 
   return (
     <Modal
@@ -199,16 +209,29 @@ export function SquadSelectorModal({
             ) : null}
           </View>
 
-          <TouchableOpacity
-            onPress={onOpenAddPlayerModal}
-            activeOpacity={0.8}
-            style={styles.addPlayerBtn}
-          >
-            <Ionicons name="person-add" size={15} color="#0284C7" />
-            <Text style={styles.addPlayerBtnText}>
-              + Add New Ground Player
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <TouchableOpacity
+              onPress={() => setBulkPasteModalOpen(true)}
+              activeOpacity={0.8}
+              style={[styles.addPlayerBtn, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}
+            >
+              <Ionicons name="logo-whatsapp" size={15} color="#16A34A" />
+              <Text style={[styles.addPlayerBtnText, { color: '#16A34A' }]}>
+                Paste WhatsApp Squad
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={onOpenAddPlayerModal}
+              activeOpacity={0.8}
+              style={styles.addPlayerBtn}
+            >
+              <Ionicons name="person-add" size={15} color="#0284C7" />
+              <Text style={styles.addPlayerBtnText}>
+                + Add Player
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Sub-header text */}
@@ -389,6 +412,14 @@ export function SquadSelectorModal({
             );
           })()}
         </View>
+
+        {/* WhatsApp Bulk Squad Paste Sub-Modal */}
+        <BulkSquadPasteModal
+          visible={bulkPasteModalOpen}
+          onClose={() => setBulkPasteModalOpen(false)}
+          onImportPlayers={handleBulkImport}
+          teamName={activeTeamName}
+        />
       </SafeAreaView>
     </Modal>
   );
