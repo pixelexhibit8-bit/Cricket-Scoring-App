@@ -375,3 +375,14 @@ export const getTournamentLogoSource = (tournament) => {
   return require('../../assets/rpl_logo.jpg');
 };
 
+/**
+ * Safely clean match date string from invalid/NaN formats
+ */
+export const cleanMatchDate = (dateStr, fallback = 'Tomorrow') => {
+  if (!dateStr || typeof dateStr !== 'string') return fallback;
+  const trimmed = dateStr.trim();
+  if (trimmed.includes('NaN') || trimmed.includes('Invalid') || trimmed === 'null' || trimmed === 'undefined') {
+    return fallback;
+  }
+  return trimmed;
+};

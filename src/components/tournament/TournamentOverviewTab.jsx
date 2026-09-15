@@ -16,7 +16,7 @@ import {
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
 import { PointsTableSection } from './PointsTableSection.jsx';
-import { resolveTeamWithRoster, formatMatchResult } from '../../utils/teamUtils.js';
+import { resolveTeamWithRoster, formatMatchResult, cleanMatchDate } from '../../utils/teamUtils.js';
 
 function isKnockoutStage(stage) {
   if (!stage || typeof stage !== 'string') return false;
@@ -180,7 +180,7 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
                           {m.time || '07:30 PM'}
                         </Text>
                         <Text style={styles.matchDateText}>
-                          {m.dateStr || 'Tomorrow'}
+                          {cleanMatchDate(m.dateStr || m.date || 'Tomorrow')}
                         </Text>
                       </View>
                     )}

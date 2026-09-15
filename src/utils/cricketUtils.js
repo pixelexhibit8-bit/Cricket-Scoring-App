@@ -1197,10 +1197,41 @@ export function generateRoundRobinFixtures(teams = [], options = {}) {
   const matchesPerRound = numTeams / 2;
 
   const leagueFixtures = [];
-  let matchCounter = 1;
+  // Safe Base Date Parser for Hermes & JSC
+  const parseSafeDate = (raw) => {
+    if (!raw) return new Date();
+    if (raw instanceof Date && !isNaN(raw.getTime())) return raw;
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      const p = new Date(trimmed);
+      if (!isNaN(p.getTime())) return p;
 
-  // Track dates & times
-  const baseDate = new Date(startDate);
+      const cleanStr = trimmed.replace(/,/g, '').trim();
+      const parts = cleanStr.split(/[\s\-\/]+/);
+      if (parts.length >= 3) {
+        const monthMap = {
+          jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+          jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+        };
+        const m1 = monthMap[parts[1]?.toLowerCase()?.slice(0, 3)];
+        if (m1 !== undefined) {
+          const d = parseInt(parts[0], 10) || 1;
+          const y = parseInt(parts[2], 10) || new Date().getFullYear();
+          return new Date(y, m1, d);
+        }
+        const m0 = monthMap[parts[0]?.toLowerCase()?.slice(0, 3)];
+        if (m0 !== undefined) {
+          const d = parseInt(parts[1], 10) || 1;
+          const y = parseInt(parts[2], 10) || new Date().getFullYear();
+          return new Date(y, m0, d);
+        }
+      }
+    }
+    return new Date();
+  };
+
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const baseDate = parseSafeDate(startDate);
   let dayOffset = 0;
   let timeIndex = 0;
 
@@ -1217,13 +1248,13 @@ export function generateRoundRobinFixtures(teams = [], options = {}) {
       const teamB = teamList[awayIdx];
 
       if (!teamA.isDummy && !teamB.isDummy) {
-        const currentDate = new Date(baseDate);
+        const currentDate = new Date(baseDate.getTime());
         currentDate.setDate(baseDate.getDate() + dayOffset);
         
-        const day = currentDate.getDate();
-        const monthShort = currentDate.toLocaleDateString('en-GB', { month: 'short' });
-        const year = currentDate.getFullYear();
-        const dateStr = `${day} ${monthShort} ${year}`;
+        const dayNum = currentDate.getDate() || 1;
+        const monthShort = monthNames[currentDate.getMonth()] || 'Sep';
+        const yearNum = currentDate.getFullYear() || 2026;
+        const dateStr = `${dayNum} ${monthShort} ${yearNum}`;
 
         const timeStr = matchTimes[timeIndex % matchTimes.length] || '10:00 AM';
 

@@ -16,7 +16,7 @@ import {
   systemFontBold
 } from '../../theme.js';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
-import { resolveTeamWithRoster, formatMatchResult } from '../../utils/teamUtils.js';
+import { resolveTeamWithRoster, formatMatchResult, cleanMatchDate } from '../../utils/teamUtils.js';
 
 function getOrdinal(n) {
   const num = parseInt(n, 10);
@@ -103,7 +103,8 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
     // Group upcoming matches by Date string (e.g. "Tomorrow, 16 September" or "17 September, Thursday")
     const groups = {};
     upcoming.forEach(m => {
-      const dateKey = m.dateGroup || m.dateStr || m.matchDate || 'Upcoming Fixtures';
+      const rawDate = m.dateGroup || m.dateStr || m.matchDate || 'Upcoming Fixtures';
+      const dateKey = cleanMatchDate(rawDate, 'Upcoming Fixtures');
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -144,38 +145,6 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Organiser Action Buttons */}
-        {isUserOrganiser ? (
-          <View style={styles.organiserActionBar}>
-            <TouchableOpacity
-              style={styles.primaryActionBtn}
-              onPress={() => onStartMatchScoring && onStartMatchScoring()}
-              activeOpacity={0.85}
-            >
-              <MaterialCommunityIcons name="cricket" size={16} color="#FFFFFF" />
-              <Text style={styles.primaryActionBtnText}>START MATCH</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.outlineActionBtn}
-              onPress={onOpenAutoSchedule}
-              activeOpacity={0.85}
-            >
-              <MaterialCommunityIcons name="lightning-bolt" size={15} color="#16A34A" />
-              <Text style={[styles.outlineActionBtnText, { color: '#16A34A' }]}>Auto Schedule</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.outlineActionBtn}
-              onPress={onOpenManualSchedule}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="calendar-outline" size={15} color={themeColors.textPrimary} />
-              <Text style={styles.outlineActionBtnText}>Manual</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
         {/* ── A. COMPLETED MATCHES SECTION ── */}
         {completedMatches.length > 0 ? (
           <View style={styles.matchesSectionBlock}>
