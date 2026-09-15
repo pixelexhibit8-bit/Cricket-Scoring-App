@@ -9,7 +9,8 @@ import {
   Image,
   StyleSheet,
   StatusBar,
-  Alert
+  Alert,
+  Keyboard
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -29,6 +30,7 @@ import { getCurrentUser } from '../services/authService.js';
 import { PhoneLoginModal } from '../components/modals/PhoneLoginModal.jsx';
 import { CricCalendarModal, formatCricDate } from '../components/modals/CricCalendarModal.jsx';
 import { useMatch } from '../context/MatchContext.jsx';
+import { searchCities } from '../utils/cityDatabase.js';
 
 export function CreateTournamentScreen(props = {}) {
   const matchCtx = useMatch();
@@ -37,7 +39,7 @@ export function CreateTournamentScreen(props = {}) {
     onBack = props.onBack || props.onCancel || (() => {
       if (props.navigation && props.navigation.canGoBack()) {
         props.navigation.goBack();
-      } else if (matchCtx.setCurrentScreen) {
+      } else if (matchCtx?.setCurrentScreen) {
         matchCtx.setCurrentScreen('home');
       }
     }),
@@ -49,11 +51,12 @@ export function CreateTournamentScreen(props = {}) {
         });
       } else if (props.navigation && props.navigation.canGoBack()) {
         props.navigation.goBack();
-      } else if (matchCtx.setCurrentScreen) {
+      } else if (matchCtx?.setCurrentScreen) {
         matchCtx.setCurrentScreen('home');
       }
     })
   } = props;
+
   // Stepper State (1 | 2 | 3)
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -76,11 +79,21 @@ export function CreateTournamentScreen(props = {}) {
     checkAuth();
   }, []);
 
-  // Step 1 State: Overview & Organiser
+  // ── Step 1 State: Overview, Branding & Venues ──
   const [bannerUri, setBannerUri] = useState(null);
   const [logoUri, setLogoUri] = useState(null);
   const [tournamentName, setTournamentName] = useState('');
+
+  // City Auto-Suggest
   const [city, setCity] = useState('');
+  const [citySuggestions, setCitySuggestions] = useState([]);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+
+  // Multi-Ground / Venues Tag Manager
+  const [venues, setVenues] = useState([]);
+  const [currentVenueInput, setCurrentVenueInput] = useState('');
+
+  // Organiser Info & Dates
   const [organiserName, setOrganiserName] = useState('');
   const [organiserPhone, setOrganiserPhone] = useState('');
   const [organiserEmail, setOrganiserEmail] = useState('');
@@ -95,7 +108,10 @@ export function CreateTournamentScreen(props = {}) {
   });
   const [calendarModalVisible, setCalendarModalVisible] = useState(false);
 
-  // Step 2 State: Match Rules & Format
+  // ── Step 2 State: Tournament Structure & Match Rules ──
+  // Tournament Structure: LEAGUE | KNOCKOUT | LEAGUE_KNOCKOUT
+  const [tournamentType, setTournamentType] = useState('LEAGUE_KNOCKOUT');
+
   const categories = [
     'OPEN', 'CORPORATE', 'COMMUNITY', 'SCHOOL', 'COLLEGE', 'UNIVERSITY', 'SERIES', 'OTHER'
   ];
@@ -105,11 +121,11 @@ export function CreateTournamentScreen(props = {}) {
     { id: 'tennis_red', label: 'Tennis (Red)', icon: 'baseball-outline' },
     { id: 'tennis_green', label: 'Tennis (Green)', icon: 'baseball-outline' },
     { id: 'leather', label: 'Leather', icon: 'baseball' },
-    { id: 'plastic_other', label: 'Plastic / Other', icon: 'ellipse-outline' }
+    { id: 'plastic_other', label: 'Plastic / Tape', icon: 'ellipse-outline' }
   ];
   const [selectedBall, setSelectedBall] = useState('tennis_red');
 
-  const pitchTypes = ['ROUGH', 'CEMENT', 'TURF', 'ASTROTURF', 'MATTING'];
+  const pitchTypes = ['TURF', 'ASTROTURF', 'MATTING', 'CEMENT', 'ROUGH / DIRT'];
   const [selectedPitch, setSelectedPitch] = useState('TURF');
 
   const matchFormats = [
@@ -117,42 +133,63 @@ export function CreateTournamentScreen(props = {}) {
   ];
   const [selectedFormat, setSelectedFormat] = useState('LIMITED OVERS');
 
-  // Step 3 State: Ground Ops, Team Details & Officials
+  // Match Schedule Frequency: ALL DAYS | WEEKENDS | WEEKDAYS
+  const [matchesOnType, setMatchesOnType] = useState('ALL DAYS');
+
+  // Match Timing: DAY | NIGHT | DAY_NIGHT
+  const [matchTimingType, setMatchTimingType] = useState('DAY');
+
+  // ── Step 3 State: Prizes, Registration & Regulations ──
   const [needMoreTeams, setNeedMoreTeams] = useState(true);
   const [entryFee, setEntryFee] = useState('');
-  const [totalTeamsCount, setTotalTeamsCount] = useState('');
-  const [winningPrizeType, setWinningPrizeType] = useState('BOTH'); // 'CASH' | 'TROPHIES' | 'BOTH'
-  const [matchesOnType, setMatchesOnType] = useState('ALL DAYS'); // 'WEEKENDS' | 'WEEKDAYS' | 'ALL DAYS'
-  const [matchTimingType, setMatchTimingType] = useState('DAY'); // 'DAY' | 'NIGHT' | 'DAY & NIGHT'
-  const [additionalNotes, setAdditionalNotes] = useState('');
+  const [totalTeamsCount, setTotalTeamsCount] = useState('8');
+  const [maxSquadSize, setMaxSquadSize] = useState('15');
+
+  // Winning Prize: BOTH | CASH | TROPHIES
+  const [winningPrizeType, setWinningPrizeType] = useState('BOTH');
+  const [firstPrize, setFirstPrize] = useState('');
+  const [runnerUpPrize, setRunnerUpPrize] = useState('');
+
+  // Rules & Regulations
+  const [tournamentRules, setTournamentRules] = useState('');
 
   const [informPreviousPlayers, setInformPreviousPlayers] = useState(true);
-  const [needOfficials, setNeedOfficials] = useState(true);
-  const [selectedOfficialRoles, setSelectedOfficialRoles] = useState(['Scorer', 'Umpire']);
-  const [contactPreference, setContactPreference] = useState('Call');
+  const [needOfficials, setNeedOfficials] = useState(false);
   const [assignedScorerPhone, setAssignedScorerPhone] = useState('');
 
-  // 1-Click Preset Handler
-  const applyPreset = (presetType) => {
-    if (presetType === 'tennis_10') {
-      setSelectedCategory('OPEN');
-      setSelectedBall('tennis_red');
-      setSelectedPitch('TURF');
-      setSelectedFormat('LIMITED OVERS');
-      Alert.alert('Preset Applied', 'Local Tennis 10-Over rules loaded in 1-Click.');
-    } else if (presetType === 'leather_league') {
-      setSelectedCategory('OPEN');
-      setSelectedBall('leather');
-      setSelectedPitch('MATTING');
-      setSelectedFormat('LIMITED OVERS');
-      Alert.alert('Preset Applied', 'Leather Ball League rules loaded in 1-Click.');
-    } else if (presetType === 'box_turf') {
-      setSelectedCategory('CORPORATE');
-      setSelectedBall('tennis_green');
-      setSelectedPitch('ASTROTURF');
-      setSelectedFormat('BOX / TURF CRICKET');
-      Alert.alert('Preset Applied', 'Corporate Box Turf rules loaded in 1-Click.');
+  // ── City Auto-Suggest Handlers ──
+  const handleCityChange = (text) => {
+    setCity(text);
+    if (text.trim().length > 0) {
+      const matches = searchCities(text, 6);
+      setCitySuggestions(matches);
+      setShowCityDropdown(matches.length > 0);
+    } else {
+      setCitySuggestions([]);
+      setShowCityDropdown(false);
     }
+  };
+
+  const handleSelectCity = (selectedCity) => {
+    setCity(selectedCity);
+    setShowCityDropdown(false);
+    Keyboard.dismiss();
+  };
+
+  // ── Venue Tag Handlers ──
+  const handleAddVenue = () => {
+    const trimmed = currentVenueInput.trim();
+    if (!trimmed) return;
+    if (venues.includes(trimmed)) {
+      Alert.alert('Duplicate Ground', 'This ground name is already added.');
+      return;
+    }
+    setVenues([...venues, trimmed]);
+    setCurrentVenueInput('');
+  };
+
+  const handleRemoveVenue = (indexToRemove) => {
+    setVenues(venues.filter((_, idx) => idx !== indexToRemove));
   };
 
   // Navigation Back
@@ -218,13 +255,14 @@ export function CreateTournamentScreen(props = {}) {
   const handleNextStep = () => {
     if (currentStep === 1) {
       if (!tournamentName.trim()) {
-        Alert.alert('Required Field', 'Please enter Tournament / Series Name');
+        Alert.alert('Required Field', 'Please enter Tournament / Series Name.');
         return;
       }
       if (!city.trim()) {
-        Alert.alert('Required Field', 'Please enter City / Location');
+        Alert.alert('Required Field', 'Please select or enter City / Location.');
         return;
       }
+      setShowCityDropdown(false);
       setCurrentStep(2);
     } else if (currentStep === 2) {
       setCurrentStep(3);
@@ -238,6 +276,8 @@ export function CreateTournamentScreen(props = {}) {
       return;
     }
 
+    const finalVenues = venues.length > 0 ? venues : [city.trim() || 'Main Ground'];
+
     const tournamentData = {
       id: `t_${Date.now()}`,
       name: tournamentName.trim(),
@@ -245,6 +285,10 @@ export function CreateTournamentScreen(props = {}) {
       fullName: tournamentName.trim(),
       city: city.trim(),
       host: city.trim() || 'Local Ground',
+      venues: finalVenues,
+      venue: finalVenues[0],
+      tournamentType: tournamentType,
+      structure: tournamentType,
       organiserId: currentUser?.id || `usr_${organiserPhone.trim()}`,
       organiserName: organiserName.trim() || currentUser?.name || 'Organiser',
       organiserPhone: organiserPhone.trim() || currentUser?.phone || '',
@@ -256,7 +300,19 @@ export function CreateTournamentScreen(props = {}) {
       ballType: selectedBall,
       pitchType: selectedPitch,
       format: selectedFormat,
+      matchDays: matchesOnType,
+      matchesOn: matchesOnType,
+      matchTiming: matchTimingType,
       needMoreTeams,
+      entryFee: entryFee ? `₹${entryFee.replace(/[^0-9]/g, '')}` : '',
+      totalTeamsCount: totalTeamsCount ? parseInt(totalTeamsCount, 10) : 8,
+      maxSquadSize: maxSquadSize ? parseInt(maxSquadSize, 10) : 15,
+      winningPrizeType,
+      firstPrize: firstPrize ? `₹${firstPrize.replace(/[^0-9]/g, '')}` : '',
+      runnerUpPrize: runnerUpPrize ? `₹${runnerUpPrize.replace(/[^0-9]/g, '')}` : '',
+      rules: tournamentRules.trim(),
+      additionalNotes: tournamentRules.trim(),
+      informPreviousPlayers,
       needOfficials,
       assignedScorerPhone: assignedScorerPhone.trim(),
       bannerUri,
@@ -290,11 +346,6 @@ export function CreateTournamentScreen(props = {}) {
       <View style={styles.container}>
         {/* ── 1. HEADER BAR ── */}
         <View style={styles.headerBar}>
-          {/* Centered Title (absolute positioned so it never gets skewed) */}
-          <View style={styles.headerTitleWrap} pointerEvents="none">
-            <Text style={styles.headerTitle}>Host a Tournament</Text>
-          </View>
-
           <TouchableOpacity
             style={styles.backBtn}
             onPress={handleBack}
@@ -303,6 +354,10 @@ export function CreateTournamentScreen(props = {}) {
           >
             <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
           </TouchableOpacity>
+
+          <View style={styles.headerTitleWrap} pointerEvents="none">
+            <Text style={styles.headerTitle}>Host a Tournament</Text>
+          </View>
 
           <View style={styles.stepCounterBadge}>
             <Text style={styles.stepCounterText}>Step {currentStep}/3</Text>
@@ -328,12 +383,13 @@ export function CreateTournamentScreen(props = {}) {
                 Alert.alert('Complete Step 1', 'Please enter Tournament Name and City first.');
                 return;
               }
+              setShowCityDropdown(false);
               setCurrentStep(2);
             }}
             activeOpacity={0.8}
           >
             <Text style={[styles.stepTabText, currentStep === 2 && styles.stepTabTextActive]}>
-              2. Match Rules
+              2. Rules & Format
             </Text>
           </TouchableOpacity>
 
@@ -344,12 +400,13 @@ export function CreateTournamentScreen(props = {}) {
                 Alert.alert('Complete Step 1', 'Please enter Tournament Name and City first.');
                 return;
               }
+              setShowCityDropdown(false);
               setCurrentStep(3);
             }}
             activeOpacity={0.8}
           >
             <Text style={[styles.stepTabText, currentStep === 3 && styles.stepTabTextActive]}>
-              3. Officials
+              3. Prizes & Setup
             </Text>
           </TouchableOpacity>
         </View>
@@ -358,13 +415,16 @@ export function CreateTournamentScreen(props = {}) {
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* ── STEP 1: OVERVIEW & ORGANISER ── */}
+          {/* ══════════════════════════════════════════════════════════════════════
+              STEP 1: OVERVIEW, BRANDING & MULTI-GROUND VENUES
+              ══════════════════════════════════════════════════════════════════════ */}
           {currentStep === 1 && (
             <View style={styles.stepContentWrap}>
-              {/* Facebook-style Cover Banner + Overlapping Circular Logo */}
+              {/* Branding: Cover Banner + Overlapping Circular Logo */}
               <View style={styles.brandingContainer}>
-                {/* 1. Cover Banner (16:9 Landscape) */}
+                {/* 1. Cover Banner (16:9) */}
                 <TouchableOpacity
                   style={styles.bannerPickerCard}
                   onPress={handlePickBanner}
@@ -374,8 +434,8 @@ export function CreateTournamentScreen(props = {}) {
                     <Image source={{ uri: bannerUri }} style={styles.bannerImage} />
                   ) : (
                     <View style={styles.bannerPlaceholder}>
-                      <Ionicons name="image-outline" size={26} color={themeColors.textMuted} />
-                      <Text style={styles.bannerPlaceholderText}>Tap to Upload Tournament Banner / Poster</Text>
+                      <Ionicons name="image-outline" size={28} color={themeColors.textMuted} />
+                      <Text style={styles.bannerPlaceholderText}>Upload Tournament Poster / Banner</Text>
                       <Text style={styles.bannerSubText}>Recommended 16:9 Landscape</Text>
                     </View>
                   )}
@@ -385,7 +445,7 @@ export function CreateTournamentScreen(props = {}) {
                   </View>
                 </TouchableOpacity>
 
-                {/* 2. Overlapping Center Circular Logo */}
+                {/* 2. Overlapping Circular Logo */}
                 <View style={styles.logoOverlapWrapper}>
                   <TouchableOpacity
                     style={styles.logoCircleCard}
@@ -409,10 +469,14 @@ export function CreateTournamentScreen(props = {}) {
                 <Text style={styles.brandingHintText}>Tap banner for cover poster • Tap circle for brand logo</Text>
               </View>
 
-              {/* Basic Fields */}
+              {/* Tournament Identification Card */}
               <View style={styles.sectionCard}>
-                <Text style={styles.sectionCardTitle}>TOURNAMENT IDENTIFICATION</Text>
+                <View style={styles.cardHeaderRow}>
+                  <MaterialCommunityIcons name="trophy-award" size={18} color="#18181B" />
+                  <Text style={styles.sectionCardTitle}>TOURNAMENT IDENTIFICATION</Text>
+                </View>
 
+                {/* Tournament Name */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Tournament / Series Name *</Text>
                   <TextInput
@@ -424,17 +488,58 @@ export function CreateTournamentScreen(props = {}) {
                   />
                 </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>City / Location *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="e.g. Nagaur, Rajasthan"
-                    placeholderTextColor={themeColors.textSubtle}
-                    value={city}
-                    onChangeText={setCity}
-                  />
+                {/* City Auto-Suggest */}
+                <View style={[styles.inputGroup, { zIndex: 10 }]}>
+                  <Text style={styles.inputLabel}>City / District *</Text>
+                  <View style={styles.cityInputWrapper}>
+                    <Ionicons name="location-outline" size={18} color={themeColors.textSecondary} style={styles.cityInputIcon} />
+                    <TextInput
+                      style={[styles.textInput, styles.cityTextInput]}
+                      placeholder="Type city e.g. Nagaur, Jaipur, Delhi..."
+                      placeholderTextColor={themeColors.textSubtle}
+                      value={city}
+                      onChangeText={handleCityChange}
+                      onFocus={() => {
+                        if (city.trim().length > 0) {
+                          const matches = searchCities(city, 6);
+                          setCitySuggestions(matches);
+                          setShowCityDropdown(matches.length > 0);
+                        }
+                      }}
+                    />
+                    {city.length > 0 && (
+                      <TouchableOpacity
+                        style={styles.clearCityBtn}
+                        onPress={() => {
+                          setCity('');
+                          setCitySuggestions([]);
+                          setShowCityDropdown(false);
+                        }}
+                      >
+                        <Ionicons name="close-circle" size={18} color={themeColors.textMuted} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* Auto-Suggest Dropdown */}
+                  {showCityDropdown && citySuggestions.length > 0 && (
+                    <View style={styles.suggestionsContainer}>
+                      {citySuggestions.map((item, index) => (
+                        <TouchableOpacity
+                          key={`${item}-${index}`}
+                          style={styles.suggestionItem}
+                          onPress={() => handleSelectCity(item)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="location" size={15} color="#18181B" style={{ marginRight: 8 }} />
+                          <Text style={styles.suggestionText}>{item}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
 
+                {/* Tournament Dates */}
                 <View style={styles.rowInputs}>
                   <View style={[styles.inputGroup, { flex: 1 }]}>
                     <Text style={styles.inputLabel}>Start Date *</Text>
@@ -462,9 +567,69 @@ export function CreateTournamentScreen(props = {}) {
                 </View>
               </View>
 
-              {/* Organiser Info */}
+              {/* Multi-Ground / Venue Tag Manager Card */}
               <View style={styles.sectionCard}>
-                <Text style={styles.sectionCardTitle}>ORGANISER CONTACT DETAILS</Text>
+                <View style={styles.cardHeaderRow}>
+                  <MaterialCommunityIcons name="stadium-variant" size={18} color="#18181B" />
+                  <Text style={styles.sectionCardTitle}>TOURNAMENT GROUNDS / VENUES</Text>
+                </View>
+                <Text style={styles.sectionCardSub}>
+                  Add one or more ground names where tournament matches will take place.
+                </Text>
+
+                <View style={styles.addVenueInputRow}>
+                  <TextInput
+                    style={[styles.textInput, { flex: 1 }]}
+                    placeholder="e.g. Sadokan Stadium Ground 1"
+                    placeholderTextColor={themeColors.textSubtle}
+                    value={currentVenueInput}
+                    onChangeText={setCurrentVenueInput}
+                    onSubmitEditing={handleAddVenue}
+                    returnKeyType="done"
+                  />
+                  <TouchableOpacity
+                    style={styles.addVenueBtn}
+                    onPress={handleAddVenue}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="add" size={18} color="#FFFFFF" />
+                    <Text style={styles.addVenueBtnText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Venue Chips List */}
+                {venues.length > 0 ? (
+                  <View style={styles.venueChipsWrap}>
+                    {venues.map((vName, index) => (
+                      <View key={`${vName}-${index}`} style={styles.venueChip}>
+                        <MaterialCommunityIcons name="cricket" size={14} color="#18181B" style={{ marginRight: 6 }} />
+                        <Text style={styles.venueChipText} numberOfLines={1}>{vName}</Text>
+                        <TouchableOpacity
+                          style={styles.removeVenueChipBtn}
+                          onPress={() => handleRemoveVenue(index)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="close-circle" size={16} color="#64748B" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.venueEmptyHint}>
+                    <Ionicons name="information-circle-outline" size={15} color={themeColors.textMuted} />
+                    <Text style={styles.venueEmptyHintText}>
+                      No specific ground added. City ({city || 'Location'}) will be used as default venue.
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Organiser Contact Info Card */}
+              <View style={styles.sectionCard}>
+                <View style={styles.cardHeaderRow}>
+                  <Ionicons name="person-outline" size={18} color="#18181B" />
+                  <Text style={styles.sectionCardTitle}>ORGANISER CONTACT DETAILS</Text>
+                </View>
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Organiser Name</Text>
@@ -510,14 +675,128 @@ export function CreateTournamentScreen(props = {}) {
                 onPress={handleNextStep}
                 activeOpacity={0.85}
               >
-                <Text style={styles.primaryNextBtnText}>GO TO MATCH RULES (STEP 2) →</Text>
+                <Text style={styles.primaryNextBtnText}>GO TO RULES & STRUCTURE (STEP 2) →</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* ── STEP 2: MATCH RULES & FORMAT ── */}
+          {/* ══════════════════════════════════════════════════════════════════════
+              STEP 2: TOURNAMENT STRUCTURE, FORMAT & SCHEDULE
+              ══════════════════════════════════════════════════════════════════════ */}
           {currentStep === 2 && (
             <View style={styles.stepContentWrap}>
+              {/* 1. TOURNAMENT STRUCTURE / COMPETITION TYPE */}
+              <View style={styles.sectionCard}>
+                <View style={styles.cardHeaderRow}>
+                  <MaterialCommunityIcons name="tournament" size={18} color="#18181B" />
+                  <Text style={styles.sectionCardTitle}>TOURNAMENT STRUCTURE</Text>
+                </View>
+                <Text style={styles.sectionCardSub}>
+                  Select how matches and points table will be conducted.
+                </Text>
+
+                {/* Structure Options: 3 Visual Cards */}
+                <View style={styles.structureList}>
+                  {/* Option 1: Group Stage + Knockout */}
+                  <TouchableOpacity
+                    style={[
+                      styles.structureCard,
+                      tournamentType === 'LEAGUE_KNOCKOUT' && styles.structureCardActive
+                    ]}
+                    onPress={() => setTournamentType('LEAGUE_KNOCKOUT')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.structureIconWrap}>
+                      <MaterialCommunityIcons
+                        name="trophy-variant-outline"
+                        size={22}
+                        color={tournamentType === 'LEAGUE_KNOCKOUT' ? '#FFFFFF' : '#18181B'}
+                      />
+                    </View>
+                    <View style={styles.structureContent}>
+                      <View style={styles.structureTitleRow}>
+                        <Text style={[styles.structureTitle, tournamentType === 'LEAGUE_KNOCKOUT' && styles.structureTitleActive]}>
+                          League + Knockout (Hybrid)
+                        </Text>
+                        <View style={styles.recommendedBadge}>
+                          <Text style={styles.recommendedBadgeText}>Popular</Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.structureDesc, tournamentType === 'LEAGUE_KNOCKOUT' && styles.structureDescActive]}>
+                        Group stage matches with Points Table, followed by Semi-Finals & Grand Finale.
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={tournamentType === 'LEAGUE_KNOCKOUT' ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={20}
+                      color={tournamentType === 'LEAGUE_KNOCKOUT' ? '#18181B' : '#94A3B8'}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Option 2: Round-Robin League */}
+                  <TouchableOpacity
+                    style={[
+                      styles.structureCard,
+                      tournamentType === 'LEAGUE' && styles.structureCardActive
+                    ]}
+                    onPress={() => setTournamentType('LEAGUE')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.structureIconWrap}>
+                      <MaterialCommunityIcons
+                        name="format-list-numbered"
+                        size={22}
+                        color={tournamentType === 'LEAGUE' ? '#FFFFFF' : '#18181B'}
+                      />
+                    </View>
+                    <View style={styles.structureContent}>
+                      <Text style={[styles.structureTitle, tournamentType === 'LEAGUE' && styles.structureTitleActive]}>
+                        Round-Robin League Only
+                      </Text>
+                      <Text style={[styles.structureDesc, tournamentType === 'LEAGUE' && styles.structureDescActive]}>
+                        All teams play against each other. Standings decide winner directly.
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={tournamentType === 'LEAGUE' ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={20}
+                      color={tournamentType === 'LEAGUE' ? '#18181B' : '#94A3B8'}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Option 3: Direct Knockout */}
+                  <TouchableOpacity
+                    style={[
+                      styles.structureCard,
+                      tournamentType === 'KNOCKOUT' && styles.structureCardActive
+                    ]}
+                    onPress={() => setTournamentType('KNOCKOUT')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.structureIconWrap}>
+                      <MaterialCommunityIcons
+                        name="sword-cross"
+                        size={22}
+                        color={tournamentType === 'KNOCKOUT' ? '#FFFFFF' : '#18181B'}
+                      />
+                    </View>
+                    <View style={styles.structureContent}>
+                      <Text style={[styles.structureTitle, tournamentType === 'KNOCKOUT' && styles.structureTitleActive]}>
+                        Direct Knockout (Elimination)
+                      </Text>
+                      <Text style={[styles.structureDesc, tournamentType === 'KNOCKOUT' && styles.structureDescActive]}>
+                        Single loss eliminates team. Winner advances directly to next round.
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={tournamentType === 'KNOCKOUT' ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={20}
+                      color={tournamentType === 'KNOCKOUT' ? '#18181B' : '#94A3B8'}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               {/* Tournament Category */}
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionCardTitle}>TOURNAMENT CATEGORY</Text>
@@ -612,28 +891,100 @@ export function CreateTournamentScreen(props = {}) {
                 </View>
               </View>
 
+              {/* Match Schedule Days & Timing */}
+              <View style={styles.sectionCard}>
+                <View style={styles.cardHeaderRow}>
+                  <MaterialCommunityIcons name="calendar-clock" size={18} color="#18181B" />
+                  <Text style={styles.sectionCardTitle}>MATCH SCHEDULE & TIMINGS</Text>
+                </View>
+
+                {/* Match Days Frequency */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Match Schedule Frequency</Text>
+                  <View style={styles.chipsWrap}>
+                    {[
+                      { id: 'ALL DAYS', label: 'All Days (Daily)' },
+                      { id: 'WEEKENDS', label: 'Weekends Only (Sat-Sun)' },
+                      { id: 'WEEKDAYS', label: 'Weekdays Only (Mon-Fri)' }
+                    ].map((item) => {
+                      const isSelected = matchesOnType === item.id;
+                      return (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={[styles.chipPill, isSelected && styles.chipPillActive]}
+                          onPress={() => setMatchesOnType(item.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                            {item.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Match Timing */}
+                <View style={[styles.inputGroup, { marginTop: 4 }]}>
+                  <Text style={styles.inputLabel}>Match Timing & Lighting</Text>
+                  <View style={styles.chipsWrap}>
+                    {[
+                      { id: 'DAY', label: 'Day (Sunlight)', icon: 'sunny-outline' },
+                      { id: 'NIGHT', label: 'Night (Floodlights)', icon: 'cloudy-night-outline' },
+                      { id: 'DAY_NIGHT', label: 'Day & Night Both', icon: 'contrast-outline' }
+                    ].map((item) => {
+                      const isSelected = matchTimingType === item.id;
+                      return (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={[styles.chipPill, isSelected && styles.chipPillActive]}
+                          onPress={() => setMatchTimingType(item.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name={item.icon}
+                            size={15}
+                            color={isSelected ? '#FFFFFF' : themeColors.textSecondary}
+                            style={{ marginRight: 6 }}
+                          />
+                          <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                            {item.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
+
               <TouchableOpacity
                 style={styles.primaryNextBtn}
                 onPress={handleNextStep}
                 activeOpacity={0.85}
               >
-                <Text style={styles.primaryNextBtnText}>GO TO GROUND OPERATIONS (STEP 3) →</Text>
+                <Text style={styles.primaryNextBtnText}>GO TO PRIZES & SETUP (STEP 3) →</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* ── STEP 3: GROUND OPERATIONS & TEAM REGISTRATION ── */}
+          {/* ══════════════════════════════════════════════════════════════════════
+              STEP 3: PRIZES, PUBLIC REGISTRATION & REGULATIONS
+              ══════════════════════════════════════════════════════════════════════ */}
           {currentStep === 3 && (
             <View style={styles.stepContentWrap}>
-              {/* 1. TOURNAMENT PREFERENCES CARD */}
+              {/* 1. PUBLIC TEAM REGISTRATIONS CARD */}
               <View style={styles.sectionCard}>
-                <Text style={styles.sectionCardTitle}>TOURNAMENT PREFERENCES</Text>
+                <View style={styles.cardHeaderRow}>
+                  <Ionicons name="people-outline" size={18} color="#18181B" />
+                  <Text style={styles.sectionCardTitle}>PUBLIC TEAM REGISTRATIONS</Text>
+                </View>
 
-                {/* TOGGLE 1: NEED TEAMS */}
                 <View style={styles.toggleRow}>
                   <View style={styles.toggleTextWrap}>
-                    <Text style={styles.toggleTitle}>Do you need more teams for your tournament?</Text>
-                    <Text style={styles.toggleSub}>Allow other ground teams to apply/join this tournament</Text>
+                    <Text style={styles.toggleTitle}>Open Public Team Registration</Text>
+                    <Text style={styles.toggleSub}>
+                      Allow captains from other clubs & ground teams to discover and apply to join this tournament.
+                    </Text>
                   </View>
                   <Switch
                     value={needMoreTeams}
@@ -643,13 +994,139 @@ export function CreateTournamentScreen(props = {}) {
                   />
                 </View>
 
-                <View style={styles.dividerLine} />
+                {/* Expanded Fields if Registration is ON */}
+                {needMoreTeams && (
+                  <View style={styles.expandedSectionWrap}>
+                    <View style={styles.dividerLine} />
 
-                {/* TOGGLE 2: INFORM PREVIOUS PLAYERS */}
+                    <View style={styles.rowInputs}>
+                      <View style={[styles.inputGroup, { flex: 1 }]}>
+                        <Text style={styles.inputLabel}>Entry Fee (₹)</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="e.g. 5000 (or 0 for Free)"
+                          placeholderTextColor={themeColors.textSubtle}
+                          keyboardType="numeric"
+                          value={entryFee}
+                          onChangeText={setEntryFee}
+                        />
+                      </View>
+
+                      <View style={[styles.inputGroup, { flex: 1 }]}>
+                        <Text style={styles.inputLabel}>Total Teams Limit</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="e.g. 8 or 16"
+                          placeholderTextColor={themeColors.textSubtle}
+                          keyboardType="numeric"
+                          value={totalTeamsCount}
+                          onChangeText={setTotalTeamsCount}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Max Squad Size (Per Team)</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="e.g. 15 players"
+                        placeholderTextColor={themeColors.textSubtle}
+                        keyboardType="numeric"
+                        value={maxSquadSize}
+                        onChangeText={setMaxSquadSize}
+                      />
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {/* 2. WINNING PRIZES CARD */}
+              <View style={styles.sectionCard}>
+                <View style={styles.cardHeaderRow}>
+                  <MaterialCommunityIcons name="trophy" size={18} color="#18181B" />
+                  <Text style={styles.sectionCardTitle}>WINNING PRIZES</Text>
+                </View>
+
+                <View style={styles.chipsWrap}>
+                  {[
+                    { id: 'BOTH', label: 'Trophies & Cash' },
+                    { id: 'CASH', label: 'Cash Prize Only' },
+                    { id: 'TROPHIES', label: 'Trophies Only' }
+                  ].map((pz) => {
+                    const isSelected = winningPrizeType === pz.id;
+                    return (
+                      <TouchableOpacity
+                        key={pz.id}
+                        style={[styles.chipPill, isSelected && styles.chipPillActive]}
+                        onPress={() => setWinningPrizeType(pz.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                          {pz.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {(winningPrizeType === 'CASH' || winningPrizeType === 'BOTH') && (
+                  <View style={styles.rowInputs}>
+                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                      <Text style={styles.inputLabel}>1st Winner Prize (₹)</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="e.g. 21000"
+                        placeholderTextColor={themeColors.textSubtle}
+                        keyboardType="numeric"
+                        value={firstPrize}
+                        onChangeText={setFirstPrize}
+                      />
+                    </View>
+
+                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                      <Text style={styles.inputLabel}>Runner-Up Prize (₹)</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="e.g. 11000"
+                        placeholderTextColor={themeColors.textSubtle}
+                        keyboardType="numeric"
+                        value={runnerUpPrize}
+                        onChangeText={setRunnerUpPrize}
+                      />
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {/* 3. RULES & REGULATIONS TEXT BOX */}
+              <View style={styles.sectionCard}>
+                <View style={styles.cardHeaderRow}>
+                  <MaterialCommunityIcons name="book-open-outline" size={18} color="#18181B" />
+                  <Text style={styles.sectionCardTitle}>RULES & REGULATIONS (OPTIONAL)</Text>
+                </View>
+                <Text style={styles.sectionCardSub}>
+                  Specify custom ground rules, powerplay rules, mankad rules, dress code, etc.
+                </Text>
+
+                <TextInput
+                  style={[styles.textInput, styles.rulesMultilineInput]}
+                  placeholder="e.g. 10 Overs per match, Max 2 overs per bowler, Mankad not allowed, Super Over for tie..."
+                  placeholderTextColor={themeColors.textSubtle}
+                  multiline
+                  numberOfLines={4}
+                  value={tournamentRules}
+                  onChangeText={setTournamentRules}
+                />
+              </View>
+
+              {/* 4. PREVIOUS PLAYERS NOTIFICATION CARD */}
+              <View style={styles.sectionCard}>
                 <View style={styles.toggleRow}>
                   <View style={styles.toggleTextWrap}>
-                    <Text style={styles.toggleTitle}>Inform all players of my previous tournaments</Text>
-                    <Text style={styles.toggleSub}>Send notification to your registered ground player database</Text>
+                    <Text style={styles.toggleTitle}>Notify players of previous tournaments</Text>
+                    <Text style={styles.toggleSub}>
+                      Broadcast tournament announcement to your ground players & team captains.
+                    </Text>
                   </View>
                   <Switch
                     value={informPreviousPlayers}
@@ -660,146 +1137,52 @@ export function CreateTournamentScreen(props = {}) {
                 </View>
               </View>
 
-              {/* 2. EXPANDED TEAM & PRIZE DETAILS (Only if needMoreTeams is ON) */}
-              {needMoreTeams && (
-                <View style={styles.sectionCard}>
-                  <Text style={styles.sectionCardTitle}>TEAM & PRIZE DETAILS</Text>
-
-                  <View style={styles.rowInputs}>
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={styles.inputLabel}>Entry Fee (₹) *</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        placeholder="e.g. 5000"
-                        placeholderTextColor={themeColors.textSubtle}
-                        keyboardType="numeric"
-                        value={entryFee}
-                        onChangeText={setEntryFee}
-                      />
-                    </View>
-
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={styles.inputLabel}>Total No. of Teams *</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        placeholder="e.g. 8"
-                        placeholderTextColor={themeColors.textSubtle}
-                        keyboardType="numeric"
-                        value={totalTeamsCount}
-                        onChangeText={setTotalTeamsCount}
-                      />
-                    </View>
-                  </View>
-
-                  {/* WINNING PRIZE */}
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Winning Prize *</Text>
-                    <View style={styles.chipsWrap}>
-                      {['CASH', 'TROPHIES', 'BOTH'].map((pz) => {
-                        const isSelected = winningPrizeType === pz;
-                        return (
-                          <TouchableOpacity
-                            key={pz}
-                            style={[styles.chipPill, isSelected && styles.chipPillActive]}
-                            onPress={() => setWinningPrizeType(pz)}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                              {pz}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-
-                  {/* MATCHES ON */}
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Matches On *</Text>
-                    <View style={styles.chipsWrap}>
-                      {['WEEKENDS', 'WEEKDAYS', 'ALL DAYS'].map((mo) => {
-                        const isSelected = matchesOnType === mo;
-                        return (
-                          <TouchableOpacity
-                            key={mo}
-                            style={[styles.chipPill, isSelected && styles.chipPillActive]}
-                            onPress={() => setMatchesOnType(mo)}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                              {mo}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-
-                  {/* MATCH TIMING */}
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Match Timing *</Text>
-                    <View style={styles.chipsWrap}>
-                      {['DAY', 'NIGHT', 'DAY & NIGHT'].map((mt) => {
-                        const isSelected = matchTimingType === mt;
-                        return (
-                          <TouchableOpacity
-                            key={mt}
-                            style={[styles.chipPill, isSelected && styles.chipPillActive]}
-                            onPress={() => setMatchTimingType(mt)}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                              {mt}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-
-                  {/* ADDITIONAL DETAILS NOTE */}
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Any Additional Details?</Text>
-                    <TextInput
-                      style={[styles.textInput, { height: 70, textAlignVertical: 'top' }]}
-                      placeholder="Add details like prizes, trophies, entry fees, ground rules, etc."
-                      placeholderTextColor={themeColors.textSubtle}
-                      multiline
-                      numberOfLines={3}
-                      value={additionalNotes}
-                      onChangeText={setAdditionalNotes}
-                    />
-                  </View>
-                </View>
-              )}
-
-              {/* Summary Review Card */}
+              {/* 5. SUMMARY REVIEW CARD */}
               <View style={styles.summaryReviewCard}>
-                <Text style={styles.summaryTitle}>TOURNAMENT SUMMARY REVIEW</Text>
+                <View style={styles.cardHeaderRow}>
+                  <Ionicons name="checkmark-done-circle" size={18} color="#059669" />
+                  <Text style={[styles.sectionCardTitle, { color: '#059669' }]}>TOURNAMENT SUMMARY REVIEW</Text>
+                </View>
+
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Tournament:</Text>
                   <Text style={styles.summaryVal}>{tournamentName || 'Unnamed Tournament'}</Text>
                 </View>
+
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>City:</Text>
-                  <Text style={styles.summaryVal}>{city || 'Nagaur, RJ'}</Text>
+                  <Text style={styles.summaryLabel}>City & Venue:</Text>
+                  <Text style={styles.summaryVal}>
+                    {city || 'Location'} • {venues.length > 0 ? `${venues.length} Ground(s)` : 'Main Ground'}
+                  </Text>
                 </View>
+
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Structure:</Text>
+                  <Text style={styles.summaryVal}>
+                    {tournamentType === 'LEAGUE_KNOCKOUT'
+                      ? 'League + Knockout'
+                      : tournamentType === 'LEAGUE'
+                      ? 'Round-Robin League'
+                      : 'Direct Knockout'}
+                  </Text>
+                </View>
+
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Rules:</Text>
-                  <Text style={styles.summaryVal}>{selectedCategory} • {selectedPitch} • {selectedFormat}</Text>
+                  <Text style={styles.summaryVal}>
+                    {selectedCategory} • {selectedPitch} • {selectedFormat}
+                  </Text>
                 </View>
               </View>
 
-              {/* Final Submit */}
+              {/* 6. FINAL SUBMIT BUTTON */}
               <TouchableOpacity
                 style={styles.submitBtn}
                 onPress={handleSubmit}
                 activeOpacity={0.85}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                  <MaterialCommunityIcons name="trophy" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={styles.submitBtnText}>CREATE TOURNAMENT & LAUNCH HUB</Text>
-                </View>
+                <MaterialCommunityIcons name="trophy" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.submitBtnText}>CREATE TOURNAMENT & LAUNCH HUB</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -883,11 +1266,6 @@ const styles = StyleSheet.create({
     color: themeColors.textPrimary,
     letterSpacing: -0.2
   },
-  headerSubtitle: {
-    fontSize: 10,
-    fontFamily: systemFont,
-    color: themeColors.textMuted
-  },
   stepCounterBadge: {
     backgroundColor: themeColors.surfaceOffWhite,
     borderWidth: 1,
@@ -952,7 +1330,7 @@ const styles = StyleSheet.create({
   },
   bannerPickerCard: {
     width: '100%',
-    height: 135,
+    height: 140,
     backgroundColor: themeColors.surfaceOffWhite,
     borderBottomWidth: 1,
     borderBottomColor: themeColors.border,
@@ -969,10 +1347,10 @@ const styles = StyleSheet.create({
   bannerPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3
+    gap: 4
   },
   bannerPlaceholderText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontFamily: systemFontMedium,
     color: themeColors.textPrimary
   },
@@ -1061,18 +1439,28 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     backgroundColor: themeColors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: themeColors.border,
     padding: 16,
     gap: 12
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
   sectionCardTitle: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontFamily: systemFontBold,
-    color: themeColors.textMuted,
-    letterSpacing: 0.8,
-    marginBottom: 2
+    color: themeColors.textPrimary,
+    letterSpacing: 0.8
+  },
+  sectionCardSub: {
+    fontSize: 11.5,
+    fontFamily: systemFont,
+    color: themeColors.textSecondary,
+    marginTop: -4
   },
   inputGroup: {
     gap: 6
@@ -1091,7 +1479,111 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     fontFamily: systemFont,
+    color: themeColors.textPrimary,
+    minHeight: 44
+  },
+  cityInputWrapper: {
+    position: 'relative',
+    justifyContent: 'center'
+  },
+  cityInputIcon: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 2
+  },
+  cityTextInput: {
+    paddingLeft: 38,
+    paddingRight: 36
+  },
+  clearCityBtn: {
+    position: 'absolute',
+    right: 12,
+    zIndex: 2,
+    padding: 4
+  },
+  suggestionsContainer: {
+    backgroundColor: themeColors.surface,
+    borderWidth: 1,
+    borderColor: themeColors.borderDark,
+    borderRadius: 10,
+    marginTop: 4,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: themeColors.border
+  },
+  suggestionText: {
+    fontSize: 13,
+    fontFamily: systemFontMedium,
     color: themeColors.textPrimary
+  },
+  addVenueInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  addVenueBtn: {
+    backgroundColor: '#18181B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    height: 44,
+    gap: 4
+  },
+  addVenueBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: systemFontBold
+  },
+  venueChipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4
+  },
+  venueChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1,
+    borderColor: themeColors.borderDark,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    maxWidth: '100%'
+  },
+  venueChipText: {
+    fontSize: 12,
+    fontFamily: systemFontMedium,
+    color: themeColors.textPrimary,
+    maxWidth: 200
+  },
+  removeVenueChipBtn: {
+    marginLeft: 6
+  },
+  venueEmptyHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 2
+  },
+  venueEmptyHintText: {
+    fontSize: 11,
+    fontFamily: systemFont,
+    color: themeColors.textMuted,
+    flex: 1
   },
   rowInputs: {
     flexDirection: 'row',
@@ -1114,39 +1606,70 @@ const styles = StyleSheet.create({
     fontFamily: systemFontMedium,
     color: themeColors.textPrimary
   },
-  presetsCard: {
-    backgroundColor: '#0F2744',
-    borderRadius: 12,
-    padding: 14,
-    gap: 8
-  },
-  presetsTitle: {
-    fontSize: 12,
-    fontFamily: systemFontBold,
-    color: '#38BDF8',
-    letterSpacing: 0.8
-  },
-  presetsSub: {
-    fontSize: 11,
-    fontFamily: systemFont,
-    color: '#94A3B8'
-  },
-  presetButtonsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  structureList: {
+    gap: 10,
     marginTop: 4
   },
-  presetChip: {
-    backgroundColor: '#1E3A8A',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8
+  structureCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1.5,
+    borderColor: themeColors.borderDark,
+    borderRadius: 12,
+    padding: 12,
+    gap: 12
   },
-  presetChipText: {
+  structureCardActive: {
+    borderColor: '#18181B',
+    backgroundColor: '#FAFAFA'
+  },
+  structureIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#18181B',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  structureContent: {
+    flex: 1,
+    gap: 2
+  },
+  structureTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  structureTitle: {
+    fontSize: 13.5,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary
+  },
+  structureTitleActive: {
+    color: '#18181B'
+  },
+  recommendedBadge: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4
+  },
+  recommendedBadgeText: {
+    fontSize: 9.5,
+    fontFamily: systemFontBold,
+    color: '#B45309'
+  },
+  structureDesc: {
     fontSize: 11,
-    fontFamily: systemFontMedium,
-    color: '#FFFFFF'
+    fontFamily: systemFont,
+    color: themeColors.textSecondary,
+    lineHeight: 15
+  },
+  structureDescActive: {
+    color: themeColors.textPrimary
   },
   chipsWrap: {
     flexDirection: 'row',
@@ -1195,37 +1718,41 @@ const styles = StyleSheet.create({
     fontFamily: systemFont,
     color: themeColors.textMuted
   },
+  expandedSectionWrap: {
+    gap: 12
+  },
   dividerLine: {
     height: 1,
     backgroundColor: themeColors.border,
     marginVertical: 4
   },
+  rulesMultilineInput: {
+    height: 85,
+    textAlignVertical: 'top',
+    paddingTop: 10
+  },
   summaryReviewCard: {
     backgroundColor: themeColors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: themeColors.border,
+    borderColor: '#A7F3D0',
+    backgroundColor: '#F0FDF4',
     padding: 14,
     gap: 8
   },
-  summaryTitle: {
-    fontSize: 11,
-    fontFamily: systemFontBold,
-    color: themeColors.textMuted,
-    letterSpacing: 0.8
-  },
   summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
   summaryLabel: {
     fontSize: 12,
     fontFamily: systemFont,
-    color: themeColors.textMuted
+    color: themeColors.textSecondary
   },
   summaryVal: {
     fontSize: 12,
-    fontFamily: systemFontBold,
+    fontFamily: systemFontMedium,
     color: themeColors.textPrimary
   },
   primaryNextBtn: {
@@ -1246,6 +1773,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#059669',
     borderRadius: 12,
     paddingVertical: 15,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8
