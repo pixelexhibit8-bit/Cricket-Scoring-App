@@ -283,7 +283,7 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                     <View style={styles.liveTeamRow}>
                       <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={24} />
                       <Text style={styles.liveTeamName} numberOfLines={1}>{t1Name}</Text>
-                      <Text style={styles.liveTeamScore}>{m.team1?.score || '0-0 (0.0)'}</Text>
+                      <Text style={styles.liveTeamScore}>{m.team1?.score || '0-0  0.0'}</Text>
                     </View>
                     <View style={[styles.liveTeamRow, { marginTop: 6 }]}>
                       <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={24} />

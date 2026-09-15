@@ -15,10 +15,9 @@ export const LiveMatchCardItem = React.memo(function LiveMatchCardItem({
   const inn1 = match.innings?.[0];
   const inn2 = match.innings?.[1];
 
-  const oversNum = match.maxOvers || match.totalOvers || 20;
   const tourName = match.tournamentName || match.tournamentTitle || match.seriesName || '';
-  const venueText = match.venue ? ` • ${match.venue}` : ' • Sadokan Ground';
-  const subtitle = tourName ? `${tourName} • ${oversNum} Overs` : `${oversNum} Overs${venueText}`;
+  const venue = match.venue || '';
+  const subtitle = tourName ? (venue ? `${tourName} • ${venue}` : tourName) : (venue || 'Sadokan Ground');
 
   const t1Score = inn1?.battingTeam ? `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}` : '0-0';
   const t1Overs = inn1 ? formatOvers(inn1.totalLegalBalls || 0) : '0.0';

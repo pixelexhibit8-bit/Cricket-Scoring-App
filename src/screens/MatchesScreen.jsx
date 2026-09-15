@@ -136,10 +136,9 @@ export function MatchesScreen(props = {}) {
     const inn1 = m.innings?.[0];
     const inn2 = m.innings?.[1];
 
-    const oversNum = m.maxOvers || m.totalOvers || 20;
     const tourName = m.tournamentName || m.tournamentTitle || m.seriesName || '';
-    const venueText = m.venue ? ` - ${m.venue}` : '';
-    const subtitle = tourName ? `${tourName} • ${oversNum} Overs` : `${oversNum}-over match${venueText}`;
+    const venue = m.venue || '';
+    const subtitle = tourName ? (venue ? `${tourName} • ${venue}` : tourName) : (venue || 'Sadokan Ground');
 
     const t1Score = inn1?.battingTeam ? `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}` : '0-0';
     const t1Overs = inn1 ? formatOvers(inn1.totalLegalBalls || 0) : '0.0';
@@ -183,10 +182,9 @@ export function MatchesScreen(props = {}) {
     const resultCardText = getFinishedResultCardText(match);
     const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
 
-    const oversText = `${match.maxOvers || 5} Overs`;
-    const ballTypeText = match.ballType ? ` • ${match.ballType.charAt(0).toUpperCase() + match.ballType.slice(1)} Ball` : ' • Tennis Ball';
-    const venueText = match.venue ? ` • ${match.venue}` : ' • Sadokan Ground';
-    const subtitleText = `${oversText}${ballTypeText}${venueText}`;
+    const tourName = match.tournamentName || match.tournamentTitle || match.seriesName || '';
+    const venue = match.venue || 'Sadokan Ground';
+    const subtitleText = tourName ? `${tourName} • ${venue}` : venue;
 
     return (
       <View key={`${match.id || match.title || 'match'}-${index}`} style={{ marginBottom: 8 }}>
@@ -706,10 +704,9 @@ export function MatchesScreen(props = {}) {
                         const t2Name = m.team2?.name || m.team2Name || m.teams?.[1]?.name || 'Team B';
                         const schedTime = m.timeText || m.time || (m.matchDate && m.matchDate.includes('•') ? m.matchDate.split('•')[1]?.trim() : 'Scheduled');
                         const venue = m.venueName || m.venue || 'Sadokan Ground';
-                        const overs = m.totalOvers || m.maxOvers || m.overs || 5;
                         const tourName = m.tournamentName || m.tournamentTitle || m.seriesName || '';
                         const stage = m.stage || '';
-                        const subtitleText = [tourName, stage, `${overs}-Over Match`, venue].filter(Boolean).join(' • ');
+                        const subtitleText = [tourName, stage, venue].filter(Boolean).join(' • ');
 
                         return (
                           <View

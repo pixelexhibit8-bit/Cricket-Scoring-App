@@ -686,7 +686,7 @@ export const buildFinishedMatch = (match, rosterByTeam = {}) => {
       logoKey: teamMeta?.logoKey || (name === firstTeamName ? 'default-team-1' : 'default-team-2'),
       logoUri: teamMeta?.logoUri,
       score: battingInning
-        ? `${runs}-${wickets} (${formatOvers(totalLegalBalls)} Ov)`
+        ? `${runs}-${wickets} ${formatOvers(totalLegalBalls)}`
         : 'Yet to bat',
       runs,
       wickets,
@@ -756,8 +756,8 @@ export const escapeRegExp = (value = '') =>
 
 export const parseFinishedScoreText = (scoreText = '') => {
   const text = String(scoreText || '').trim();
-  const scoreMatch = text.match(/(\d+)\s*-\s*(\d+)/);
-  const oversMatch = text.match(/\(([^)]+)\)/);
+  const scoreMatch = text.match(/(\d+)\s*[-/]\s*(\d+)/);
+  const oversMatch = text.match(/\(([^)]+)\)/) || text.match(/(?:[-/]\d+\s+)(\d+(?:\.\d+)?)/);
   const oversText = (oversMatch?.[1] || '0.0').replace(/\s*Ov$/i, '').trim();
   return {
     runs: Number(scoreMatch?.[1] || 0),

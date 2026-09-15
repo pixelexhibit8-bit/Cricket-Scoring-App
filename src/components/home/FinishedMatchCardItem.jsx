@@ -18,9 +18,8 @@ export const FinishedMatchCardItem = React.memo(function FinishedMatchCardItem({
   const resultCardText = getFinishedResultCardText(match);
   const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
   const tourName = match.tournamentName || match.tournamentTitle || match.seriesName || '';
-  const subtitleText = tourName
-    ? `${tourName} • ${match.maxOvers || 5} Overs`
-    : `${match.maxOvers || 5} Overs • ${match.venue || 'Sadokan Ground'}`;
+  const venue = match.venue || 'Sadokan Ground';
+  const subtitleText = tourName ? `${tourName} • ${venue}` : venue;
 
   return (
     <View style={[{ marginBottom: 10 }, style]}>

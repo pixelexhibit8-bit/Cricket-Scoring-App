@@ -115,13 +115,13 @@ export function PublicLiveViewScreen(props = {}) {
 
   const t1ScoreParts = inn1?.battingTeam ? {
     score: `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}`,
-    overs: `(${formatOvers(inn1.totalLegalBalls || 0)} ov)`
+    overs: formatOvers(inn1.totalLegalBalls || 0)
   } : { score: 'Yet to bat', overs: '' };
 
   const t2ScoreParts = inn2?.battingTeam ? {
     score: `${inn2.battingTeam.runs ?? 0}-${inn2.battingTeam.wickets ?? 0}`,
-    overs: `(${formatOvers(inn2.totalLegalBalls || 0)} ov)`
-  } : (isInn2 ? { score: '0-0', overs: '(0.0 ov)' } : { score: 'Yet to bat', overs: '' });
+    overs: formatOvers(inn2.totalLegalBalls || 0)
+  } : (isInn2 ? { score: '0-0', overs: '0.0' } : { score: 'Yet to bat', overs: '' });
 
   const reqRuns = isInn2 && activeMatch.target ? Math.max(0, activeMatch.target - (inn2?.battingTeam?.runs || 0)) : null;
   const reqBalls = isInn2 ? Math.max(0, (activeMatch.maxOvers * 6) - (inn2?.totalLegalBalls || 0)) : null;
@@ -508,11 +508,11 @@ export function PublicLiveViewScreen(props = {}) {
                     {[
                       {
                         name: team1Name,
-                        score: inn1?.battingTeam ? `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0} (${formatOvers(inn1.totalLegalBalls || 0)} ov)` : '0-0'
+                        score: inn1?.battingTeam ? `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}  ${formatOvers(inn1.totalLegalBalls || 0)}` : '0-0'
                       },
                       {
                         name: team2Name,
-                        score: inn2?.battingTeam ? `${inn2.battingTeam.runs ?? 0}-${inn2.battingTeam.wickets ?? 0} (${formatOvers(inn2.totalLegalBalls || 0)} ov)` : (isInn2 ? '0-0 (0.0 ov)' : 'Yet to bat')
+                        score: inn2?.battingTeam ? `${inn2.battingTeam.runs ?? 0}-${inn2.battingTeam.wickets ?? 0}  ${formatOvers(inn2.totalLegalBalls || 0)}` : (isInn2 ? '0-0  0.0' : 'Yet to bat')
                       }
                     ].map((tObj, idx) => {
                       const active = scorecardInningIndex === idx;

@@ -200,21 +200,21 @@ export const getScorePartsFromText = (scoreText = '') => {
   const raw = String(scoreText || '').trim();
   if (!raw) return { score: '', overs: '' };
 
-  const match = raw.match(/^([0-9]+\s*-\s*[0-9]+)\s*(?:\(([^)]+)\))?$/);
+  const match = raw.match(/^([0-9]+\s*[-/]\s*[0-9]+)\s*(?:\(([^)]+)\))?$/);
   if (match) {
     const score = match[1].replace(/\s+/g, '');
     const oversStr = (match[2] || '').trim();
     const oversMatch = oversStr.match(/([0-9]+(?:\.[0-9]+)?)\s*ov(?:s)?/i) || oversStr.match(/([0-9]+(?:\.[0-9]+)?)/);
     const ovNum = oversMatch ? oversMatch[1] : oversStr;
-    const overs = ovNum ? (ovNum.toLowerCase().includes('ov') ? `(${ovNum})` : `(${ovNum} ov)`) : '';
+    const overs = ovNum ? ovNum.replace(/\s*ov(?:s)?/i, '').replace(/[()]/g, '').trim() : '';
     return { score, overs };
   }
 
-  const directScoreMatch = raw.match(/^([0-9]+\s*-\s*[0-9]+)/);
+  const directScoreMatch = raw.match(/^([0-9]+\s*[-/]\s*[0-9]+)/);
   if (directScoreMatch) {
     const score = directScoreMatch[1].replace(/\s+/g, '');
     const oversMatch = raw.match(/([0-9]+\.[0-9]+)/);
-    const overs = oversMatch ? `(${oversMatch[1]} ov)` : '';
+    const overs = oversMatch ? oversMatch[1] : '';
     return { score, overs };
   }
 

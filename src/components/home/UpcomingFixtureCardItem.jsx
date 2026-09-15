@@ -47,7 +47,7 @@ export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardIt
               </Text>
             </View>
             <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: systemFontMedium, flex: 1 }} numberOfLines={1}>
-              {tourName} • {overs} Ov
+              {tourName}
             </Text>
           </View>
           <Text style={{ fontSize: 11.5, color: '#0284C7', fontFamily: systemFontMedium }}>

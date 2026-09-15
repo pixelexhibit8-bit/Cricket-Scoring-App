@@ -43,7 +43,7 @@ export const ScorerHubCard = React.memo(function ScorerHubCard({
 
             {/* Score & Overs */}
             <Text style={styles.matchScoreText}>
-              Inning {activeMatch?.inning || 1} • {activeRuns}/{activeWickets} ({activeOvers} Ov)
+              Inning {activeMatch?.inning || 1} • {activeRuns}/{activeWickets}  {activeOvers}
             </Text>
 
             {/* Resume Button */}
