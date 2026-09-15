@@ -1126,8 +1126,8 @@ export function buildSadokanPremierLeagueTournament() {
     startDate: '10 Sep 2026',
     endDate: '19 Sep 2026',
     duration: '10 Sep 2026 - 19 Sep 2026',
-    bannerUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469230/spl_tournament_banner.jpg',
-    logoUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469234/spl_tournament_logo.jpg',
+    bannerUri: 'spl_banner',
+    logoUri: 'spl_logo',
     teams: SPL_TEAMS,
     matches: SPL_MATCHES,
     pointsTable

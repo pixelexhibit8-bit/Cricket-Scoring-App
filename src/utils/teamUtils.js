@@ -321,17 +321,20 @@ export const getTournamentBannerSource = (tournament) => {
   const rawBanner = tournament.bannerUri || tournament.bannerUrl || tournament.banner;
   const id = String(tournament.id || '').toLowerCase();
   const name = String(tournament.fullName || tournament.name || tournament.title || '').toLowerCase();
+  const rawStr = String(rawBanner || '').toLowerCase();
 
-  if (typeof rawBanner === 'string' && (rawBanner.startsWith('http://') || rawBanner.startsWith('https://') || rawBanner.startsWith('data:') || rawBanner.startsWith('file:'))) {
-    return { uri: rawBanner };
+  // 1. Prioritize bundled local assets for known tournament identities
+  if (id.includes('sadokan') || name.includes('sadokan') || rawStr.includes('spl') || rawBanner === 'spl_banner') {
+    return require('../../assets/spl_banner.jpg');
   }
 
-  if (id.includes('rajasthan') || name.includes('rajasthan') || rawBanner === 'rpl_banner' || rawBanner === 'rpl') {
+  if (id.includes('rajasthan') || name.includes('rajasthan') || rawStr.includes('rpl') || rawBanner === 'rpl_banner') {
     return require('../../assets/rpl_banner.jpg');
   }
 
-  if (id.includes('sadokan') || name.includes('sadokan') || rawBanner === 'spl_banner' || rawBanner === 'spl') {
-    return require('../../assets/spl_banner.jpg');
+  // 2. Explicit custom URLs uploaded by organizers
+  if (typeof rawBanner === 'string' && (rawBanner.startsWith('http://') || rawBanner.startsWith('https://') || rawBanner.startsWith('data:') || rawBanner.startsWith('file:'))) {
+    return { uri: rawBanner };
   }
 
   if (typeof rawBanner === 'string' && rawBanner.length > 5) {
@@ -349,17 +352,20 @@ export const getTournamentLogoSource = (tournament) => {
   const rawLogo = tournament.logoUri || tournament.logoUrl || tournament.logo;
   const id = String(tournament.id || '').toLowerCase();
   const name = String(tournament.fullName || tournament.name || tournament.title || '').toLowerCase();
+  const rawStr = String(rawLogo || '').toLowerCase();
 
-  if (typeof rawLogo === 'string' && (rawLogo.startsWith('http://') || rawLogo.startsWith('https://') || rawLogo.startsWith('data:') || rawLogo.startsWith('file:'))) {
-    return { uri: rawLogo };
+  // 1. Prioritize bundled local assets for known tournament identities
+  if (id.includes('sadokan') || name.includes('sadokan') || rawStr.includes('spl') || rawLogo === 'spl_logo') {
+    return require('../../assets/spl_logo.jpg');
   }
 
-  if (id.includes('rajasthan') || name.includes('rajasthan') || rawLogo === 'rpl_logo' || rawLogo === 'rpl') {
+  if (id.includes('rajasthan') || name.includes('rajasthan') || rawStr.includes('rpl') || rawLogo === 'rpl_logo') {
     return require('../../assets/rpl_logo.jpg');
   }
 
-  if (id.includes('sadokan') || name.includes('sadokan') || rawLogo === 'spl_logo' || rawLogo === 'spl') {
-    return require('../../assets/spl_logo.jpg');
+  // 2. Explicit custom URLs uploaded by organizers
+  if (typeof rawLogo === 'string' && (rawLogo.startsWith('http://') || rawLogo.startsWith('https://') || rawLogo.startsWith('data:') || rawLogo.startsWith('file:'))) {
+    return { uri: rawLogo };
   }
 
   if (typeof rawLogo === 'string' && rawLogo.length > 5) {

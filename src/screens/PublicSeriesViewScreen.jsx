@@ -542,16 +542,6 @@ export function PublicSeriesViewScreen(props = {}) {
                       </View>
                     )}
 
-                    {/* Gradient title overlay */}
-                    <View style={styles.carouselCardOverlay}>
-                      <Text style={styles.carouselCardTitle} numberOfLines={1}>
-                        {tItem.name || tItem.title}
-                      </Text>
-                      <Text style={styles.carouselCardSubtitle} numberOfLines={1}>
-                        {tItem.duration || tItem.startDate || 'Season 2026'}
-                      </Text>
-                    </View>
-
                     {isSelected ? (
                       <View style={styles.carouselCheckmarkBadge}>
                         <Ionicons name="checkmark-circle" size={20} color="#0284C7" />
@@ -1099,47 +1089,26 @@ const styles = StyleSheet.create({
     paddingVertical: 10
   },
   carouselCard: {
-    width: 204,
-    height: 98,
-    borderRadius: 14,
+    width: 120,
+    height: 132,
+    borderRadius: 12,
     backgroundColor: '#18181B',
     overflow: 'hidden',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#EEEEF0',
     position: 'relative'
   },
   carouselCardSelected: {
     borderColor: '#0284C7',
-    borderWidth: 2
+    borderWidth: 1.5
   },
   carouselCardImage: {
     width: '100%',
     height: '100%',
     position: 'absolute',
     top: 0,
-    left: 0
-  },
-  carouselCardOverlay: {
-    position: 'absolute',
-    bottom: 0,
     left: 0,
-    right: 0,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.72)',
-    justifyContent: 'flex-end'
-  },
-  carouselCardTitle: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontFamily: systemFontBold,
-    letterSpacing: -0.2
-  },
-  carouselCardSubtitle: {
-    color: '#E2E8F0',
-    fontSize: 9.5,
-    fontFamily: systemFontMedium,
-    marginTop: 1
+    resizeMode: 'cover'
   },
   carouselCardFallback: {
     flex: 1,
