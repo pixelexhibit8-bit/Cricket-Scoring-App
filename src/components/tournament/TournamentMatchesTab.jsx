@@ -56,7 +56,8 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
   onViewScorecard,
   isUserOrganiser,
   onOpenAutoSchedule,
-  onOpenManualSchedule
+  onOpenManualSchedule,
+  onRescheduleMatch
 }) {
   const matches = Array.isArray(tournament?.matches) ? tournament.matches : [];
   const teams = Array.isArray(tournament?.teams) ? tournament.teams : [];
@@ -342,6 +343,35 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                         <Text style={styles.startsAtTimeText}>{startTime}</Text>
                       </View>
                     </View>
+
+                    {/* Organiser Action Buttons for Upcoming Fixture */}
+                    {isUserOrganiser ? (
+                      <View style={styles.upcomingActionRow}>
+                        <TouchableOpacity
+                          style={styles.rescheduleBtn}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (onRescheduleMatch) onRescheduleMatch(m);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <MaterialCommunityIcons name="calendar-edit" size={14} color="#0284C7" />
+                          <Text style={styles.rescheduleBtnText}>Reschedule</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.startScoringQuickBtn}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (onStartMatchScoring) onStartMatchScoring(m);
+                          }}
+                          activeOpacity={0.85}
+                        >
+                          <MaterialCommunityIcons name="cricket" size={14} color="#FFFFFF" />
+                          <Text style={styles.startScoringQuickText}>Start Scoring</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
                   </TouchableOpacity>
                 );
               })}
@@ -745,6 +775,47 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold,
     color: '#0F172A',
     marginTop: 2
+  },
+  upcomingActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9'
+  },
+  rescheduleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD'
+  },
+  rescheduleBtnText: {
+    fontSize: 12,
+    fontFamily: systemFontBold,
+    color: '#0284C7'
+  },
+  startScoringQuickBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: '#18181B'
+  },
+  startScoringQuickText: {
+    fontSize: 12,
+    fontFamily: systemFontBold,
+    color: '#FFFFFF'
   },
   emptyStateCard: {
     backgroundColor: '#FFFFFF',

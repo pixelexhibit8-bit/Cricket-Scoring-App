@@ -57,6 +57,8 @@ import { EditTournamentModal } from '../components/modals/EditTournamentModal.js
 import { TournamentRoundsModal } from '../components/modals/TournamentRoundsModal.jsx';
 import { TournamentGroupsModal } from '../components/modals/TournamentGroupsModal.jsx';
 import { TournamentRulesModal } from '../components/modals/TournamentRulesModal.jsx';
+import { ScheduleChoiceModal } from '../components/modals/ScheduleChoiceModal.jsx';
+import { ManualScheduleMatchModal } from '../components/modals/ManualScheduleMatchModal.jsx';
 import { getCurrentUser } from '../services/authService.js';
 import { useMatch } from '../context/MatchContext.jsx';
 import {
@@ -134,11 +136,10 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Modals for Organiser Actions
   const [addTeamModalVisible, setAddTeamModalVisible] = useState(false);
+  const [scheduleChoiceModalVisible, setScheduleChoiceModalVisible] = useState(false);
   const [autoFixturesModalVisible, setAutoFixturesModalVisible] = useState(false);
-  const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
-  const [schedTeam1, setSchedTeam1] = useState('');
-  const [schedTeam2, setSchedTeam2] = useState('');
-  const [schedDateStr, setSchedDateStr] = useState('Tomorrow • 07:30 PM');
+  const [manualScheduleModalVisible, setManualScheduleModalVisible] = useState(false);
+  const [selectedMatchToReschedule, setSelectedMatchToReschedule] = useState(null);
 
   // Admin Settings Modals
   const [adminMenuModalVisible, setAdminMenuModalVisible] = useState(false);
@@ -625,35 +626,46 @@ export function PublicSeriesViewScreen(props = {}) {
     }
   };
 
-  // Schedule Match Submission
-  const handleScheduleSubmit = async () => {
-    if (!schedTeam1 || !schedTeam2) {
-      Alert.alert('Required', 'Please select both teams for the match.');
-      return;
-    }
-    if (schedTeam1 === schedTeam2) {
-      Alert.alert('Invalid Selection', 'Please select two different teams.');
-      return;
+  // Save or Reschedule Manual Match
+  const handleSaveManualMatch = async (matchData) => {
+    if (!tournament?.id || !matchData) return;
+    const currentMatches = Array.isArray(tournament.matches) ? tournament.matches : [];
+
+    const existingIdx = currentMatches.findIndex(m => m.id === matchData.id);
+    let updatedMatchesList = [];
+
+    if (existingIdx !== -1) {
+      const target = currentMatches[existingIdx];
+      // Lock finished or live matches
+      if (target.status === 'FINISHED' || target.status === 'LIVE' || Boolean(target.result)) {
+        Alert.alert('Match Locked', 'Completed or Live matches cannot be rescheduled.');
+        return;
+      }
+      updatedMatchesList = [...currentMatches];
+      updatedMatchesList[existingIdx] = {
+        ...target,
+        ...matchData
+      };
+    } else {
+      const newMatchNumber = currentMatches.length + 1;
+      const completeNewMatch = {
+        ...matchData,
+        id: matchData.id || `match_${tournament.id}_${Date.now()}`,
+        matchNumber: newMatchNumber,
+        matchNo: newMatchNumber
+      };
+      updatedMatchesList = [...currentMatches, completeNewMatch];
     }
 
-    const matchData = {
-      team1: { name: schedTeam1 },
-      team2: { name: schedTeam2 },
-      dateStr: schedDateStr || 'Upcoming',
-      status: 'UPCOMING'
-    };
-
-    const updated = await addMatchToTournament(tournament.id, matchData);
+    const updated = await saveTournamentFixtures(tournament.id, updatedMatchesList);
     if (updated) {
       setTournament(updated);
     } else {
       setTournament(prev => ({
         ...prev,
-        matches: [...(prev?.matches || []), { id: `m_${Date.now()}`, ...matchData }]
+        matches: updatedMatchesList
       }));
     }
-
-    setScheduleModalVisible(false);
   };
 
   // Tournament Admin Handlers
@@ -679,19 +691,19 @@ export function PublicSeriesViewScreen(props = {}) {
   const handleDeleteSchedule = async () => {
     if (!tournament?.id) return;
     const currentMatches = Array.isArray(tournament.matches) ? tournament.matches : [];
-    const keptMatches = currentMatches.filter(m => m.status === 'FINISHED' || m.status === 'LIVE');
+    const keptMatches = currentMatches.filter(m => m.status === 'FINISHED' || m.status === 'LIVE' || Boolean(m.result));
     const updated = await saveTournamentFixtures(tournament.id, keptMatches);
     if (updated) {
       setTournament(updated);
     } else {
       setTournament(prev => ({ ...(prev || {}), matches: keptMatches }));
     }
-    showToast('Scheduled fixtures cleared', 'info');
+    showToast('Upcoming scheduled fixtures cleared', 'info');
   };
 
   const handleOpenStartMatch = () => {
     const matches = Array.isArray(tournament.matches) ? tournament.matches : [];
-    const upcoming = matches.find(m => m.status !== 'FINISHED' && m.status !== 'LIVE');
+    const upcoming = matches.find(m => m.status !== 'FINISHED' && m.status !== 'LIVE' && !m.result);
     if (upcoming) {
       handleStartMatchScoring(upcoming);
     } else if (matches.length > 0) {
@@ -702,7 +714,7 @@ export function PublicSeriesViewScreen(props = {}) {
         'Please schedule a match fixture or generate auto fixtures before starting match scoring.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Schedule Match', onPress: () => setScheduleModalVisible(true) }
+          { text: 'Schedule Match', onPress: () => setScheduleChoiceModalVisible(true) }
         ]
       );
     }
@@ -982,7 +994,14 @@ export function PublicSeriesViewScreen(props = {}) {
               onViewScorecard={handleViewScorecard}
               isUserOrganiser={isUserOrganiser}
               onOpenAutoSchedule={() => setAutoFixturesModalVisible(true)}
-              onOpenManualSchedule={() => setScheduleModalVisible(true)}
+              onOpenManualSchedule={() => {
+                setSelectedMatchToReschedule(null);
+                setManualScheduleModalVisible(true);
+              }}
+              onRescheduleMatch={(match) => {
+                setSelectedMatchToReschedule(match);
+                setManualScheduleModalVisible(true);
+              }}
             />
           </View>
 
@@ -1051,85 +1070,28 @@ export function PublicSeriesViewScreen(props = {}) {
           onSaveFixtures={handleSaveAutoFixtures}
         />
 
-        {/* ── MODAL 3: SCHEDULE FIXTURE MODAL ── */}
-        <Modal
-          visible={scheduleModalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setScheduleModalVisible(false)}
-        >
-          <Pressable style={styles.modalOverlay} onPress={() => setScheduleModalVisible(false)}>
-            <Pressable style={styles.modalContent} onPress={() => {}}>
-              <View style={styles.modalHandle} />
-              <View style={styles.modalHeaderRow}>
-                <Text style={styles.modalTitle}>Schedule Match Fixture</Text>
-                <TouchableOpacity onPress={() => setScheduleModalVisible(false)}>
-                  <Ionicons name="close" size={24} color={themeColors.textPrimary} />
-                </TouchableOpacity>
-              </View>
+        {/* ── MODAL 3: SCHEDULE CHOICE MODAL (AUTO vs MANUAL) ── */}
+        <ScheduleChoiceModal
+          visible={scheduleChoiceModalVisible}
+          onClose={() => setScheduleChoiceModalVisible(false)}
+          onSelectAuto={() => setAutoFixturesModalVisible(true)}
+          onSelectManual={() => {
+            setSelectedMatchToReschedule(null);
+            setManualScheduleModalVisible(true);
+          }}
+        />
 
-              {(tournament.teams && tournament.teams.length >= 2) ? (
-                <>
-                  <Text style={styles.inputLabel}>Select Team 1</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginVertical: 6 }}>
-                    {tournament.teams.map(t => (
-                      <TouchableOpacity
-                        key={`t1-${t.id || t.name}`}
-                        style={[styles.teamSelectPill, schedTeam1 === t.name && styles.teamSelectPillActive]}
-                        onPress={() => setSchedTeam1(t.name)}
-                      >
-                        <Text style={[styles.teamSelectPillText, schedTeam1 === t.name && styles.teamSelectPillTextActive]}>{t.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-
-                  <Text style={[styles.inputLabel, { marginTop: 10 }]}>Select Team 2</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginVertical: 6 }}>
-                    {tournament.teams.map(t => (
-                      <TouchableOpacity
-                        key={`t2-${t.id || t.name}`}
-                        style={[styles.teamSelectPill, schedTeam2 === t.name && styles.teamSelectPillActive]}
-                        onPress={() => setSchedTeam2(t.name)}
-                      >
-                        <Text style={[styles.teamSelectPillText, schedTeam2 === t.name && styles.teamSelectPillTextActive]}>{t.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-
-                  <View style={[styles.inputGroup, { marginTop: 10 }]}>
-                    <Text style={styles.inputLabel}>Match Date & Time</Text>
-                    <TextInput
-                      style={styles.modalTextInput}
-                      value={schedDateStr}
-                      onChangeText={setSchedDateStr}
-                    />
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.modalSubmitBtn}
-                    onPress={handleScheduleSubmit}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.modalSubmitBtnText}>CONFIRM & SAVE FIXTURE</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <View style={{ paddingVertical: 14, alignItems: 'center', gap: 8 }}>
-                  <Text style={styles.emptySubtitle}>Please add at least 2 teams before creating fixtures.</Text>
-                  <TouchableOpacity
-                    style={styles.modalSubmitBtn}
-                    onPress={() => {
-                      setScheduleModalVisible(false);
-                      setAddTeamModalVisible(true);
-                    }}
-                  >
-                    <Text style={styles.modalSubmitBtnText}>+ Add Teams First</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </Pressable>
-          </Pressable>
-        </Modal>
+        {/* ── MODAL 4: MANUAL SCHEDULE / RESCHEDULE MATCH MODAL ── */}
+        <ManualScheduleMatchModal
+          visible={manualScheduleModalVisible}
+          onClose={() => {
+            setManualScheduleModalVisible(false);
+            setSelectedMatchToReschedule(null);
+          }}
+          tournament={tournament}
+          initialMatchData={selectedMatchToReschedule}
+          onSaveMatch={handleSaveManualMatch}
+        />
 
         {/* ── MODAL 4: UPGRADED SQUAD & TEAM MANAGEMENT DRAWER ── */}
         <Modal
@@ -1375,7 +1337,7 @@ export function PublicSeriesViewScreen(props = {}) {
           onOpenRounds={() => setRoundsModalVisible(true)}
           onOpenGroups={() => setGroupsModalVisible(true)}
           onOpenStartMatch={handleOpenStartMatch}
-          onOpenSchedule={() => setScheduleModalVisible(true)}
+          onOpenSchedule={() => setScheduleChoiceModalVisible(true)}
           onDeleteSchedule={handleDeleteSchedule}
           onOpenScorers={handleOpenScorers}
           onOpenOfficials={handleOpenOfficials}
