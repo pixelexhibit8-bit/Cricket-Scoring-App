@@ -734,13 +734,21 @@ export function MatchesScreen(props = {}) {
                               {/* Left Teams Column */}
                               <View style={{ flex: 1, gap: 12 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                  <TeamIdentityMark team={m.team1 || { name: t1Name }} size={26} />
+                                  <TeamIdentityMark
+                                    team={m.team1 || { name: t1Name }}
+                                    tournamentTeams={m.tournament?.teams || []}
+                                    size={26}
+                                  />
                                   <Text style={{ fontSize: 15.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
                                     {t1Name}
                                   </Text>
                                 </View>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                  <TeamIdentityMark team={m.team2 || { name: t2Name }} size={26} />
+                                  <TeamIdentityMark
+                                    team={m.team2 || { name: t2Name }}
+                                    tournamentTeams={m.tournament?.teams || []}
+                                    size={26}
+                                  />
                                   <Text style={{ fontSize: 15.5, color: '#0F172A', fontFamily: systemFontMedium }} numberOfLines={1}>
                                     {t2Name}
                                   </Text>

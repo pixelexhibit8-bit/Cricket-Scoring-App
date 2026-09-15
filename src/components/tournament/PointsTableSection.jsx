@@ -11,6 +11,8 @@ import {
 
 export const PointsTableSection = React.memo(function PointsTableSection({
   pointsTableData = [],
+  teams = [],
+  tournamentTeams = [],
   totalTeams = 0,
   qualifyingSpots = 4,
   isOverviewPreview = false,
@@ -18,6 +20,7 @@ export const PointsTableSection = React.memo(function PointsTableSection({
   onToggleTeamForm,
   onViewAll
 }) {
+  const activeTeamsList = teams.length > 0 ? teams : tournamentTeams;
   const teamsCount = totalTeams || pointsTableData.length;
   const effectiveCutoff = teamsCount >= 5 ? 4 : (teamsCount >= 3 ? 2 : 1);
 
@@ -87,8 +90,8 @@ export const PointsTableSection = React.memo(function PointsTableSection({
           <Text style={[styles.tableColHeader, styles.colPts]}>Pts</Text>
         </View>
 
-        {/* Dynamic Table Rows for ALL Teams */}
-        {pointsTableData.map((row, idx) => {
+        {/* Dynamic Table Rows */}
+        {(isOverviewPreview ? pointsTableData.slice(0, 4) : pointsTableData).map((row, idx) => {
           const rank = idx + 1;
           const isQualifier = rank <= effectiveCutoff;
           const teamCode = getTeamCode(row);
@@ -103,7 +106,7 @@ export const PointsTableSection = React.memo(function PointsTableSection({
               style={[
                 styles.tableDataRow,
                 isQualifier && styles.qualifierRowHighlight,
-                idx === pointsTableData.length - 1 && { borderBottomWidth: 0 }
+                idx === (isOverviewPreview ? Math.min(4, pointsTableData.length) : pointsTableData.length) - 1 && { borderBottomWidth: 0 }
               ]}
             >
               {/* Team Identity Column: Q Tag + Logo + Short Name */}
@@ -116,7 +119,11 @@ export const PointsTableSection = React.memo(function PointsTableSection({
                   <View style={styles.qTagPlaceholder} />
                 )}
 
-                <TeamIdentityMark team={{ name: row.team, shortName: teamCode }} size={20} />
+                <TeamIdentityMark
+                  team={{ name: row.team, shortName: teamCode }}
+                  tournamentTeams={activeTeamsList}
+                  size={20}
+                />
 
                 <Text style={styles.teamCodeText} numberOfLines={1}>
                   {teamCode}
@@ -164,55 +171,57 @@ export const PointsTableSection = React.memo(function PointsTableSection({
         <Text style={styles.qualifierIndicatorText}>Qualified</Text>
       </View>
 
-      {/* Clean 2-Column Standard Cricket Glossary */}
-      <View style={styles.glossaryContainer}>
-        <Text style={styles.glossaryTitle}>Glossary</Text>
-        <View style={styles.glossaryTwoColRow}>
-          {/* Left Column */}
-          <View style={styles.glossaryCol}>
-            <View style={styles.glossaryItem}>
-              <Text style={styles.glossaryKey}>P:</Text>
-              <Text style={styles.glossaryVal}>The number of matches played</Text>
+      {/* Clean 2-Column Standard Cricket Glossary (Only on Full Points Table Tab) */}
+      {!isOverviewPreview ? (
+        <View style={styles.glossaryContainer}>
+          <Text style={styles.glossaryTitle}>Glossary</Text>
+          <View style={styles.glossaryTwoColRow}>
+            {/* Left Column */}
+            <View style={styles.glossaryCol}>
+              <View style={styles.glossaryItem}>
+                <Text style={styles.glossaryKey}>P:</Text>
+                <Text style={styles.glossaryVal}>The number of matches played</Text>
+              </View>
+              <View style={styles.glossaryItem}>
+                <Text style={styles.glossaryKey}>W:</Text>
+                <Text style={styles.glossaryVal}>The number of matches won</Text>
+              </View>
+              <View style={styles.glossaryItem}>
+                <Text style={styles.glossaryKey}>L:</Text>
+                <Text style={styles.glossaryVal}>The number of matches lost</Text>
+              </View>
+              <View style={styles.glossaryItem}>
+                <Text style={styles.glossaryKey}>NRR:</Text>
+                <Text style={styles.glossaryVal}>Net Run Rate</Text>
+              </View>
             </View>
-            <View style={styles.glossaryItem}>
-              <Text style={styles.glossaryKey}>W:</Text>
-              <Text style={styles.glossaryVal}>The number of matches won</Text>
-            </View>
-            <View style={styles.glossaryItem}>
-              <Text style={styles.glossaryKey}>L:</Text>
-              <Text style={styles.glossaryVal}>The number of matches lost</Text>
-            </View>
-            <View style={styles.glossaryItem}>
-              <Text style={styles.glossaryKey}>NRR:</Text>
-              <Text style={styles.glossaryVal}>Net Run Rate</Text>
-            </View>
-          </View>
 
-          {/* Right Column */}
-          <View style={styles.glossaryCol}>
-            <View style={styles.glossaryItem}>
-              <Text style={styles.glossaryKey}>NR:</Text>
-              <Text style={styles.glossaryVal}>No Result</Text>
-            </View>
-            <View style={styles.glossaryItem}>
-              <Text style={styles.glossaryKey}>Pts:</Text>
-              <Text style={styles.glossaryVal}>Points</Text>
-            </View>
-            <View style={styles.glossaryItem}>
-              <View style={styles.eTagBadgeMini}>
-                <Text style={styles.eTagTextMini}>E</Text>
+            {/* Right Column */}
+            <View style={styles.glossaryCol}>
+              <View style={styles.glossaryItem}>
+                <Text style={styles.glossaryKey}>NR:</Text>
+                <Text style={styles.glossaryVal}>No Result</Text>
               </View>
-              <Text style={styles.glossaryVal}>Eliminated</Text>
-            </View>
-            <View style={styles.glossaryItem}>
-              <View style={styles.qTagBadgeMini}>
-                <Text style={styles.qTagTextMini}>Q</Text>
+              <View style={styles.glossaryItem}>
+                <Text style={styles.glossaryKey}>Pts:</Text>
+                <Text style={styles.glossaryVal}>Points</Text>
               </View>
-              <Text style={styles.glossaryVal}>Qualified</Text>
+              <View style={styles.glossaryItem}>
+                <View style={styles.eTagBadgeMini}>
+                  <Text style={styles.eTagTextMini}>E</Text>
+                </View>
+                <Text style={styles.glossaryVal}>Eliminated</Text>
+              </View>
+              <View style={styles.glossaryItem}>
+                <View style={styles.qTagBadgeMini}>
+                  <Text style={styles.qTagTextMini}>Q</Text>
+                </View>
+                <Text style={styles.glossaryVal}>Qualified</Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
+      ) : null}
     </View>
   );
 });

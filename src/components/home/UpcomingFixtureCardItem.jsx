@@ -60,7 +60,11 @@ export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardIt
           <View style={{ flex: 1, gap: 12 }}>
             {/* Team 1 */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <TeamIdentityMark team={fixture.team1 || { name: t1Name }} size={26} />
+              <TeamIdentityMark
+                team={fixture.team1 || { name: t1Name }}
+                tournamentTeams={fixture.tournament?.teams || []}
+                size={26}
+              />
               <Text style={{ fontSize: 15.5, color: '#0F172A', fontFamily: systemFontMedium, flex: 1 }} numberOfLines={1}>
                 {t1Name}
               </Text>
@@ -68,7 +72,11 @@ export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardIt
 
             {/* Team 2 */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <TeamIdentityMark team={fixture.team2 || { name: t2Name }} size={26} />
+              <TeamIdentityMark
+                team={fixture.team2 || { name: t2Name }}
+                tournamentTeams={fixture.tournament?.teams || []}
+                size={26}
+              />
               <Text style={{ fontSize: 15.5, color: '#0F172A', fontFamily: systemFontMedium, flex: 1 }} numberOfLines={1}>
                 {t2Name}
               </Text>

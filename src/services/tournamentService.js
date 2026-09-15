@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabaseClient.js';
+import { resolveTeamWithRoster } from '../utils/teamUtils.js';
 
 const TOURNAMENTS_STORAGE_KEY = 'cricflow.tournaments.v2';
 const MY_HOSTED_TOURNAMENTS_KEY = 'cricflow.my_hosted_tournaments.v2';
@@ -783,11 +784,8 @@ export async function getAllUpcomingTournamentMatches() {
         const isFinished = m.status === 'FINISHED' || m.phase === 'result' || Boolean(m.result) || Boolean(m.resultText);
         const isLive = m.status === 'LIVE' || m.phase === 'playing' || m.phase === 'inningBreak';
         if (!isFinished && !isLive) {
-          const t1Obj = typeof m.team1 === 'object' ? m.team1 : { name: m.team1 || 'Team 1' };
-          const t2Obj = typeof m.team2 === 'object' ? m.team2 : { name: m.team2 || 'Team 2' };
-
-          const t1InTourn = (tourn.teams || []).find(t => (t.name || '').trim().toLowerCase() === String(t1Obj.name || '').trim().toLowerCase());
-          const t2InTourn = (tourn.teams || []).find(t => (t.name || '').trim().toLowerCase() === String(t2Obj.name || '').trim().toLowerCase());
+          const t1Resolved = resolveTeamWithRoster(m.team1 || { name: 'Team 1' }, tourn.teams || []);
+          const t2Resolved = resolveTeamWithRoster(m.team2 || { name: 'Team 2' }, tourn.teams || []);
 
           allUpcoming.push({
             ...m,
@@ -795,10 +793,10 @@ export async function getAllUpcomingTournamentMatches() {
             tournamentId: tourn.id,
             tournamentName: tourn.name || tourn.title || 'Tournament Fixture',
             seriesName: tourn.name || tourn.title || 'Tournament',
-            matchTitle: m.matchTitle || `${t1Obj.name} vs ${t2Obj.name}`,
-            title: m.matchTitle || `${t1Obj.name} vs ${t2Obj.name}`,
-            team1: { ...t1Obj, logoUri: t1Obj.logoUri || t1InTourn?.logoUri || t1InTourn?.logoUrl },
-            team2: { ...t2Obj, logoUri: t2Obj.logoUri || t2InTourn?.logoUri || t2InTourn?.logoUrl },
+            matchTitle: m.matchTitle || `${t1Resolved.name} vs ${t2Resolved.name}`,
+            title: m.matchTitle || `${t1Resolved.name} vs ${t2Resolved.name}`,
+            team1: t1Resolved,
+            team2: t2Resolved,
             stage: m.stage || 'ROUND-ROBIN',
             status: 'UPCOMING',
             venue: m.venue || tourn.city || 'Sadokan Ground',
