@@ -518,18 +518,19 @@ export function PublicSeriesViewScreen(props = {}) {
                       isSelected && styles.carouselCardSelected
                     ]}
                     onPress={() => handleSelectTournament(tItem)}
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                   >
                     {bannerSrc ? (
                       <Image
                         source={bannerSrc}
                         style={styles.carouselCardImage}
+                        resizeMode="cover"
                       />
                     ) : (
                       <View style={[styles.carouselCardFallback, { backgroundColor: isSelected ? '#18181B' : '#F8FAFC' }]}>
                         <MaterialCommunityIcons
                           name="trophy"
-                          size={30}
+                          size={24}
                           color={isSelected ? '#FFFFFF' : '#64748B'}
                         />
                         <Text
@@ -541,9 +542,19 @@ export function PublicSeriesViewScreen(props = {}) {
                       </View>
                     )}
 
+                    {/* Gradient title overlay */}
+                    <View style={styles.carouselCardOverlay}>
+                      <Text style={styles.carouselCardTitle} numberOfLines={1}>
+                        {tItem.name || tItem.title}
+                      </Text>
+                      <Text style={styles.carouselCardSubtitle} numberOfLines={1}>
+                        {tItem.duration || tItem.startDate || 'Season 2026'}
+                      </Text>
+                    </View>
+
                     {isSelected ? (
                       <View style={styles.carouselCheckmarkBadge}>
-                        <Ionicons name="checkmark-circle" size={19} color="#0284C7" />
+                        <Ionicons name="checkmark-circle" size={20} color="#0284C7" />
                       </View>
                     ) : null}
                   </TouchableOpacity>
@@ -1088,26 +1099,47 @@ const styles = StyleSheet.create({
     paddingVertical: 10
   },
   carouselCard: {
-    width: 120,
-    height: 132,
-    borderRadius: 12,
+    width: 204,
+    height: 98,
+    borderRadius: 14,
     backgroundColor: '#18181B',
     overflow: 'hidden',
-    borderWidth: 1.2,
-    borderColor: themeColors.border,
+    borderWidth: 1.5,
+    borderColor: '#EEEEF0',
     position: 'relative'
   },
   carouselCardSelected: {
     borderColor: '#0284C7',
-    borderWidth: 1.5
+    borderWidth: 2
   },
   carouselCardImage: {
     width: '100%',
     height: '100%',
     position: 'absolute',
     top: 0,
+    left: 0
+  },
+  carouselCardOverlay: {
+    position: 'absolute',
+    bottom: 0,
     left: 0,
-    resizeMode: 'cover'
+    right: 0,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    justifyContent: 'flex-end'
+  },
+  carouselCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: systemFontBold,
+    letterSpacing: -0.2
+  },
+  carouselCardSubtitle: {
+    color: '#E2E8F0',
+    fontSize: 9.5,
+    fontFamily: systemFontMedium,
+    marginTop: 1
   },
   carouselCardFallback: {
     flex: 1,
@@ -1138,11 +1170,11 @@ const styles = StyleSheet.create({
     height: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5
+    shadowOpacity: 0.25,
+    shadowRadius: 2
   },
   headerBar: {
     minHeight: 52,
