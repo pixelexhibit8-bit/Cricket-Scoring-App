@@ -42,6 +42,7 @@ import { AddTeamHubModal } from '../components/modals/AddTeamHubModal.jsx';
 import { AutoGenerateFixturesModal } from '../components/modals/AutoGenerateFixturesModal.jsx';
 import { getCurrentUser } from '../services/authService.js';
 import { getCleanMatchStageBadge } from '../utils/cricketUtils.js';
+import { PointsTableSection } from '../components/tournament/PointsTableSection.jsx';
 
 export function PublicSeriesViewScreen(props = {}) {
   const routeParams = props.route?.params || {};
@@ -1020,52 +1021,13 @@ export function PublicSeriesViewScreen(props = {}) {
                 </TouchableOpacity>
               </View>
 
-              {/* Embedded Points Table Section */}
-              <View style={[styles.sectionHeaderRow, { marginTop: 14 }]}>
-                <Text style={styles.sectionTitle}>Points Table Preview</Text>
-                <TouchableOpacity activeOpacity={0.7} onPress={() => handleTabPress('pointsTable', 3)}>
-                  <Text style={styles.seeAllText}>Full Table</Text>
-                </TouchableOpacity>
-              </View>
-
-              {pointsTableData.length > 0 ? (
-                <View style={styles.embeddedPointsTableCard}>
-                  <View style={styles.tableHeaderRow}>
-                    <Text style={[styles.tableColHeader, { flex: 1 }]}>Team</Text>
-                    <Text style={[styles.tableColHeader, { width: 24, textAlign: 'center' }]}>P</Text>
-                    <Text style={[styles.tableColHeader, { width: 24, textAlign: 'center' }]}>W</Text>
-                    <Text style={[styles.tableColHeader, { width: 24, textAlign: 'center' }]}>L</Text>
-                    <Text style={[styles.tableColHeader, { width: 45, textAlign: 'right' }]}>NRR</Text>
-                    <Text style={[styles.tableColHeader, { width: 30, textAlign: 'center' }]}>Pts</Text>
-                  </View>
-
-                  {pointsTableData.slice(0, 4).map((row, idx) => (
-                    <View key={row.team} style={[styles.tableDataRow, idx === 0 && styles.qualifierRow]}>
-                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <TeamIdentityMark team={{ name: row.team, shortName: row.shortName }} size={18} />
-                        <Text style={[styles.tableCell, { flex: 1, fontFamily: systemFontMedium }]} numberOfLines={1}>
-                          {row.team}
-                        </Text>
-                      </View>
-                      <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.p}</Text>
-                      <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.w}</Text>
-                      <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.l}</Text>
-                      <Text style={[styles.tableCell, { width: 45, textAlign: 'right', fontFamily: systemFontMedium, color: '#059669' }]}>
-                        {row.nrr}
-                      </Text>
-                      <Text style={[styles.tableCell, { width: 30, textAlign: 'center', fontFamily: systemFontBold, color: '#D97706' }]}>
-                        {row.pts}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.emptyCard}>
-                  <MaterialCommunityIcons name="table" size={24} color={themeColors.textSubtle} />
-                  <Text style={styles.emptyCardTitle}>Points Table Auto-Initializes with Teams</Text>
-                  <Text style={styles.emptyCardSubtitle}>Add teams to begin tracking tournament standings automatically.</Text>
-                </View>
-              )}
+              {/* Standings / Points Table Section */}
+              <PointsTableSection
+                pointsTableData={pointsTableData}
+                totalTeams={tournament?.teams?.length || 0}
+                isOverviewPreview={true}
+                onViewAll={() => handleTabPress('pointsTable', 3)}
+              />
 
             </ScrollView>
           </View>
@@ -1292,115 +1254,15 @@ export function PublicSeriesViewScreen(props = {}) {
           {/* ── TAB 4: POINTS TABLE ── */}
           <View key="pointsTable" style={{ flex: 1 }}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.tabScrollPadding} showsVerticalScrollIndicator={false}>
-              
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Points Table (Auto-Calculated)</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.toggleLabelText}>Team Form</Text>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => setTeamFormEnabled(!teamFormEnabled)}
-                    style={[styles.toggleSwitchTrack, teamFormEnabled && styles.toggleSwitchTrackActive]}
-                  >
-                    <View style={[styles.toggleSwitchThumb, teamFormEnabled && styles.toggleSwitchThumbActive]} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {pointsTableData.length > 0 ? (
-                <View style={styles.sectionCard}>
-                  <View style={styles.tableHeaderRow}>
-                    <Text style={[styles.tableColHeader, { flex: 1 }]}>Team</Text>
-                    <Text style={[styles.tableColHeader, { width: 24, textAlign: 'center' }]}>P</Text>
-                    <Text style={[styles.tableColHeader, { width: 24, textAlign: 'center' }]}>W</Text>
-                    <Text style={[styles.tableColHeader, { width: 24, textAlign: 'center' }]}>L</Text>
-                    <Text style={[styles.tableColHeader, { width: 24, textAlign: 'center' }]}>NR</Text>
-                    <Text style={[styles.tableColHeader, { width: 55, textAlign: 'right' }]}>NRR</Text>
-                    <Text style={[styles.tableColHeader, { width: 30, textAlign: 'center' }]}>Pts</Text>
-                  </View>
-
-                  {pointsTableData.map((row, idx) => (
-                    <View key={row.team} style={[styles.tableDataRow, idx === 0 && styles.qualifierRow]}>
-                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <TeamIdentityMark team={{ name: row.team, shortName: row.shortName }} size={22} />
-                        <Text style={[styles.tableCell, { flex: 1, fontFamily: systemFontMedium, color: themeColors.textPrimary }]} numberOfLines={1}>
-                          {row.team}
-                        </Text>
-                        {teamFormEnabled && row.form ? (
-                          <View style={{ flexDirection: 'row', gap: 2 }}>
-                            {row.form.map((f, fIdx) => (
-                              <View
-                                key={fIdx}
-                                style={[
-                                  styles.formBadgeCircle,
-                                  { backgroundColor: f === 'W' ? '#16A34A' : '#DC2626' }
-                                ]}
-                              >
-                                <Text style={styles.formBadgeText}>{f}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        ) : null}
-                      </View>
-                      <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.p}</Text>
-                      <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.w}</Text>
-                      <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.l}</Text>
-                      <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.nr}</Text>
-                      <Text style={[styles.tableCell, { width: 55, textAlign: 'right', fontFamily: systemFontMedium, color: '#059669' }]}>
-                        {row.nrr}
-                      </Text>
-                      <Text style={[styles.tableCell, { width: 30, textAlign: 'center', fontFamily: systemFontBold, color: '#D97706' }]}>
-                        {row.pts}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.emptyCard}>
-                  <MaterialCommunityIcons name="table-large" size={32} color={themeColors.textSubtle} />
-                  <Text style={styles.emptyCardTitle}>Points Table Ready</Text>
-                  <Text style={styles.emptyCardSubtitle}>
-                    Points Table will calculate automatically as teams are added and matches are scored.
-                  </Text>
-                </View>
-              )}
-
-              {/* Glossary Section */}
-              <View style={[styles.sectionHeaderRow, { marginTop: 14 }]}>
-                <Text style={styles.glossarySectionHeaderTitle}>Glossary</Text>
-              </View>
-
-              <View style={styles.glossaryTwoColContainer}>
-                <View style={styles.glossaryCol}>
-                  <View style={styles.glossaryRowItem}>
-                    <Text style={styles.glossaryKeyBold}>P:</Text>
-                    <Text style={styles.glossaryValMuted}> Matches Played</Text>
-                  </View>
-                  <View style={styles.glossaryRowItem}>
-                    <Text style={styles.glossaryKeyBold}>W:</Text>
-                    <Text style={styles.glossaryValMuted}> Matches Won (+2 pts)</Text>
-                  </View>
-                  <View style={styles.glossaryRowItem}>
-                    <Text style={styles.glossaryKeyBold}>L:</Text>
-                    <Text style={styles.glossaryValMuted}> Matches Lost (0 pts)</Text>
-                  </View>
-                </View>
-
-                <View style={styles.glossaryCol}>
-                  <View style={styles.glossaryRowItem}>
-                    <Text style={styles.glossaryKeyBold}>NRR:</Text>
-                    <Text style={styles.glossaryValMuted}> Net Run Rate</Text>
-                  </View>
-                  <View style={styles.glossaryRowItem}>
-                    <Text style={styles.glossaryKeyBold}>NR:</Text>
-                    <Text style={styles.glossaryValMuted}> No Result (+1 pt)</Text>
-                  </View>
-                  <View style={styles.glossaryRowItem}>
-                    <Text style={styles.glossaryKeyBold}>Pts:</Text>
-                    <Text style={styles.glossaryValMuted}> Total Points</Text>
-                  </View>
-                </View>
-              </View>
+              <PointsTableSection
+                pointsTableData={pointsTableData}
+                totalTeams={tournament?.teams?.length || 0}
+                isOverviewPreview={false}
+                teamFormEnabled={teamFormEnabled}
+                onToggleTeamForm={() => setTeamFormEnabled(!teamFormEnabled)}
+              />
+            </ScrollView>
+          </View>
 
             </ScrollView>
           </View>
