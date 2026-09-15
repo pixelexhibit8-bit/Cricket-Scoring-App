@@ -25,10 +25,12 @@ import {
   systemFontBold
 } from '../theme.js';
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
+import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import {
   getTournaments,
   addTeamToTournament,
   addMatchToTournament,
+  saveTournamentFixtures,
   autoCalculatePointsTable,
   getMyHostedTournamentIds,
   saveActiveTournamentId,
@@ -37,7 +39,9 @@ import {
 } from '../services/tournamentService.js';
 import { navigate } from '../navigation/navigationService.js';
 import { AddTeamHubModal } from '../components/modals/AddTeamHubModal.jsx';
+import { AutoGenerateFixturesModal } from '../components/modals/AutoGenerateFixturesModal.jsx';
 import { getCurrentUser } from '../services/authService.js';
+import { getCleanMatchStageBadge } from '../utils/cricketUtils.js';
 
 export function PublicSeriesViewScreen(props = {}) {
   const routeParams = props.route?.params || {};
@@ -219,9 +223,18 @@ export function PublicSeriesViewScreen(props = {}) {
   const [newCaptainName, setNewCaptainName] = useState('');
 
   const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
+  const [autoFixturesModalVisible, setAutoFixturesModalVisible] = useState(false);
   const [schedTeam1, setSchedTeam1] = useState('');
   const [schedTeam2, setSchedTeam2] = useState('');
   const [schedDateStr, setSchedDateStr] = useState('Tomorrow • 09:00 AM');
+
+  const handleSaveAutoFixtures = async (generatedFixtures) => {
+    if (!tournament?.id || !Array.isArray(generatedFixtures)) return;
+    const updated = await saveTournamentFixtures(tournament.id, generatedFixtures);
+    if (updated) {
+      setTournament(updated);
+    }
+  };
 
   // Auto-calculated Points Table Data
   const pointsTableData = useMemo(() => {
@@ -535,13 +548,9 @@ export function PublicSeriesViewScreen(props = {}) {
               >
                 <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
               </TouchableOpacity>
-            ) : (
-              <View style={{ width: 28, alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialCommunityIcons name="trophy" size={22} color={themeColors.textPrimary} />
-              </View>
-            )}
+            ) : null}
 
-            <View style={styles.headerTitleWrapBtn}>
+            <View style={[styles.headerTitleWrapBtn, isTab && { paddingLeft: 4 }]}>
               <Text style={styles.headerTitle}>Tournament Hub</Text>
               <Text style={styles.headerSubtitle}>Manage & Explore Ground Tournaments</Text>
             </View>
@@ -657,14 +666,10 @@ export function PublicSeriesViewScreen(props = {}) {
             >
               <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
             </TouchableOpacity>
-          ) : (
-            <View style={{ width: 28, alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name="trophy" size={22} color={themeColors.textPrimary} />
-            </View>
-          )}
+          ) : null}
 
           <TouchableOpacity
-            style={styles.headerTitleWrapBtn}
+            style={[styles.headerTitleWrapBtn, isTab && { paddingLeft: 4 }]}
             onPress={() => setSelectSeriesModalVisible(true)}
             activeOpacity={0.7}
           >
@@ -679,22 +684,12 @@ export function PublicSeriesViewScreen(props = {}) {
             </Text>
           </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {isUserOrganiser ? (
-              <View style={styles.organiserPill}>
-                <MaterialCommunityIcons name="shield-crown-outline" size={13} color="#FFFFFF" />
-                <Text style={styles.organiserPillText}>Host</Text>
-              </View>
-            ) : null}
-
-            <TouchableOpacity
-              style={styles.shareHeaderBtn}
-              onPress={handleShareInvite}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="share-social-outline" size={20} color={themeColors.textPrimary} />
-            </TouchableOpacity>
-          </View>
+          {isUserOrganiser ? (
+            <View style={styles.organiserPill}>
+              <MaterialCommunityIcons name="shield-crown-outline" size={13} color="#FFFFFF" />
+              <Text style={styles.organiserPillText}>Host</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* ── 2. SCROLLABLE TAB STRIP WITH SMOOTH ANIMATED UNDERLINE ── */}
@@ -806,6 +801,55 @@ export function PublicSeriesViewScreen(props = {}) {
                 </View>
               </View>
 
+              {/* Organiser Next Scheduled Match Card */}
+              {isUserOrganiser && rawMatches.find(m => m.status === 'UPCOMING' || !m.status) ? (() => {
+                const nextMatch = rawMatches.find(m => m.status === 'UPCOMING' || !m.status);
+                return (
+                  <View style={styles.nextMatchHeroCard}>
+                    {/* Header info row */}
+                    <View style={styles.nextMatchHeaderRow}>
+                      <View style={styles.nextMatchTag}>
+                        <Text style={styles.nextMatchTagText}>
+                          {nextMatch.stage || 'NEXT SCHEDULED FIXTURE'}
+                        </Text>
+                      </View>
+                      <Text style={styles.nextMatchTimeText}>
+                        {nextMatch.dateStr || 'Upcoming'} {nextMatch.time ? `• ${nextMatch.time}` : ''}
+                      </Text>
+                    </View>
+
+                    {/* Teams Matchup Row */}
+                    <View style={styles.nextMatchVersusRow}>
+                      <View style={styles.nextMatchTeamBlock}>
+                        <TeamIdentityMark team={nextMatch.team1} size={32} />
+                        <Text style={styles.nextMatchTeamName} numberOfLines={1}>
+                          {nextMatch.team1?.name || nextMatch.team1 || 'Team 1'}
+                        </Text>
+                      </View>
+                      <View style={styles.nextMatchVsCircle}>
+                        <Text style={styles.nextMatchVsText}>VS</Text>
+                      </View>
+                      <View style={styles.nextMatchTeamBlock}>
+                        <TeamIdentityMark team={nextMatch.team2} size={32} />
+                        <Text style={styles.nextMatchTeamName} numberOfLines={1}>
+                          {nextMatch.team2?.name || nextMatch.team2 || 'Team 2'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Action button */}
+                    <TouchableOpacity
+                      style={styles.nextMatchScoreBtn}
+                      onPress={() => handleStartMatchScoring(nextMatch)}
+                      activeOpacity={0.85}
+                    >
+                      <MaterialCommunityIcons name="cricket" size={16} color="#FFFFFF" />
+                      <Text style={styles.nextMatchScoreBtnText}>SCORE MATCH</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })() : null}
+
               {/* Featured Matches Section */}
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Featured Matches</Text>
@@ -820,16 +864,16 @@ export function PublicSeriesViewScreen(props = {}) {
                     <View key={m.id} style={styles.featuredMatchCard}>
                       <Text style={styles.matchDateHeader}>{m.dateStr || 'Upcoming'}</Text>
                       <View style={styles.matchTeamRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <MaterialCommunityIcons name="shield-half-full" size={16} color="#64748B" />
-                          <Text style={styles.teamShortText}>{m.team1?.name || m.team1 || 'Team 1'}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                          <TeamIdentityMark team={m.team1} size={20} />
+                          <Text style={[styles.teamShortText, { flex: 1 }]} numberOfLines={1}>{m.team1?.name || m.team1 || 'Team 1'}</Text>
                         </View>
                         <Text style={styles.teamScoreText}>{m.team1?.score || 'VS'}</Text>
                       </View>
                       <View style={styles.matchTeamRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <MaterialCommunityIcons name="shield-half-full" size={16} color="#64748B" />
-                          <Text style={styles.teamShortText}>{m.team2?.name || m.team2 || 'Team 2'}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                          <TeamIdentityMark team={m.team2} size={20} />
+                          <Text style={[styles.teamShortText, { flex: 1 }]} numberOfLines={1}>{m.team2?.name || m.team2 || 'Team 2'}</Text>
                         </View>
                         <Text style={styles.teamScoreText}>{m.team2?.score || ''}</Text>
                       </View>
@@ -997,9 +1041,12 @@ export function PublicSeriesViewScreen(props = {}) {
 
                   {pointsTableData.slice(0, 4).map((row, idx) => (
                     <View key={row.team} style={[styles.tableDataRow, idx === 0 && styles.qualifierRow]}>
-                      <Text style={[styles.tableCell, { flex: 1, fontFamily: systemFontMedium }]} numberOfLines={1}>
-                        {row.team}
-                      </Text>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <TeamIdentityMark team={{ name: row.team, shortName: row.shortName }} size={18} />
+                        <Text style={[styles.tableCell, { flex: 1, fontFamily: systemFontMedium }]} numberOfLines={1}>
+                          {row.team}
+                        </Text>
+                      </View>
                       <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.p}</Text>
                       <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.w}</Text>
                       <Text style={[styles.tableCell, { width: 24, textAlign: 'center' }]}>{row.l}</Text>
@@ -1029,7 +1076,7 @@ export function PublicSeriesViewScreen(props = {}) {
               
               {/* Organiser Action Buttons */}
               {isUserOrganiser ? (
-                <View style={styles.matchesActionBar}>
+                <View style={[styles.matchesActionBar, { flexWrap: 'wrap', gap: 8 }]}>
                   <TouchableOpacity
                     style={styles.primaryActionBtn}
                     onPress={() => handleStartMatchScoring()}
@@ -1040,12 +1087,21 @@ export function PublicSeriesViewScreen(props = {}) {
                   </TouchableOpacity>
 
                   <TouchableOpacity
+                    style={[styles.outlineActionBtn, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}
+                    onPress={() => setAutoFixturesModalVisible(true)}
+                    activeOpacity={0.85}
+                  >
+                    <MaterialCommunityIcons name="lightning-bolt" size={16} color="#16A34A" />
+                    <Text style={[styles.outlineActionBtnText, { color: '#16A34A' }]}>Auto Schedule</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
                     style={styles.outlineActionBtn}
                     onPress={() => setScheduleModalVisible(true)}
                     activeOpacity={0.85}
                   >
                     <Ionicons name="calendar-outline" size={16} color={themeColors.primary} />
-                    <Text style={styles.outlineActionBtnText}>Schedule Fixture</Text>
+                    <Text style={styles.outlineActionBtnText}>Manual Match</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -1072,11 +1128,11 @@ export function PublicSeriesViewScreen(props = {}) {
                   <View key={item.id || idx} style={styles.dateMatchCard}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        {item.stage ? (
-                          <View style={{ backgroundColor: '#18181B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontBold }}>{item.stage}</Text>
-                          </View>
-                        ) : null}
+                        <View style={{ backgroundColor: '#18181B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontBold }}>
+                            {getCleanMatchStageBadge(item.stage, item.matchNumber || item.matchNo || idx + 1)}
+                          </Text>
+                        </View>
                         <Text style={styles.groupDateTitle}>
                           {item.dateStr || item.date || 'Upcoming Match'} {item.time ? `• ${item.time}` : ''}
                         </Text>
@@ -1090,9 +1146,15 @@ export function PublicSeriesViewScreen(props = {}) {
                     </View>
 
                     <View style={styles.matchTeamsRow}>
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={styles.matchTeamTitle}>{item.team1?.name || item.team1 || 'Team 1'}</Text>
-                        <Text style={styles.matchTeamTitle}>{item.team2?.name || item.team2 || 'Team 2'}</Text>
+                      <View style={{ flex: 1, gap: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TeamIdentityMark team={item.team1} size={22} />
+                          <Text style={styles.matchTeamTitle} numberOfLines={1}>{item.team1?.name || item.team1 || 'Team 1'}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TeamIdentityMark team={item.team2} size={22} />
+                          <Text style={styles.matchTeamTitle} numberOfLines={1}>{item.team2?.name || item.team2 || 'Team 2'}</Text>
+                        </View>
                       </View>
 
                       {item.result ? (
@@ -1143,35 +1205,56 @@ export function PublicSeriesViewScreen(props = {}) {
               
               {/* Organiser Invite / Add Header Card */}
               {isUserOrganiser ? (
-                <View style={styles.inviteCaptainCard}>
-                  <Text style={styles.inviteCardTitle}>Invite Captains to Add Teams</Text>
-                  <Text style={styles.inviteCardSub}>
-                    Save time! Share this link with captains, and they will register their team and squads.
-                  </Text>
-
-                  <TouchableOpacity
-                    style={styles.shareCaptainBtn}
-                    onPress={handleShareInvite}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons name="logo-whatsapp" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                    <Text style={styles.shareCaptainBtnText}>SHARE WITH CAPTAINS</Text>
-                  </TouchableOpacity>
-
-                  <View style={styles.orDividerRow}>
-                    <View style={styles.orLine} />
-                    <Text style={styles.orText}>OR</Text>
-                    <View style={styles.orLine} />
+                tournament.teams && tournament.teams.length >= 2 ? (
+                  <View style={styles.compactTeamActionsBar}>
+                    <TouchableOpacity
+                      style={styles.compactInviteBtn}
+                      onPress={handleShareInvite}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#16A34A" />
+                      <Text style={styles.compactInviteBtnText}>Invite Captains</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.compactAddBtn}
+                      onPress={() => setAddTeamModalVisible(true)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="add-circle-outline" size={16} color={themeColors.primary} />
+                      <Text style={styles.compactAddBtnText}>Add Team</Text>
+                    </TouchableOpacity>
                   </View>
+                ) : (
+                  <View style={styles.inviteCaptainCard}>
+                    <Text style={styles.inviteCardTitle}>Invite Captains to Add Teams</Text>
+                    <Text style={styles.inviteCardSub}>
+                      Save time! Share this link with captains, and they will register their team and squads.
+                    </Text>
 
-                  <TouchableOpacity
-                    style={styles.addManualBtn}
-                    onPress={() => setAddTeamModalVisible(true)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.addManualBtnText}>+ ADD TEAM MANUALLY</Text>
-                  </TouchableOpacity>
-                </View>
+                    <TouchableOpacity
+                      style={styles.shareCaptainBtn}
+                      onPress={handleShareInvite}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="logo-whatsapp" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      <Text style={styles.shareCaptainBtnText}>SHARE WITH CAPTAINS</Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.orDividerRow}>
+                      <View style={styles.orLine} />
+                      <Text style={styles.orText}>OR</Text>
+                      <View style={styles.orLine} />
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.addManualBtn}
+                      onPress={() => setAddTeamModalVisible(true)}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.addManualBtnText}>+ ADD TEAM MANUALLY</Text>
+                    </TouchableOpacity>
+                  </View>
+                )
               ) : null}
 
               <Text style={[styles.sectionTitle, { marginTop: 12 }]}>
@@ -1186,10 +1269,8 @@ export function PublicSeriesViewScreen(props = {}) {
                     activeOpacity={0.7}
                     onPress={() => setSelectedTeamDrawer(team)}
                   >
-                    <View style={[styles.teamIconBadge, { backgroundColor: '#F8F8FA' }]}>
-                      <MaterialCommunityIcons name={team.icon || 'shield-half-full'} size={22} color={themeColors.primary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
+                    <TeamIdentityMark team={team} size={38} style={{ borderRadius: 8 }} />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
                       <Text style={styles.teamRowName}>{team.name}</Text>
                       <Text style={styles.teamRowSub}>
                         {team.count || `${(team.players || team.squad || []).length} Players`} {team.captainName || team.captain ? `• Capt: ${team.captainName || team.captain}` : ''}
@@ -1240,8 +1321,9 @@ export function PublicSeriesViewScreen(props = {}) {
 
                   {pointsTableData.map((row, idx) => (
                     <View key={row.team} style={[styles.tableDataRow, idx === 0 && styles.qualifierRow]}>
-                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={[styles.tableCell, { fontFamily: systemFontMedium, color: themeColors.textPrimary }]} numberOfLines={1}>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <TeamIdentityMark team={{ name: row.team, shortName: row.shortName }} size={22} />
+                        <Text style={[styles.tableCell, { flex: 1, fontFamily: systemFontMedium, color: themeColors.textPrimary }]} numberOfLines={1}>
                           {row.team}
                         </Text>
                         {teamFormEnabled && row.form ? (
@@ -1518,7 +1600,7 @@ export function PublicSeriesViewScreen(props = {}) {
               <View style={styles.modalHandle} />
               <View style={styles.modalHeaderRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <MaterialCommunityIcons name="shield-half-full" size={22} color={themeColors.primary} />
+                  <TeamIdentityMark team={selectedTeamDrawer} size={28} style={{ borderRadius: 6 }} />
                   <Text style={styles.modalTitle}>{selectedTeamDrawer?.name} Squad</Text>
                 </View>
                 <TouchableOpacity onPress={() => setSelectedTeamDrawer(null)}>
@@ -1751,6 +1833,14 @@ export function PublicSeriesViewScreen(props = {}) {
             </Pressable>
           </Pressable>
         </Modal>
+
+        {/* ── MODAL 5: AUTO GENERATE FIXTURES MODAL ── */}
+        <AutoGenerateFixturesModal
+          visible={autoFixturesModalVisible}
+          onClose={() => setAutoFixturesModalVisible(false)}
+          tournament={tournament}
+          onSaveFixtures={handleSaveAutoFixtures}
+        />
 
       </View>
     </SafeAreaView>
@@ -2397,6 +2487,137 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10.5,
     fontFamily: systemFontBold
+  },
+  compactTeamActionsBar: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: themeColors.surface,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4
+  },
+  compactInviteBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0'
+  },
+  compactInviteBtnText: {
+    color: '#16A34A',
+    fontSize: 12,
+    fontFamily: systemFontBold
+  },
+  compactAddBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: themeColors.borderDark
+  },
+  compactAddBtnText: {
+    color: themeColors.textPrimary,
+    fontSize: 12,
+    fontFamily: systemFontBold
+  },
+  nextMatchHeroCard: {
+    backgroundColor: themeColors.surface,
+    borderRadius: 12,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+    marginBottom: 4
+  },
+  nextMatchHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: themeColors.border,
+    paddingBottom: 8
+  },
+  nextMatchTag: {
+    backgroundColor: themeColors.surfaceOffWhite,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: themeColors.border
+  },
+  nextMatchTagText: {
+    color: themeColors.textSecondary,
+    fontSize: 10.5,
+    fontFamily: systemFontBold,
+    letterSpacing: 0.3
+  },
+  nextMatchTimeText: {
+    color: themeColors.textMuted,
+    fontSize: 11,
+    fontFamily: systemFontMedium
+  },
+  nextMatchVersusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingVertical: 4
+  },
+  nextMatchTeamBlock: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6
+  },
+  nextMatchTeamName: {
+    color: themeColors.textPrimary,
+    fontSize: 12.5,
+    fontFamily: systemFontMedium,
+    textAlign: 'center'
+  },
+  nextMatchVsCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: themeColors.surfaceOffWhite,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 8
+  },
+  nextMatchVsText: {
+    color: themeColors.textMuted,
+    fontSize: 10,
+    fontFamily: systemFontBold
+  },
+  nextMatchScoreBtn: {
+    backgroundColor: '#18181B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 38,
+    borderRadius: 8
+  },
+  nextMatchScoreBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: systemFontBold,
+    letterSpacing: 0.3
   },
   inviteCaptainCard: {
     backgroundColor: themeColors.surface,

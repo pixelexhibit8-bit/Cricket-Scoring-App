@@ -281,7 +281,12 @@ export const fetchLiveMatchesFromSupabase = async () => {
           || row.phase === 'finished'
           || row.phase === 'completed'
           || row.match_data?.phase === 'result'
-          || row.match_data?.isCompleted;
+          || row.match_data?.phase === 'finished'
+          || row.match_data?.phase === 'completed'
+          || row.match_data?.isCompleted
+          || Boolean(row.result_text)
+          || Boolean(row.match_data?.resultText)
+          || Boolean(row.match_data?.winner);
         const isCurrentBuild = row.match_data?.app_build_token === CURRENT_BUILD_TOKEN;
         return !isFinished && isCurrentBuild && row.match_data;
       })

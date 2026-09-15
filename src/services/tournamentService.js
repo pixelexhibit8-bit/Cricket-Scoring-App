@@ -545,6 +545,43 @@ export async function addMatchToTournament(tournamentId, matchData) {
 }
 
 /**
+ * Replace / Set all scheduled fixtures for a tournament (Local + Supabase Sync)
+ */
+export async function saveTournamentFixtures(tournamentId, fixtures = []) {
+  try {
+    const list = await getTournamentsFromStorage();
+    const target = list.find(t => t.id === tournamentId);
+    if (!target) return null;
+
+    target.matches = fixtures;
+    target.updatedAt = new Date().toISOString();
+
+    await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+
+    // Supabase Cloud Sync
+    if (supabase) {
+      try {
+        await supabase
+          .from('tournaments')
+          .update({
+            matches: fixtures,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase fixtures sync error:', cloudErr);
+      }
+    }
+
+    return target;
+  } catch (err) {
+    console.error('[TournamentService] saveTournamentFixtures error:', err);
+    return null;
+  }
+}
+
+
+/**
  * Real-time WebSocket subscription for tournaments table
  */
 export function subscribeToTournamentsLive(onUpdate) {
@@ -731,4 +768,90 @@ export async function syncLiveMatchToTournament(tournamentId, liveMatch) {
     return null;
   }
 }
+
+/**
+ * Fetch all upcoming scheduled tournament matches across all tournaments
+ */
+export async function getAllUpcomingTournamentMatches() {
+  try {
+    const tournaments = await getTournaments();
+    const allUpcoming = [];
+
+    (tournaments || []).forEach(tourn => {
+      const matches = Array.isArray(tourn.matches) ? tourn.matches : [];
+      matches.forEach((m, idx) => {
+        const isFinished = m.status === 'FINISHED' || m.phase === 'result' || Boolean(m.result) || Boolean(m.resultText);
+        const isLive = m.status === 'LIVE' || m.phase === 'playing' || m.phase === 'inningBreak';
+        if (!isFinished && !isLive) {
+          const t1Obj = typeof m.team1 === 'object' ? m.team1 : { name: m.team1 || 'Team 1' };
+          const t2Obj = typeof m.team2 === 'object' ? m.team2 : { name: m.team2 || 'Team 2' };
+
+          const t1InTourn = (tourn.teams || []).find(t => (t.name || '').trim().toLowerCase() === String(t1Obj.name || '').trim().toLowerCase());
+          const t2InTourn = (tourn.teams || []).find(t => (t.name || '').trim().toLowerCase() === String(t2Obj.name || '').trim().toLowerCase());
+
+          allUpcoming.push({
+            ...m,
+            id: m.id || `up_${tourn.id}_${m.matchNo || idx + 1}`,
+            tournamentId: tourn.id,
+            tournamentName: tourn.name || tourn.title || 'Tournament Fixture',
+            seriesName: tourn.name || tourn.title || 'Tournament',
+            matchTitle: m.matchTitle || `${t1Obj.name} vs ${t2Obj.name}`,
+            title: m.matchTitle || `${t1Obj.name} vs ${t2Obj.name}`,
+            team1: { ...t1Obj, logoUri: t1Obj.logoUri || t1InTourn?.logoUri || t1InTourn?.logoUrl },
+            team2: { ...t2Obj, logoUri: t2Obj.logoUri || t2InTourn?.logoUri || t2InTourn?.logoUrl },
+            stage: m.stage || 'ROUND-ROBIN',
+            status: 'UPCOMING',
+            venue: m.venue || tourn.city || 'Sadokan Ground',
+            dateText: m.dateStr || m.date || 'Upcoming Fixture',
+            matchDate: m.dateStr || m.date || 'Upcoming',
+            time: m.time || '10:00 AM',
+            overs: m.overs || tourn.overs || 5,
+            maxOvers: m.overs || tourn.overs || 5,
+            isTournamentFixture: true,
+            tournament: tourn
+          });
+        }
+      });
+    });
+
+    return allUpcoming;
+  } catch (err) {
+    console.warn('[TournamentService] getAllUpcomingTournamentMatches error:', err);
+    return [];
+  }
+}
+
+/**
+ * True realtime WebSocket subscription for tournaments table
+ */
+export function subscribeToTournamentsLive(onUpdate) {
+  if (!supabase || typeof onUpdate !== 'function') {
+    return () => {};
+  }
+
+  try {
+    const channelName = `tournaments_live_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const channel = supabase.channel(channelName);
+
+    channel
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tournaments' },
+        (payload) => {
+          onUpdate(payload);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try {
+        supabase.removeChannel(channel);
+      } catch (e) {}
+    };
+  } catch (err) {
+    console.warn('[TournamentService] subscribeToTournamentsLive error:', err);
+    return () => {};
+  }
+}
+
 

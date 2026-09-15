@@ -4,6 +4,7 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import { systemFont, systemFontMedium, systemFontBold } from '../../theme.js';
 import { ScalePressable, FadeSlideIn } from '../motion/MotionSystem.jsx';
+import { getCleanMatchStageBadge } from '../../utils/cricketUtils.js';
 
 export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardItem({
   fixture,
@@ -16,7 +17,7 @@ export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardIt
   const t1Name = fixture.team1?.name || fixture.team1Name || fixture.teams?.[0]?.name || 'Team 1';
   const t2Name = fixture.team2?.name || fixture.team2Name || fixture.teams?.[1]?.name || 'Team 2';
   const tourName = fixture.tournamentName || fixture.tournamentTitle || fixture.seriesName || 'Tournament';
-  const stage = fixture.stage || 'LEAGUE';
+  const cleanStage = getCleanMatchStageBadge(fixture.stage, fixture.matchNumber || fixture.matchNo);
   const venue = fixture.venue || 'Sadokan Ground';
   const overs = fixture.overs || fixture.totalOvers || fixture.maxOvers || 5;
   const matchDate = fixture.dateText || fixture.matchDate || 'Upcoming';
@@ -40,9 +41,9 @@ export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardIt
         {/* Card Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
-            <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
-              <Text style={{ fontSize: 10.5, color: '#475569', fontFamily: systemFontMedium, textTransform: 'uppercase' }} numberOfLines={1}>
-                {stage}
+            <View style={{ backgroundColor: '#18181B', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+              <Text style={{ fontSize: 10.5, color: '#FFFFFF', fontFamily: systemFontBold }} numberOfLines={1}>
+                {cleanStage}
               </Text>
             </View>
             <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: systemFontMedium, flex: 1 }} numberOfLines={1}>

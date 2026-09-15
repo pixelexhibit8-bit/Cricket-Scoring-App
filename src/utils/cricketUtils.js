@@ -1122,4 +1122,229 @@ export function getPlayerMatchStatus(activeMatch, playerName) {
   };
 }
 
+/**
+ * Format match stage label to clean, industry-standard cricket badge (e.g. "Match 1", "Semi-Final 1", "Grand Final 🏆")
+ */
+export function getCleanMatchStageBadge(stage, matchNumber) {
+  if (!stage && !matchNumber) return 'Match';
+  const s = String(stage || '').trim().toUpperCase();
+
+  if (s.includes('GRAND FINAL') || s === 'FINAL') return 'Grand Final 🏆';
+  if (s.includes('SEMI-FINAL 1') || s.includes('SEMI FINAL 1') || s.includes('SF 1') || s.includes('SF1')) return 'Semi-Final 1';
+  if (s.includes('SEMI-FINAL 2') || s.includes('SEMI FINAL 2') || s.includes('SF 2') || s.includes('SF2')) return 'Semi-Final 2';
+  if (s.includes('SEMI-FINAL') || s.includes('SEMI FINAL')) return 'Semi-Final';
+  if (s.includes('QUARTER-FINAL 1') || s.includes('QF 1')) return 'Quarter-Final 1';
+  if (s.includes('QUARTER-FINAL 2') || s.includes('QF 2')) return 'Quarter-Final 2';
+  if (s.includes('QUARTER-FINAL') || s.includes('QUARTER FINAL')) return 'Quarter-Final';
+  if (s.includes('ELIMINATOR')) return 'Eliminator';
+  if (s.includes('QUALIFIER 1')) return 'Qualifier 1';
+  if (s.includes('QUALIFIER 2')) return 'Qualifier 2';
+
+  // If already formatted as "Match X", return as is
+  const matchNumRegex = /^MATCH\s*(\d+)$/i;
+  const matchNumMatch = s.match(matchNumRegex);
+  if (matchNumMatch) return `Match ${matchNumMatch[1]}`;
+
+  // If match number is passed, format as "Match X"
+  if (matchNumber != null && matchNumber !== '') {
+    return `Match ${matchNumber}`;
+  }
+
+  // Fallback cleanup
+  if (s.includes('ROUND-ROBIN') || s.includes('LEAGUE')) {
+    return 'League Match';
+  }
+
+  return stage;
+}
+
+/**
+ * Auto-Generate Round-Robin Tournament Fixtures & Playoff Bracket
+ */
+export function generateRoundRobinFixtures(teams = [], options = {}) {
+  if (!Array.isArray(teams) || teams.length < 2) return [];
+
+  const {
+    startDate = new Date().toISOString().split('T')[0],
+    matchTimes = ['09:00 AM', '02:00 PM'],
+    venue = 'Sadokan Cricket Ground',
+    overs = 10,
+    includePlayoffs = teams.length >= 4,
+    tournamentId = null,
+    tournamentName = 'Tournament'
+  } = options;
+
+  const validTeams = teams.map((t, idx) => ({
+    id: t.id || `team_${idx + 1}`,
+    name: typeof t === 'string' ? t : (t.name || `Team ${idx + 1}`),
+    logoUri: t.logoUri || t.logoUrl || null,
+    players: Array.isArray(t.players) ? t.players : []
+  }));
+
+  const teamList = [...validTeams];
+  const isOdd = teamList.length % 2 !== 0;
+  if (isOdd) {
+    teamList.push({ name: 'BYE', isDummy: true });
+  }
+
+  const numTeams = teamList.length;
+  const numRounds = numTeams - 1;
+  const matchesPerRound = numTeams / 2;
+
+  const leagueFixtures = [];
+  let matchCounter = 1;
+
+  // Track dates & times
+  const baseDate = new Date(startDate);
+  let dayOffset = 0;
+  let timeIndex = 0;
+
+  for (let round = 0; round < numRounds; round++) {
+    for (let match = 0; match < matchesPerRound; match++) {
+      const homeIdx = (round + match) % (numTeams - 1);
+      let awayIdx = (numTeams - 1 - match + round) % (numTeams - 1);
+
+      if (match === 0) {
+        awayIdx = numTeams - 1;
+      }
+
+      const teamA = teamList[homeIdx];
+      const teamB = teamList[awayIdx];
+
+      if (!teamA.isDummy && !teamB.isDummy) {
+        const currentDate = new Date(baseDate);
+        currentDate.setDate(baseDate.getDate() + dayOffset);
+        
+        const day = currentDate.getDate();
+        const monthShort = currentDate.toLocaleDateString('en-GB', { month: 'short' });
+        const year = currentDate.getFullYear();
+        const dateStr = `${day} ${monthShort} ${year}`;
+
+        const timeStr = matchTimes[timeIndex % matchTimes.length] || '10:00 AM';
+
+        leagueFixtures.push({
+          id: `match_${tournamentId || 't'}_${matchCounter}`,
+          matchNumber: matchCounter,
+          matchNo: matchCounter,
+          stage: `Match ${matchCounter}`,
+          tournamentId: tournamentId,
+          tournamentName: tournamentName,
+          matchTitle: `${teamA.name} vs ${teamB.name}`,
+          team1: { name: teamA.name, logoUri: teamA.logoUri, players: teamA.players },
+          team2: { name: teamB.name, logoUri: teamB.logoUri, players: teamB.players },
+          dateStr: dateStr,
+          date: dateStr,
+          time: timeStr,
+          timeText: timeStr,
+          venue: venue,
+          overs: Number(overs) || 10,
+          maxOvers: Number(overs) || 10,
+          status: 'UPCOMING',
+          phase: 'upcoming'
+        });
+
+        matchCounter++;
+        timeIndex++;
+        if (timeIndex % matchTimes.length === 0) {
+          dayOffset++;
+        }
+      }
+    }
+  }
+
+  // Optional Playoffs (Semi-Finals + Final)
+  const allFixtures = [...leagueFixtures];
+
+  if (includePlayoffs && validTeams.length >= 4) {
+    if (timeIndex % matchTimes.length !== 0) {
+      dayOffset++;
+      timeIndex = 0;
+    }
+
+    const semiDate = new Date(baseDate);
+    semiDate.setDate(baseDate.getDate() + dayOffset);
+    const semiDay = semiDate.getDate();
+    const semiMonth = semiDate.toLocaleDateString('en-GB', { month: 'short' });
+    const semiDateStr = `${semiDay} ${semiMonth} ${semiDate.getFullYear()}`;
+
+    // Semi-Final 1
+    allFixtures.push({
+      id: `match_${tournamentId || 't'}_${matchCounter}`,
+      matchNumber: matchCounter,
+      matchNo: matchCounter,
+      stage: 'Semi-Final 1',
+      tournamentId: tournamentId,
+      tournamentName: tournamentName,
+      matchTitle: 'Rank 1 (League Topper) vs Rank 4 (League)',
+      team1: { name: 'Rank 1 (League Topper)' },
+      team2: { name: 'Rank 4 (League)' },
+      dateStr: semiDateStr,
+      date: semiDateStr,
+      time: matchTimes[0] || '09:00 AM',
+      timeText: matchTimes[0] || '09:00 AM',
+      venue: venue,
+      overs: Number(overs) || 10,
+      maxOvers: Number(overs) || 10,
+      status: 'UPCOMING',
+      phase: 'upcoming'
+    });
+    matchCounter++;
+
+    // Semi-Final 2
+    allFixtures.push({
+      id: `match_${tournamentId || 't'}_${matchCounter}`,
+      matchNumber: matchCounter,
+      matchNo: matchCounter,
+      stage: 'Semi-Final 2',
+      tournamentId: tournamentId,
+      tournamentName: tournamentName,
+      matchTitle: 'Rank 2 (League) vs Rank 3 (League)',
+      team1: { name: 'Rank 2 (League)' },
+      team2: { name: 'Rank 3 (League)' },
+      dateStr: semiDateStr,
+      date: semiDateStr,
+      time: matchTimes[1] || '01:30 PM',
+      timeText: matchTimes[1] || '01:30 PM',
+      venue: venue,
+      overs: Number(overs) || 10,
+      maxOvers: Number(overs) || 10,
+      status: 'UPCOMING',
+      phase: 'upcoming'
+    });
+    matchCounter++;
+
+    // Grand Final (next day or evening)
+    dayOffset++;
+    const finalDate = new Date(baseDate);
+    finalDate.setDate(baseDate.getDate() + dayOffset);
+    const finalDay = finalDate.getDate();
+    const finalMonth = finalDate.toLocaleDateString('en-GB', { month: 'short' });
+    const finalDateStr = `${finalDay} ${finalMonth} ${finalDate.getFullYear()}`;
+
+    allFixtures.push({
+      id: `match_${tournamentId || 't'}_${matchCounter}`,
+      matchNumber: matchCounter,
+      matchNo: matchCounter,
+      stage: 'Grand Final 🏆',
+      tournamentId: tournamentId,
+      tournamentName: tournamentName,
+      matchTitle: 'Winner Semi-Final 1 vs Winner Semi-Final 2',
+      team1: { name: 'Winner Semi-Final 1' },
+      team2: { name: 'Winner Semi-Final 2' },
+      dateStr: finalDateStr,
+      date: finalDateStr,
+      time: '05:30 PM',
+      timeText: '05:30 PM',
+      venue: venue,
+      overs: Number(overs) || 10,
+      maxOvers: Number(overs) || 10,
+      status: 'UPCOMING',
+      phase: 'upcoming'
+    });
+  }
+
+  return allFixtures;
+}
+
+
 

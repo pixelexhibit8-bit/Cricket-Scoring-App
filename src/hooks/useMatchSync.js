@@ -14,7 +14,9 @@ import { aggregateMatchToPlayerStats } from '../services/localPlayerService.js';
 import { showToast } from '../services/toastService.js';
 import {
   syncFinishedMatchToTournament,
-  syncLiveMatchToTournament
+  syncLiveMatchToTournament,
+  getAllUpcomingTournamentMatches,
+  subscribeToTournamentsLive
 } from '../services/tournamentService.js';
 
 const STORAGE_KEY = '@cricflow_app_state_v3';
@@ -26,6 +28,7 @@ export function useMatchSync({
 }) {
   const [activeMatch, setActiveMatch] = useState(null);
   const [liveMatches, setLiveMatches] = useState([]);
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
   const [finishedArchive, setFinishedArchive] = useState([]);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [playerPool, setPlayerPool] = useState([]);
@@ -33,11 +36,17 @@ export function useMatchSync({
   const [liveSyncState, setLiveSyncState] = useState('connected');
   const [storageReady, setStorageReady] = useState(false);
 
-  // 1. Initial Load: Fetch remote players & finished matches from Supabase
+  // 1. Initial Load: Fetch remote players, finished matches & upcoming tournament fixtures
   useEffect(() => {
     fetchPlayersFromSupabase().then(dbPlayers => {
       if (Array.isArray(dbPlayers) && dbPlayers.length > 0) {
         setPlayerPool(dbPlayers.map(p => p.name));
+      }
+    }).catch(() => { });
+
+    getAllUpcomingTournamentMatches().then(upList => {
+      if (Array.isArray(upList)) {
+        setUpcomingMatches(upList);
       }
     }).catch(() => { });
 
@@ -112,6 +121,13 @@ export function useMatchSync({
     };
 
     const unsubscribe = subscribeToSupabaseLiveMatches(onLiveUpdate);
+    const unsubTournaments = subscribeToTournamentsLive(() => {
+      getAllUpcomingTournamentMatches().then(upList => {
+        if (Array.isArray(upList)) {
+          setUpcomingMatches(upList);
+        }
+      }).catch(() => { });
+    });
 
     fetchLiveMatchesFromSupabase().then(liveList => {
       if (Array.isArray(liveList) && liveList.length > 0) {
@@ -121,6 +137,7 @@ export function useMatchSync({
 
     return () => {
       unsubscribe();
+      if (typeof unsubTournaments === 'function') unsubTournaments();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -264,9 +281,10 @@ export function useMatchSync({
   const handlePullToRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [liveDataList, finishedData] = await Promise.all([
+      const [liveDataList, finishedData, upData] = await Promise.all([
         fetchLiveMatchesFromSupabase(),
-        fetchFinishedMatchesFromSupabase()
+        fetchFinishedMatchesFromSupabase(),
+        getAllUpcomingTournamentMatches()
       ]);
       if (Array.isArray(liveDataList)) {
         setLiveMatches(liveDataList);
@@ -278,6 +296,9 @@ export function useMatchSync({
       }
       if (finishedData && Array.isArray(finishedData)) {
         setFinishedArchive(finishedData);
+      }
+      if (upData && Array.isArray(upData)) {
+        setUpcomingMatches(upData);
       }
     } catch (e) {
       // Refresh error ignored
@@ -312,6 +333,8 @@ export function useMatchSync({
     setActiveMatch,
     liveMatches,
     setLiveMatches,
+    upcomingMatches,
+    setUpcomingMatches,
     finishedArchive,
     setFinishedArchive,
     selectedMatch,

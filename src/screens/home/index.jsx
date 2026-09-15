@@ -7,11 +7,12 @@ import {
   RefreshControl,
   useWindowDimensions
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/navigation/AppHeader.jsx';
 import {
   HomeBannerCarousel,
   LiveMatchCardItem,
+  UpcomingFixtureCardItem,
   FinishedMatchCardItem,
   SearchResultsSection,
   ScorerHubCard,
@@ -68,6 +69,8 @@ export function HomeScreen(props = {}) {
     setSelectedMatch,
     visibleLiveMatches = [],
     recentFinishedMatches = [],
+    upcomingMatches = [],
+    handleStartUpcomingMatch = null,
     onJoinMatchByCode
   } = mergedProps;
 
@@ -315,6 +318,40 @@ export function HomeScreen(props = {}) {
                     key={`home-live-${m.id || m.supabaseId || idx}`}
                     match={m}
                     onPress={() => handleSelectLiveMatch(m)}
+                  />
+                ))}
+              </FadeSlideIn>
+            )}
+
+            {/* UPCOMING FIXTURES SECTION */}
+            {upcomingMatches.length > 0 && (
+              <FadeSlideIn distance={12} delay={75}>
+                <View style={styles.sectionHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="calendar-outline" size={16} color="#0284C7" />
+                    <Text style={styles.sectionTitle}>
+                      {`UPCOMING FIXTURES (${upcomingMatches.length})`}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (setBottomNavTab) setBottomNavTab('matches');
+                      if (setMatchesSubTab) setMatchesSubTab('upcoming');
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.sectionLink}>View all ({upcomingMatches.length})</Text>
+                  </TouchableOpacity>
+                </View>
+                {upcomingMatches.slice(0, 3).map((fixture, idx) => (
+                  <UpcomingFixtureCardItem
+                    key={`home-up-${fixture.id || idx}`}
+                    fixture={fixture}
+                    onPress={() => {
+                      if (setBottomNavTab) setBottomNavTab('matches');
+                      if (setMatchesSubTab) setMatchesSubTab('upcoming');
+                    }}
+                    onScorePress={handleStartUpcomingMatch}
                   />
                 ))}
               </FadeSlideIn>

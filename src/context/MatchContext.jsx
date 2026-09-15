@@ -8,6 +8,8 @@ import { useCricketSpeech } from '../hooks/useCricketSpeech.js';
 import { useCricketScoring } from '../hooks/useCricketScoring.js';
 import { useScorerWorkflow } from '../hooks/useScorerWorkflow.js';
 import { navigate, ROUTE_SCREEN_MAP } from '../navigation/navigationService.js';
+import { getCurrentUser } from '../services/authService.js';
+import { showToast } from '../services/toastService.js';
 
 const MatchContext = createContext(null);
 
@@ -36,6 +38,8 @@ export function MatchProvider({ children }) {
     setActiveMatch,
     liveMatches,
     setLiveMatches,
+    upcomingMatches,
+    setUpcomingMatches,
     finishedArchive,
     setFinishedArchive,
     selectedMatch,
@@ -291,6 +295,57 @@ export function MatchProvider({ children }) {
     [finishedArchive, localPlayersList]
   );
 
+  // ── One-Tap Upcoming Tournament Match Scorer Initializer ──
+  const handleStartUpcomingMatch = useCallback(async (fixture) => {
+    if (!fixture) return;
+    const user = await getCurrentUser();
+    if (!user) {
+      showToast('Please login from Profile to score matches', 'error', 'Login Required');
+      setBottomNavTab('profile');
+      setCurrentScreen('home');
+      return;
+    }
+
+    const t1Name = fixture.team1?.name || fixture.team1Name || fixture.teams?.[0]?.name || 'Team 1';
+    const t2Name = fixture.team2?.name || fixture.team2Name || fixture.teams?.[1]?.name || 'Team 2';
+    const tourn = fixture.tournament || {};
+
+    const t1Obj = (tourn.teams || []).find(t => (t.name || '').trim().toLowerCase() === String(t1Name).trim().toLowerCase());
+    const t2Obj = (tourn.teams || []).find(t => (t.name || '').trim().toLowerCase() === String(t2Name).trim().toLowerCase());
+
+    const t1Squad = t1Obj?.players?.map(p => (typeof p === 'string' ? p : p?.name || '')) || fixture.team1?.players || [];
+    const t2Squad = t2Obj?.players?.map(p => (typeof p === 'string' ? p : p?.name || '')) || fixture.team2?.players || [];
+
+    const prefilledMatch = {
+      id: fixture.id || `match_${Date.now()}`,
+      tournamentId: fixture.tournamentId || tourn.id || null,
+      tournamentMatchId: fixture.id,
+      tournamentTitle: fixture.tournamentName || tourn.name || tourn.title || '',
+      matchTitle: fixture.matchTitle || `${t1Name} vs ${t2Name}`,
+      team1: { name: t1Name, logoUri: fixture.team1?.logoUri || t1Obj?.logoUri || null, players: t1Squad },
+      team2: { name: t2Name, logoUri: fixture.team2?.logoUri || t2Obj?.logoUri || null, players: t2Squad },
+      teams: [
+        { name: t1Name, logoUri: fixture.team1?.logoUri || t1Obj?.logoUri || null },
+        { name: t2Name, logoUri: fixture.team2?.logoUri || t2Obj?.logoUri || null }
+      ],
+      playingXI: {
+        [t1Name]: t1Squad,
+        [t2Name]: t2Squad
+      },
+      overs: fixture.overs || fixture.totalOvers || fixture.maxOvers || 5,
+      maxOvers: fixture.overs || fixture.totalOvers || fixture.maxOvers || 5,
+      venue: fixture.venue || 'Sadokan Ground',
+      stage: fixture.stage || 'LEAGUE',
+      phase: 'toss',
+      inning: 1,
+      innings: []
+    };
+
+    setActiveMatch(prefilledMatch);
+    setIsScorerUnlocked(true);
+    setCurrentScreen('scorerWizard');
+  }, [setActiveMatch, setIsScorerUnlocked, setCurrentScreen, setBottomNavTab]);
+
   const value = {
     // Navigation & Screens
     currentScreen,
@@ -323,6 +378,9 @@ export function MatchProvider({ children }) {
     setActiveMatch,
     liveMatches,
     setLiveMatches,
+    upcomingMatches,
+    setUpcomingMatches,
+    handleStartUpcomingMatch,
     finishedArchive,
     setFinishedArchive,
     finishedMatches,
