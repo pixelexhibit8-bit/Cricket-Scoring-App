@@ -1118,9 +1118,55 @@ export function buildSadokanPremierLeagueTournament() {
     host: 'Sadokan Cricket Ground',
     category: 'OPEN',
     format: 'LIMITED OVERS',
+    structure: 'hybrid',
     ballType: 'tennis',
+    pitchType: 'turf',
     overs: 5,
     maxOvers: 5,
+    entryFee: '1500',
+    prizes: {
+      first: '₹21,000 + Trophy',
+      runnerUp: '₹11,000 + Trophy',
+      bestBatter: 'Cricket Bat + Trophy',
+      bestBowler: 'Cricket Shoes + Trophy',
+      mvp: 'Player of Series Kit'
+    },
+    needMoreTeams: false,
+    rounds: [
+      'Group / League Matches',
+      'Semi Final',
+      'Final'
+    ],
+    groups: [
+      {
+        id: 'group_a',
+        roundName: 'Group / League Matches',
+        name: 'Group A',
+        teams: [
+          'Sadokan Super Kings',
+          'Sangwa Strikers',
+          'Sadokan Royals',
+          'Marwar Champions',
+          'Nagaur Titans'
+        ]
+      }
+    ],
+    rules: {
+      wideRuns: 1,
+      noBallRuns: 1,
+      isLegalWide: false,
+      isLegalNoBall: false,
+      wagonWheelEnabled: true,
+      wagonWheelDotBalls: false,
+      wagonWheelSingles: false,
+      impactPlayerEnabled: false,
+      maxBowlerQuota: 2,
+      runsPerWicketPenalty: 0
+    },
+    venues: [
+      'Sadokan Cricket Ground',
+      'Sadokan Turf Arena'
+    ],
     organiserName: 'Basti Ram',
     organiserPhone: '+91 99832 28208',
     organiserId: 'usr_9983228208',
@@ -1130,9 +1176,11 @@ export function buildSadokanPremierLeagueTournament() {
     duration: '10 Sep 2026 - 19 Sep 2026',
     bannerUri: 'spl_banner',
     logoUri: 'spl_logo',
+    broadcaster: 'CricFlow Live, Ground Commentary',
     teams: SPL_TEAMS,
     matches: SPL_MATCHES,
-    pointsTable
+    pointsTable,
+    schemaVersion: 5
   };
 
   const calculatedStats = calculateTournamentStats(rawTourn);
@@ -1141,3 +1189,4 @@ export function buildSadokanPremierLeagueTournament() {
     stats: calculatedStats
   };
 }
+

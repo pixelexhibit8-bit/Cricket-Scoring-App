@@ -240,6 +240,8 @@ function mapSupabaseRowToTournament(row) {
 import { buildRajasthanLeagueTournament } from './seedRajasthanLeague.js';
 import { buildSadokanPremierLeagueTournament } from './seedSadokanPremierLeague.js';
 
+export const TOURNAMENT_SCHEMA_VERSION = 5;
+
 /**
  * Fetch all tournaments from Local Storage (Offline-First)
  */
@@ -254,38 +256,119 @@ export async function getTournamentsFromStorage() {
 
     let changed = false;
 
-    // Guarantee Rajasthan League 2026 is always available
+    // Guarantee Rajasthan League 2026 is always available with full schema v5
     const rpl = buildRajasthanLeagueTournament();
     const existingRplIdx = list.findIndex(t => t.id === rpl.id || t.name === rpl.name);
     if (existingRplIdx === -1) {
       list = [rpl, ...list];
       changed = true;
-    } else if (list[existingRplIdx].organiserPhone !== rpl.organiserPhone || list[existingRplIdx].organiserName !== rpl.organiserName) {
+    } else if (
+      (list[existingRplIdx].schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION ||
+      !Array.isArray(list[existingRplIdx].venues) ||
+      !Array.isArray(list[existingRplIdx].rounds) ||
+      !list[existingRplIdx].rules ||
+      !list[existingRplIdx].prizes ||
+      list[existingRplIdx].organiserPhone !== rpl.organiserPhone
+    ) {
       list[existingRplIdx] = {
+        ...rpl,
         ...list[existingRplIdx],
+        venues: rpl.venues,
+        rounds: rpl.rounds,
+        groups: rpl.groups,
+        rules: rpl.rules,
+        prizes: rpl.prizes,
+        structure: rpl.structure,
+        pitchType: rpl.pitchType,
+        entryFee: rpl.entryFee,
+        broadcaster: rpl.broadcaster,
         organiserName: rpl.organiserName,
         organiserPhone: rpl.organiserPhone,
         organiserId: rpl.organiserId,
-        organiserEmail: rpl.organiserEmail
+        organiserEmail: rpl.organiserEmail,
+        schemaVersion: TOURNAMENT_SCHEMA_VERSION
       };
       changed = true;
     }
 
-    // Guarantee Sadokan Premier League 2026 is always available with full ball-by-ball data
+    // Guarantee Sadokan Premier League 2026 is always available with full schema v5
     const spl = buildSadokanPremierLeagueTournament();
     const existingSplIdx = list.findIndex(t => t.id === spl.id || t.name === spl.name);
     if (existingSplIdx === -1) {
       list = [...list, spl];
       changed = true;
     } else {
-      // Refresh SPL if it had old 5-player data, empty overHistory, or outdated organizer
       const existingSpl = list[existingSplIdx];
       const hasOverHistory = existingSpl.matches?.[0]?.rawMatchData?.innings?.[0]?.overHistory?.length > 0;
-      if (!hasOverHistory || (existingSpl.teams?.[0]?.players?.length || 0) < 11 || existingSpl.organiserPhone !== spl.organiserPhone) {
+      const needsFullReset = !hasOverHistory || (existingSpl.teams?.[0]?.players?.length || 0) < 11;
+      
+      if (needsFullReset) {
         list[existingSplIdx] = spl;
+        changed = true;
+      } else if (
+        (existingSpl.schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION ||
+        !Array.isArray(existingSpl.venues) ||
+        !Array.isArray(existingSpl.rounds) ||
+        !existingSpl.rules ||
+        !existingSpl.prizes ||
+        existingSpl.organiserPhone !== spl.organiserPhone
+      ) {
+        list[existingSplIdx] = {
+          ...spl,
+          ...existingSpl,
+          venues: spl.venues,
+          rounds: spl.rounds,
+          groups: spl.groups,
+          rules: spl.rules,
+          prizes: spl.prizes,
+          structure: spl.structure,
+          pitchType: spl.pitchType,
+          entryFee: spl.entryFee,
+          broadcaster: spl.broadcaster,
+          organiserName: spl.organiserName,
+          organiserPhone: spl.organiserPhone,
+          organiserId: spl.organiserId,
+          organiserEmail: spl.organiserEmail,
+          schemaVersion: TOURNAMENT_SCHEMA_VERSION
+        };
         changed = true;
       }
     }
+
+    // Sanitize any other custom user tournaments so they never miss standard schema
+    list = list.map(t => {
+      let mod = false;
+      const copy = { ...t };
+      if (!Array.isArray(copy.venues) || copy.venues.length === 0) {
+        copy.venues = [copy.venue || copy.ground || copy.city || copy.host || 'Primary Cricket Ground'];
+        mod = true;
+      }
+      if (!Array.isArray(copy.rounds) || copy.rounds.length === 0) {
+        copy.rounds = ['Group / League Matches', 'Semi Final', 'Final'];
+        mod = true;
+      }
+      if (!copy.rules) {
+        copy.rules = {
+          wideRuns: 1,
+          noBallRuns: 1,
+          isLegalWide: false,
+          isLegalNoBall: false,
+          wagonWheelEnabled: true,
+          wagonWheelDotBalls: false,
+          wagonWheelSingles: false,
+          impactPlayerEnabled: false,
+          maxBowlerQuota: 2,
+          runsPerWicketPenalty: 0
+        };
+        mod = true;
+      }
+      if (!copy.structure) {
+        copy.structure = copy.tournamentType || 'league';
+        mod = true;
+      }
+      if (mod) changed = true;
+      return copy;
+    });
 
     if (changed) {
       await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
@@ -323,11 +406,22 @@ export async function getTournaments() {
         cloudTournaments = [rpl, ...cloudTournaments];
       } else {
         cloudTournaments[rplIdx] = {
+          ...rpl,
           ...cloudTournaments[rplIdx],
+          venues: rpl.venues,
+          rounds: rpl.rounds,
+          groups: rpl.groups,
+          rules: rpl.rules,
+          prizes: rpl.prizes,
+          structure: rpl.structure,
+          pitchType: rpl.pitchType,
+          entryFee: rpl.entryFee,
+          broadcaster: rpl.broadcaster,
           organiserName: rpl.organiserName,
           organiserPhone: rpl.organiserPhone,
           organiserId: rpl.organiserId,
-          organiserEmail: rpl.organiserEmail
+          organiserEmail: rpl.organiserEmail,
+          schemaVersion: TOURNAMENT_SCHEMA_VERSION
         };
       }
 
@@ -336,11 +430,22 @@ export async function getTournaments() {
         cloudTournaments = [...cloudTournaments, spl];
       } else {
         cloudTournaments[splIdx] = {
+          ...spl,
           ...cloudTournaments[splIdx],
+          venues: spl.venues,
+          rounds: spl.rounds,
+          groups: spl.groups,
+          rules: spl.rules,
+          prizes: spl.prizes,
+          structure: spl.structure,
+          pitchType: spl.pitchType,
+          entryFee: spl.entryFee,
+          broadcaster: spl.broadcaster,
           organiserName: spl.organiserName,
           organiserPhone: spl.organiserPhone,
           organiserId: spl.organiserId,
-          organiserEmail: spl.organiserEmail
+          organiserEmail: spl.organiserEmail,
+          schemaVersion: TOURNAMENT_SCHEMA_VERSION
         };
       }
 

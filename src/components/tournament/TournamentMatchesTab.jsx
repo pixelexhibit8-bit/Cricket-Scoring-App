@@ -29,7 +29,7 @@ function getOrdinal(n) {
 function formatMatchHeaderTitle(m, tournament, fallbackIdx = 0) {
   const overs = Number(m.overs || tournament?.overs || 20);
   const formatText = overs === 20 ? 'T20' : (overs === 10 ? 'T10' : (overs === 50 ? 'ODI' : `${overs} Ov`));
-  const venue = m.venue || tournament?.city || 'Kensington Oval, Bridgetown, Barbados , West Indies';
+  const venue = m.venue || tournament?.venue || (Array.isArray(tournament?.venues) && tournament.venues[0]) || tournament?.city || tournament?.host || 'Cricket Ground';
 
   const rawStage = String(m.stage || '').trim();
   const lowerStage = rawStage.toLowerCase();

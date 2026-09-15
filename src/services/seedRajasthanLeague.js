@@ -12,11 +12,63 @@ export const RAJASTHAN_LEAGUE_2026 = {
   host: 'Rajasthan',
   category: 'LIMITED OVERS',
   format: 'LIMITED OVERS',
+  structure: 'league',
   ballType: 'tennis',
   pitchType: 'turf',
   overs: 10,
   maxOvers: 10,
   entryFee: '2000',
+  prizes: {
+    first: '₹51,000 + Trophy',
+    runnerUp: '₹25,000 + Trophy',
+    bestBatter: 'English Willow Bat + Trophy',
+    bestBowler: 'Cricket Spikes + Trophy',
+    mvp: 'Complete Cricket Kit'
+  },
+  needMoreTeams: false,
+  rounds: [
+    'Group / League Matches',
+    'Semi Final',
+    'Final'
+  ],
+  groups: [
+    {
+      id: 'grp_rpl_a',
+      roundName: 'Group / League Matches',
+      name: 'Group A',
+      teams: [
+        'Jaipur Royals',
+        'Jodhpur Sunrisers',
+        'Nagaur Titans',
+        'Bikaner Blasters',
+        'Udaipur Warriors'
+      ]
+    },
+    {
+      id: 'grp_rpl_b',
+      roundName: 'Group / League Matches',
+      name: 'Group B',
+      teams: [
+        'Kota Challengers',
+        'Ajmer Super Giants',
+        'Sikar Panthers',
+        'Alwar Tigers',
+        'Barmer Knights'
+      ]
+    }
+  ],
+  rules: {
+    wideRuns: 1,
+    noBallRuns: 1,
+    isLegalWide: false,
+    isLegalNoBall: false,
+    wagonWheelEnabled: true,
+    wagonWheelDotBalls: false,
+    wagonWheelSingles: false,
+    impactPlayerEnabled: false,
+    maxBowlerQuota: 2,
+    runsPerWicketPenalty: 0
+  },
   organiserName: 'Basti Ram',
   organiserPhone: '+91 99832 28208',
   organiserId: 'usr_9983228208',
@@ -26,6 +78,8 @@ export const RAJASTHAN_LEAGUE_2026 = {
   duration: '16 Sep 2026 - 15 Oct 2026',
   bannerUri: 'rpl_banner',
   logoUri: 'rpl_logo',
+  broadcaster: 'CricFlow Live, YouTube, Ground Bulletin',
+  schemaVersion: 5,
   venues: [
     'Deh Cricket Ground',
     'Sadokan Cricket Club',

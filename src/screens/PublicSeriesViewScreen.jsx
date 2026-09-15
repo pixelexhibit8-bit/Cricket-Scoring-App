@@ -386,7 +386,7 @@ export function PublicSeriesViewScreen(props = {}) {
       totalOvers: match?.overs || tournament?.overs || 5,
       ballType: tournament?.ballType || 'tennis',
       pitchType: tournament?.pitchType || 'turf',
-      venueName: match?.venue || tournament?.city || 'Sadokan Cricket Ground'
+      venueName: match?.venue || tournament?.venue || (Array.isArray(tournament?.venues) && tournament.venues[0]) || tournament?.city || 'Local Cricket Ground'
     };
 
     const nav = navigation || props.navigation;

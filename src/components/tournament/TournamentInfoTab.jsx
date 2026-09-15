@@ -16,6 +16,7 @@ export const TournamentInfoTab = React.memo(function TournamentInfoTab({
   tournament
 }) {
   const matchesCount = Array.isArray(tournament?.matches) ? tournament.matches.length : 8;
+  const overs = tournament?.overs || tournament?.maxOvers || 20;
 
   const infoRows = [
     {
@@ -32,13 +33,22 @@ export const TournamentInfoTab = React.memo(function TournamentInfoTab({
     },
     {
       key: 'Format',
-      val: tournament?.format || `${matchesCount} T20s`
+      val: tournament?.format ? `${tournament.format} (${overs} Overs)` : `${matchesCount} Matches • ${overs} Overs`
     },
     {
-      key: 'Broadcaster',
-      val: tournament?.broadcaster || 'CricFlow Live, YouTube, Ground Bulletin'
+      key: 'Structure',
+      val: tournament?.structure === 'hybrid'
+        ? 'League + Knockout (Hybrid)'
+        : (tournament?.structure === 'knockout' ? 'Direct Knockout' : 'Round-Robin League')
     }
   ];
+
+  if (Array.isArray(tournament?.rounds) && tournament.rounds.length > 0) {
+    infoRows.push({
+      key: 'Rounds',
+      val: tournament.rounds.join(' › ')
+    });
+  }
 
   if (tournament?.ballType) {
     infoRows.push({
@@ -61,6 +71,20 @@ export const TournamentInfoTab = React.memo(function TournamentInfoTab({
     });
   }
 
+  if (tournament?.prizes?.first) {
+    infoRows.push({
+      key: '1st Prize',
+      val: tournament.prizes.first
+    });
+  }
+
+  if (tournament?.prizes?.runnerUp) {
+    infoRows.push({
+      key: 'Runner-up',
+      val: tournament.prizes.runnerUp
+    });
+  }
+
   if (Array.isArray(tournament?.venues) && tournament.venues.length > 0) {
     infoRows.push({
       key: 'Venues',
@@ -74,6 +98,11 @@ export const TournamentInfoTab = React.memo(function TournamentInfoTab({
       val: tournament.organiserName + (tournament.organiserPhone ? ` (${tournament.organiserPhone})` : '')
     });
   }
+
+  infoRows.push({
+    key: 'Broadcaster',
+    val: tournament?.broadcaster || 'CricFlow Live, YouTube, Ground Bulletin'
+  });
 
   return (
     <ScrollView
