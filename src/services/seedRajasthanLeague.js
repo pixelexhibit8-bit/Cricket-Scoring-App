@@ -484,7 +484,7 @@ export function generateInitialPointsTable() {
     ballsFaced: 0,
     runsConceded: 0,
     ballsBowled: 0,
-    nrr: '+0.000',
+    nrr: '-',
     form: []
   }));
 }

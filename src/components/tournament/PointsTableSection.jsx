@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import {
   themeColors,
@@ -22,7 +22,7 @@ export const PointsTableSection = React.memo(function PointsTableSection({
 }) {
   const activeTeamsList = teams.length > 0 ? teams : tournamentTeams;
   const teamsCount = totalTeams || pointsTableData.length;
-  const effectiveCutoff = teamsCount >= 5 ? 4 : (teamsCount >= 3 ? 2 : 1);
+  const effectiveCutoff = qualifyingSpots || (teamsCount >= 5 ? 4 : (teamsCount >= 3 ? 2 : 1));
 
   if (!pointsTableData || pointsTableData.length === 0) {
     return (
@@ -36,10 +36,14 @@ export const PointsTableSection = React.memo(function PointsTableSection({
     );
   }
 
+  const totalMatchesPlayed = pointsTableData.reduce((acc, r) => acc + (Number(r.p) || 0), 0);
+  const hasAnyQualifier = pointsTableData.some(r => Number(r.p) > 0 && (r.isQualified === true || r.qualified === true || r.status === 'QUALIFIED'));
+
   // Format team code
   const getTeamCode = (row) => {
     if (row.shortName && row.shortName.trim().length > 0) return row.shortName.trim().toUpperCase();
     if (row.shortCode && row.shortCode.trim().length > 0) return row.shortCode.trim().toUpperCase();
+    if (row.code && row.code.trim().length > 0) return row.code.trim().toUpperCase();
     if (row.team) {
       const parts = String(row.team).trim().split(/\s+/);
       if (parts.length >= 2) {
@@ -93,27 +97,45 @@ export const PointsTableSection = React.memo(function PointsTableSection({
         {/* Dynamic Table Rows */}
         {(isOverviewPreview ? pointsTableData.slice(0, 4) : pointsTableData).map((row, idx) => {
           const rank = idx + 1;
-          const isQualifier = rank <= effectiveCutoff;
+          const played = Number(row.p || 0);
+          const hasPlayed = played > 0;
+          const isQualified = hasPlayed && Boolean(row.isQualified || row.qualified || row.status === 'QUALIFIED');
+          const isEliminated = hasPlayed && Boolean(row.isEliminated || row.eliminated || row.status === 'ELIMINATED');
+          const isPlayoffZone = totalMatchesPlayed > 0 && (rank <= effectiveCutoff);
           const teamCode = getTeamCode(row);
 
-          const nrrNum = parseFloat(row.nrr || 0);
-          const nrrFormatted = nrrNum > 0 ? `+${nrrNum.toFixed(3)}` : (nrrNum < 0 ? nrrNum.toFixed(3) : '0.000');
-          const nrrColor = nrrNum > 0 ? '#16A34A' : (nrrNum < 0 ? '#DC2626' : '#64748B');
+          let nrrFormatted = '-';
+          let nrrColor = '#64748B';
+
+          if (hasPlayed) {
+            const rawNrr = row.nrr;
+            if (rawNrr !== '-' && rawNrr != null) {
+              const nrrNum = typeof rawNrr === 'number' ? rawNrr : parseFloat(rawNrr);
+              if (!isNaN(nrrNum)) {
+                nrrFormatted = nrrNum > 0 ? `+${nrrNum.toFixed(3)}` : (nrrNum < 0 ? nrrNum.toFixed(3) : '0.000');
+                nrrColor = nrrNum > 0 ? '#16A34A' : (nrrNum < 0 ? '#DC2626' : '#64748B');
+              }
+            }
+          }
 
           return (
             <View
               key={row.team || idx}
               style={[
                 styles.tableDataRow,
-                isQualifier && styles.qualifierRowHighlight,
+                isPlayoffZone && styles.qualifierRowHighlight,
                 idx === (isOverviewPreview ? Math.min(4, pointsTableData.length) : pointsTableData.length) - 1 && { borderBottomWidth: 0 }
               ]}
             >
               {/* Team Identity Column: Q Tag + Logo + Short Name */}
               <View style={styles.teamInfoCell}>
-                {isQualifier ? (
+                {isQualified ? (
                   <View style={styles.qTagBadge}>
                     <Text style={styles.qTagText}>Q</Text>
+                  </View>
+                ) : isEliminated ? (
+                  <View style={styles.eTagBadge}>
+                    <Text style={styles.eTagText}>E</Text>
                   </View>
                 ) : (
                   <View style={styles.qTagPlaceholder} />
@@ -130,20 +152,24 @@ export const PointsTableSection = React.memo(function PointsTableSection({
                 </Text>
 
                 {/* Form Pills if Enabled */}
-                {teamFormEnabled && row.form && Array.isArray(row.form) ? (
-                  <View style={styles.formPillsWrap}>
-                    {row.form.map((f, fIdx) => (
-                      <View
-                        key={fIdx}
-                        style={[
-                          styles.formPill,
-                          { backgroundColor: f === 'W' ? '#16A34A' : (f === 'L' ? '#DC2626' : '#94A3B8') }
-                        ]}
-                      >
-                        <Text style={styles.formPillText}>{f}</Text>
-                      </View>
-                    ))}
-                  </View>
+                {teamFormEnabled ? (
+                  hasPlayed && Array.isArray(row.form) && row.form.length > 0 ? (
+                    <View style={styles.formPillsWrap}>
+                      {row.form.map((f, fIdx) => (
+                        <View
+                          key={fIdx}
+                          style={[
+                            styles.formPill,
+                            { backgroundColor: f === 'W' ? '#16A34A' : (f === 'L' ? '#DC2626' : '#94A3B8') }
+                          ]}
+                        >
+                          <Text style={styles.formPillText}>{f}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.noFormText}>-</Text>
+                  )
                 ) : null}
               </View>
 
@@ -163,13 +189,22 @@ export const PointsTableSection = React.memo(function PointsTableSection({
         })}
       </View>
 
-      {/* Qualified Badge Indicator below Table */}
-      <View style={styles.qualifierIndicatorRow}>
-        <View style={styles.qTagBadgeSmall}>
-          <Text style={styles.qTagTextSmall}>Q</Text>
+      {/* Qualified / Playoff Indicator below Table */}
+      {hasAnyQualifier ? (
+        <View style={styles.qualifierIndicatorRow}>
+          <View style={styles.qTagBadgeSmall}>
+            <Text style={styles.qTagTextSmall}>Q</Text>
+          </View>
+          <Text style={styles.qualifierIndicatorText}>Qualified for Playoffs</Text>
         </View>
-        <Text style={styles.qualifierIndicatorText}>Qualified</Text>
-      </View>
+      ) : (
+        <View style={styles.qualifierIndicatorRow}>
+          <Ionicons name="information-circle-outline" size={14} color="#94A3B8" />
+          <Text style={styles.qualifierIndicatorText}>
+            Top {effectiveCutoff} teams qualify for Playoffs
+          </Text>
+        </View>
+      )}
 
       {/* Clean 2-Column Standard Cricket Glossary (Only on Full Points Table Tab) */}
       {!isOverviewPreview ? (
@@ -356,6 +391,20 @@ const styles = StyleSheet.create({
     color: '#854D0E',
     lineHeight: 11
   },
+  eTagBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  eTagText: {
+    fontSize: 9,
+    fontFamily: systemFontBold,
+    color: '#DC2626',
+    lineHeight: 11
+  },
   qTagPlaceholder: {
     width: 14,
     height: 14
@@ -382,6 +431,12 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     fontFamily: systemFontBold,
     color: '#FFFFFF'
+  },
+  noFormText: {
+    fontSize: 12,
+    fontFamily: systemFontMedium,
+    color: '#94A3B8',
+    marginLeft: 6
   },
   tableCell: {
     fontSize: 13,

@@ -70,11 +70,16 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
     if (selectedTeamFilter === 'ALL') return matches;
     const filterNorm = selectedTeamFilter.toLowerCase().trim();
     return matches.filter(m => {
-      const t1Name = String(m.team1?.name || m.team1?.shortName || m.team1 || '').toLowerCase().trim();
-      const t2Name = String(m.team2?.name || m.team2?.shortName || m.team2 || '').toLowerCase().trim();
-      return t1Name.includes(filterNorm) || t2Name.includes(filterNorm);
+      const t1Resolved = resolveTeamWithRoster(m.team1, teams);
+      const t2Resolved = resolveTeamWithRoster(m.team2, teams);
+      const t1Name = String(t1Resolved.name || m.team1?.name || m.team1?.shortName || m.team1 || '').toLowerCase().trim();
+      const t2Name = String(t2Resolved.name || m.team2?.name || m.team2?.shortName || m.team2 || '').toLowerCase().trim();
+      const t1Short = String(t1Resolved.shortName || m.team1?.shortName || '').toLowerCase().trim();
+      const t2Short = String(t2Resolved.shortName || m.team2?.shortName || '').toLowerCase().trim();
+      return t1Name.includes(filterNorm) || t2Name.includes(filterNorm) ||
+             (t1Short && t1Short === filterNorm) || (t2Short && t2Short === filterNorm);
     });
-  }, [matches, selectedTeamFilter]);
+  }, [matches, selectedTeamFilter, teams]);
 
   // Split into Completed vs Upcoming / Live
   const { completedMatches, liveMatches, upcomingMatchesGrouped } = useMemo(() => {
@@ -401,57 +406,76 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
           onPress={() => setTeamDropdownVisible(false)}
         >
           <View style={styles.dropdownModalCard}>
-            <Text style={styles.dropdownModalTitle}>Filter by Team</Text>
-
-            <TouchableOpacity
-              style={[
-                styles.teamOptionRow,
-                selectedTeamFilter === 'ALL' && styles.teamOptionRowActive
-              ]}
-              onPress={() => {
-                setSelectedTeamFilter('ALL');
-                setTeamDropdownVisible(false);
-              }}
-            >
-              <Text
-                style={[
-                  styles.teamOptionText,
-                  selectedTeamFilter === 'ALL' && styles.teamOptionTextActive
-                ]}
+            <View style={styles.dropdownHeaderRow}>
+              <Text style={styles.dropdownModalTitle}>Filter by Team</Text>
+              <TouchableOpacity
+                onPress={() => setTeamDropdownVisible(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                All Teams
-              </Text>
-              {selectedTeamFilter === 'ALL' ? (
-                <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
-              ) : null}
-            </TouchableOpacity>
+                <Ionicons name="close-circle-outline" size={22} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
 
-            {teams.map(t => {
-              const isSel = selectedTeamFilter === t.name || selectedTeamFilter === t.shortName;
-              return (
-                <TouchableOpacity
-                  key={t.id || t.name}
-                  style={[styles.teamOptionRow, isSel && styles.teamOptionRowActive]}
-                  onPress={() => {
-                    setSelectedTeamFilter(t.name);
-                    setTeamDropdownVisible(false);
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <TeamIdentityMark team={t} tournamentTeams={teams} size={20} />
-                    <Text
-                      style={[styles.teamOptionText, isSel && styles.teamOptionTextActive]}
-                      numberOfLines={1}
-                    >
-                      {t.name}
-                    </Text>
+            <ScrollView
+              style={styles.dropdownScrollView}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+            >
+              <TouchableOpacity
+                style={[
+                  styles.teamOptionRow,
+                  selectedTeamFilter === 'ALL' && styles.teamOptionRowActive
+                ]}
+                onPress={() => {
+                  setSelectedTeamFilter('ALL');
+                  setTeamDropdownVisible(false);
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={styles.allTeamsIconCircle}>
+                    <MaterialCommunityIcons name="account-group" size={16} color="#0284C7" />
                   </View>
-                  {isSel ? (
-                    <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
+                  <Text
+                    style={[
+                      styles.teamOptionText,
+                      selectedTeamFilter === 'ALL' && styles.teamOptionTextActive
+                    ]}
+                  >
+                    All Teams ({teams.length})
+                  </Text>
+                </View>
+                {selectedTeamFilter === 'ALL' ? (
+                  <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+                ) : null}
+              </TouchableOpacity>
+
+              {teams.map(t => {
+                const isSel = selectedTeamFilter === t.name || selectedTeamFilter === t.shortName;
+                return (
+                  <TouchableOpacity
+                    key={t.id || t.name}
+                    style={[styles.teamOptionRow, isSel && styles.teamOptionRowActive]}
+                    onPress={() => {
+                      setSelectedTeamFilter(t.name);
+                      setTeamDropdownVisible(false);
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                      <TeamIdentityMark team={t} tournamentTeams={teams} size={24} />
+                      <Text
+                        style={[styles.teamOptionText, isSel && styles.teamOptionTextActive]}
+                        numberOfLines={1}
+                      >
+                        {t.name}
+                      </Text>
+                    </View>
+                    {isSel ? (
+                      <Ionicons name="checkmark-circle" size={18} color="#0284C7" />
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
         </Pressable>
       </Modal>
@@ -785,17 +809,40 @@ const styles = StyleSheet.create({
   },
   dropdownModalCard: {
     width: '100%',
-    maxHeight: 380,
+    maxHeight: '75%',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 18,
-    gap: 6
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8
+  },
+  dropdownHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 6
   },
   dropdownModalTitle: {
     fontSize: 15,
     fontFamily: systemFontBold,
-    color: themeColors.textPrimary,
-    marginBottom: 6
+    color: themeColors.textPrimary
+  },
+  dropdownScrollView: {
+    maxHeight: 360
+  },
+  allTeamsIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   teamOptionRow: {
     flexDirection: 'row',
@@ -810,8 +857,9 @@ const styles = StyleSheet.create({
   },
   teamOptionText: {
     fontSize: 13.5,
-    fontFamily: systemFont,
-    color: themeColors.textPrimary
+    fontFamily: systemFontMedium,
+    color: themeColors.textPrimary,
+    flex: 1
   },
   teamOptionTextActive: {
     fontFamily: systemFontBold,

@@ -15,7 +15,6 @@ import {
   UpcomingFixtureCardItem,
   FinishedMatchCardItem,
   SearchResultsSection,
-  ScorerHubCard,
   SocialConnectCard
 } from '../../components/home/index.js';
 import { GroundSpotlightSection } from '../../components/GroundSpotlightSection.jsx';
@@ -282,16 +281,6 @@ export function HomeScreen(props = {}) {
           <>
             {/* ── NATIVE AUTO-PLAY BANNER CAROUSEL (ISOLATED) ── */}
             <HomeBannerCarousel bannerWidth={bannerWidth} />
-
-            {/* SCORER HUB CARD */}
-            <ScorerHubCard
-              hasActiveMatch={hasActiveMatch}
-              activeMatch={activeMatch}
-              onResumeScoring={handleResumeScoring}
-              onStartQuickMatch={handleStartQuickMatch}
-              onOpenShareModal={handleOpenShareModal}
-              onOpenJoinModal={handleOpenJoinModal}
-            />
 
             {/* FEATURED LIVE MATCH SECTION */}
             {allLive.length > 0 && (

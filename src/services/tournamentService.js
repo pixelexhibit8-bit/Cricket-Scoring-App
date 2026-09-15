@@ -14,7 +14,7 @@ export function calculateNetRunRate(runsScored = 0, ballsFaced = 0, runsConceded
   const oversFaced = ballsFaced > 0 ? (Math.floor(ballsFaced / 6) + (ballsFaced % 6) / 6) : 0;
   const oversBowled = ballsBowled > 0 ? (Math.floor(ballsBowled / 6) + (ballsBowled % 6) / 6) : 0;
 
-  if (oversFaced === 0 && oversBowled === 0) return '+0.000';
+  if (oversFaced === 0 && oversBowled === 0) return '-';
 
   const forRate = oversFaced > 0 ? (runsScored / oversFaced) : 0;
   const againstRate = oversBowled > 0 ? (runsConceded / oversBowled) : 0;
@@ -54,7 +54,7 @@ export function autoCalculatePointsTable(teams = [], matches = []) {
       ballsFaced: 0,
       runsConceded: 0,
       ballsBowled: 0,
-      nrr: '+0.000',
+      nrr: '-',
       form: [] // Last 5 matches ['W', 'L', 'W']
     };
 
@@ -190,7 +190,10 @@ export function autoCalculatePointsTable(teams = [], matches = []) {
 
   list.sort((a, b) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
-    return parseFloat(b.nrr) - parseFloat(a.nrr);
+    const aNrrVal = a.nrr === '-' ? 0 : (parseFloat(a.nrr) || 0);
+    const bNrrVal = b.nrr === '-' ? 0 : (parseFloat(b.nrr) || 0);
+    if (bNrrVal !== aNrrVal) return bNrrVal - aNrrVal;
+    return String(a.team || '').localeCompare(String(b.team || ''));
   });
 
   return list;
