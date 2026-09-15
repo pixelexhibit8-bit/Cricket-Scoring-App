@@ -51,7 +51,6 @@ import { AddTeamHubModal } from '../components/modals/AddTeamHubModal.jsx';
 import { BulkSquadPasteModal } from '../components/modals/BulkSquadPasteModal.jsx';
 import { CaptainTeamRegistrationModal } from '../components/modals/CaptainTeamRegistrationModal.jsx';
 import { AutoGenerateFixturesModal } from '../components/modals/AutoGenerateFixturesModal.jsx';
-import { PhoneLoginModal } from '../components/modals/PhoneLoginModal.jsx';
 import { TournamentAdminMenuModal } from '../components/modals/TournamentAdminMenuModal.jsx';
 import { EditTournamentModal } from '../components/modals/EditTournamentModal.jsx';
 import { TournamentRoundsModal } from '../components/modals/TournamentRoundsModal.jsx';
@@ -94,7 +93,6 @@ export function PublicSeriesViewScreen(props = {}) {
   const [savedTeamsList, setSavedTeamsList] = useState([]);
   const [myHostedIds, setMyHostedIds] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
-  const [loginModalVisible, setLoginModalVisible] = useState(false);
 
   // Active Tournament State
   const [tournament, setTournament] = useState(() => seriesData || null);
@@ -911,22 +909,14 @@ export function PublicSeriesViewScreen(props = {}) {
                 <Ionicons name="settings-outline" size={20} color={themeColors.textPrimary} />
               </TouchableOpacity>
             </View>
-          ) : !currentUser ? (
-            <TouchableOpacity
-              style={styles.loginOrganizerBtn}
-              activeOpacity={0.8}
-              onPress={() => setLoginModalVisible(true)}
-            >
-              <MaterialCommunityIcons name="account-key-outline" size={14} color="#0284C7" />
-              <Text style={styles.loginOrganizerBtnText}>Host Login</Text>
-            </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={styles.shareHeaderBtn}
+              onPress={() => setSelectSeriesModalVisible(true)}
               activeOpacity={0.7}
-              accessibilityLabel="Notifications"
+              accessibilityLabel="Select Tournament"
             >
-              <Ionicons name="notifications-outline" size={22} color={themeColors.textPrimary} />
+              <Ionicons name="list-outline" size={22} color={themeColors.textPrimary} />
             </TouchableOpacity>
           )}
         </View>
@@ -1569,13 +1559,6 @@ export function PublicSeriesViewScreen(props = {}) {
           </Pressable>
         </Modal>
 
-        {/* ── MODAL 6: HOST / USER LOGIN MODAL ── */}
-        <PhoneLoginModal
-          visible={loginModalVisible}
-          onClose={() => setLoginModalVisible(false)}
-          onLoginSuccess={loadTournamentsData}
-        />
-
       </View>
     </SafeAreaView>
   );
@@ -1741,22 +1724,6 @@ const styles = StyleSheet.create({
     borderColor: themeColors.borderDark,
     alignItems: 'center',
     justifyContent: 'center'
-  },
-  loginOrganizerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6
-  },
-  loginOrganizerBtnText: {
-    color: '#0284C7',
-    fontSize: 11,
-    fontFamily: systemFontMedium
   },
   shareHeaderBtn: {
     width: 36,
