@@ -49,39 +49,33 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
   const highestScore = stats?.batting?.highestScore || {};
   const mostSixes = stats?.batting?.mostSixes || {};
 
-  // Smart Featured Matches Selection: 1-2 Upcoming/Live + 1 Latest Completed
+  // Smart Featured Matches Selection: 1 Latest Completed Match + Next 2 Upcoming/Live Matches (in chronological order)
   const featuredMatches = useMemo(() => {
     if (!matches || matches.length === 0) return [];
 
-    const upcomingOrLive = matches.filter(m => m.status === 'LIVE' || m.status === 'UPCOMING' || (!m.status && !m.result));
-    const completed = matches.filter(m => m.status === 'FINISHED' || Boolean(m.result) || m.phase === 'result');
-
-    // Prioritize knockout upcoming matches first
-    const knockouts = upcomingOrLive.filter(m => isKnockoutStage(m.stage));
-    const regularUpcoming = upcomingOrLive.filter(m => !isKnockoutStage(m.stage));
-    const sortedUpcoming = [...knockouts, ...regularUpcoming];
+    const upcomingOrLive = matches.filter(
+      m => m.status === 'LIVE' || m.status === 'UPCOMING' || (!m.status && !m.result && m.phase !== 'result' && m.phase !== 'finished')
+    );
+    const completed = matches.filter(
+      m => m.status === 'FINISHED' || Boolean(m.result) || m.phase === 'result' || m.phase === 'finished'
+    );
 
     const result = [];
 
-    // Pick top 2 upcoming matches if available
-    if (sortedUpcoming.length >= 2) {
-      result.push(sortedUpcoming[0], sortedUpcoming[1]);
-    } else if (sortedUpcoming.length === 1) {
-      result.push(sortedUpcoming[0]);
-    }
-
-    // Pick 1 most recent completed match
+    // 1. If there are finished matches, show the 1 most recent completed match
     if (completed.length > 0) {
       result.push(completed[completed.length - 1]);
     }
 
-    // If still less than 3, fill with remaining matches
-    if (result.length < 3) {
-      matches.forEach(m => {
-        if (!result.some(r => r.id === m.id) && result.length < 3) {
-          result.push(m);
-        }
-      });
+    // 2. Add the next 2 upcoming / live matches in natural chronological order
+    const nextUpcoming = upcomingOrLive.slice(0, 2);
+    result.push(...nextUpcoming);
+
+    // 3. If no finished matches exist (unplayed tournament), fill with up to 3 immediate upcoming matches
+    if (result.length < 3 && upcomingOrLive.length > nextUpcoming.length) {
+      const remainingSlots = 3 - result.length;
+      const moreUpcoming = upcomingOrLive.slice(nextUpcoming.length, nextUpcoming.length + remainingSlots);
+      result.push(...moreUpcoming);
     }
 
     return result;
