@@ -234,6 +234,7 @@ function mapSupabaseRowToTournament(row) {
 }
 
 import { buildRajasthanLeagueTournament } from './seedRajasthanLeague.js';
+import { buildSadokanPremierLeagueTournament } from './seedSadokanPremierLeague.js';
 
 /**
  * Fetch all tournaments from Local Storage (Offline-First)
@@ -247,17 +248,39 @@ export async function getTournamentsFromStorage() {
       if (Array.isArray(parsed)) list = parsed;
     }
 
+    let changed = false;
+
     // Guarantee Rajasthan League 2026 is always available
     const rpl = buildRajasthanLeagueTournament();
-    const existingIdx = list.findIndex(t => t.id === rpl.id || t.name === rpl.name);
-    if (existingIdx === -1) {
+    const existingRplIdx = list.findIndex(t => t.id === rpl.id || t.name === rpl.name);
+    if (existingRplIdx === -1) {
       list = [rpl, ...list];
+      changed = true;
+    }
+
+    // Guarantee Sadokan Premier League 2026 is always available with full ball-by-ball data
+    const spl = buildSadokanPremierLeagueTournament();
+    const existingSplIdx = list.findIndex(t => t.id === spl.id || t.name === spl.name);
+    if (existingSplIdx === -1) {
+      list = [...list, spl];
+      changed = true;
+    } else {
+      // Refresh SPL if it had old 5-player data or empty overHistory
+      const existingSpl = list[existingSplIdx];
+      const hasOverHistory = existingSpl.matches?.[0]?.rawMatchData?.innings?.[0]?.overHistory?.length > 0;
+      if (!hasOverHistory || (existingSpl.teams?.[0]?.players?.length || 0) < 11) {
+        list[existingSplIdx] = spl;
+        changed = true;
+      }
+    }
+
+    if (changed) {
       await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
     }
 
     return list;
   } catch (err) {
-    return [buildRajasthanLeagueTournament()];
+    return [buildRajasthanLeagueTournament(), buildSadokanPremierLeagueTournament()];
   }
 }
 
@@ -278,14 +301,23 @@ export async function getTournaments() {
       .order('created_at', { ascending: false });
 
     if (!error && Array.isArray(data)) {
-      const cloudTournaments = data.map(mapSupabaseRowToTournament).filter(Boolean);
+      let cloudTournaments = data.map(mapSupabaseRowToTournament).filter(Boolean);
       const rpl = buildRajasthanLeagueTournament();
+      const spl = buildSadokanPremierLeagueTournament();
+
       const hasRPL = cloudTournaments.some(t => t.id === rpl.id || t.name === rpl.name);
-      const merged = hasRPL ? cloudTournaments : [rpl, ...cloudTournaments];
+      if (!hasRPL) {
+        cloudTournaments = [rpl, ...cloudTournaments];
+      }
+
+      const splIdx = cloudTournaments.findIndex(t => t.id === spl.id || t.name === spl.name);
+      if (splIdx === -1) {
+        cloudTournaments = [...cloudTournaments, spl];
+      }
 
       // Sync local storage with latest cloud snapshot
-      await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(merged));
-      return merged;
+      await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(cloudTournaments));
+      return cloudTournaments;
     } else if (error) {
       console.warn('[TournamentService] Supabase fetch error, fallback to local:', error.message);
     }

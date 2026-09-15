@@ -30,10 +30,10 @@ export const DEFAULT_APP_LOGO_URL = 'https://res.cloudinary.com/aov9a8tl/image/u
 export const PRESET_TEAM_LOGOS = [
   // Sadokan Premier League Official Teams
   { id: 'team_spl_ssk', label: 'SSK', name: 'Sadokan Super Kings', url: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469238/spl_team_ssk_logo.jpg', color: '#1E3A8A' },
-  { id: 'team_spl_str', label: 'STR', name: 'Sangwa Strikers', url: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469241/spl_team_str_logo.jpg', color: '#EA580C' },
+  { id: 'team_spl_str', label: 'STR', name: 'Sangwa Strikers', url: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469248/spl_team_str_logo.jpg', color: '#0D9488' },
   { id: 'team_spl_sdr', label: 'SDR', name: 'Sadokan Royals', url: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469244/spl_team_sdr_logo.jpg', color: '#0284C7' },
-  { id: 'team_spl_mwc', label: 'MWC', name: 'Marwar Champions', url: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469253/spl_team_mwc_logo.jpg', color: '#D97706' },
-  { id: 'team_spl_ngt', label: 'NGT', name: 'Nagaur Titans', url: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469266/spl_team_ngt_logo.jpg', color: '#0D9488' },
+  { id: 'team_spl_mwc', label: 'MWC', name: 'Marwar Champions', url: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469253/spl_team_mwc_logo.jpg', color: '#DC2626' },
+  { id: 'team_spl_ngt', label: 'NGT', name: 'Nagaur Titans', url: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469258/spl_team_ngt_logo.jpg', color: '#7C3AED' },
 
   // CPL & Women's CPL (WCPL) Official Teams
   { id: 'gaw', label: 'GAW', name: 'Guyana Amazon Warriors', url: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1787085716/cricflow_team_logos/gt.jpg', color: '#15803D' },
@@ -192,10 +192,10 @@ export const getTeamLogoSource = (team, tournamentTeams = []) => {
 
   // 2. Sadokan Premier League Keyword matching
   if (key.includes('super king') || key.includes('sadokan super') || key.includes('ssk')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469238/spl_team_ssk_logo.jpg' };
-  if (key.includes('striker') || key.includes('sangwa striker') || key.includes('str')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469241/spl_team_str_logo.jpg' };
+  if (key.includes('sangwa') || key.includes('striker') || key.includes('str')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469248/spl_team_str_logo.jpg' };
   if (key.includes('sadokan royal') || key.includes('sdr')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469244/spl_team_sdr_logo.jpg' };
   if (key.includes('marwar') || key.includes('champion') || key.includes('mwc')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469253/spl_team_mwc_logo.jpg' };
-  if (key.includes('nagaur') || key.includes('titan') || key.includes('ngt')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469266/spl_team_ngt_logo.jpg' };
+  if (key.includes('nagaur') || key.includes('titan') || key.includes('ngt')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469258/spl_team_ngt_logo.jpg' };
 
   // 3. CPL & WCPL Keyword matching
   if (key.includes('guyana') || key.includes('amazon warrior') || key.includes('gaw')) return { uri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1787085716/cricflow_team_logos/gt.jpg' };
