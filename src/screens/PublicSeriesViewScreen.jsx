@@ -26,6 +26,10 @@ import {
 import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import {
+  getTournamentBannerSource,
+  getTournamentLogoSource
+} from '../utils/teamUtils.js';
+import {
   getTournaments,
   addTeamToTournament,
   addMatchToTournament,
@@ -505,6 +509,7 @@ export function PublicSeriesViewScreen(props = {}) {
             >
               {tournamentsList.map(tItem => {
                 const isSelected = tournament?.id === tItem.id;
+                const bannerSrc = getTournamentBannerSource(tItem);
                 return (
                   <TouchableOpacity
                     key={tItem.id}
@@ -515,9 +520,9 @@ export function PublicSeriesViewScreen(props = {}) {
                     onPress={() => handleSelectTournament(tItem)}
                     activeOpacity={0.8}
                   >
-                    {tItem.bannerUri || tItem.logoUri ? (
+                    {bannerSrc ? (
                       <Image
-                        source={{ uri: tItem.bannerUri || tItem.logoUri }}
+                        source={bannerSrc}
                         style={styles.carouselCardImage}
                       />
                     ) : (
@@ -945,8 +950,8 @@ export function PublicSeriesViewScreen(props = {}) {
                           activeOpacity={0.7}
                         >
                           <View style={styles.sheetItemLogoWrap}>
-                            {item.logoUri || item.bannerUri ? (
-                              <Image source={{ uri: item.logoUri || item.bannerUri }} style={styles.sheetItemLogo} />
+                            {getTournamentLogoSource(item) || getTournamentBannerSource(item) ? (
+                              <Image source={getTournamentLogoSource(item) || getTournamentBannerSource(item)} style={styles.sheetItemLogo} />
                             ) : (
                               <View style={[styles.sheetItemLogoFallback, { backgroundColor: isSelected ? '#18181B' : '#F1F5F9' }]}>
                                 <MaterialCommunityIcons name="trophy" size={20} color={isSelected ? '#FFFFFF' : '#64748B'} />
@@ -991,6 +996,7 @@ export function PublicSeriesViewScreen(props = {}) {
                   {filteredSheetTournaments.map(item => {
                     const isSelected = tournament?.id === item.id;
                     const isHost = myHostedIds.includes(item.id);
+                    const logoSrc = getTournamentLogoSource(item) || getTournamentBannerSource(item);
                     return (
                       <TouchableOpacity
                         key={item.id}
@@ -1002,8 +1008,8 @@ export function PublicSeriesViewScreen(props = {}) {
                         activeOpacity={0.7}
                       >
                         <View style={styles.sheetItemLogoWrap}>
-                          {item.logoUri || item.bannerUri ? (
-                            <Image source={{ uri: item.logoUri || item.bannerUri }} style={styles.sheetItemLogo} />
+                          {logoSrc ? (
+                            <Image source={logoSrc} style={styles.sheetItemLogo} />
                           ) : (
                             <View style={[styles.sheetItemLogoFallback, { backgroundColor: isSelected ? '#18181B' : '#F1F5F9' }]}>
                               <MaterialCommunityIcons name="trophy" size={20} color={isSelected ? '#FFFFFF' : '#64748B'} />

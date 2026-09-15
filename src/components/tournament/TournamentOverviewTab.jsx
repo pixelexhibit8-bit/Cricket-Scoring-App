@@ -4,9 +4,10 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Image,
   StyleSheet
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   themeColors,
   systemFont,
@@ -16,7 +17,11 @@ import {
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
 import { PointsTableSection } from './PointsTableSection.jsx';
-import { resolveTeamWithRoster, formatMatchResult } from '../../utils/teamUtils.js';
+import {
+  resolveTeamWithRoster,
+  formatMatchResult,
+  getTournamentBannerSource
+} from '../../utils/teamUtils.js';
 
 function isKnockoutStage(stage) {
   if (!stage || typeof stage !== 'string') return false;
@@ -81,12 +86,49 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
     return result;
   }, [matches]);
 
+  const bannerSource = getTournamentBannerSource(tournament);
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
+      {/* ── 0. TOURNAMENT HERO BANNER ── */}
+      {tournament ? (
+        <View style={styles.heroBannerWrap}>
+          <Image
+            source={bannerSource}
+            style={styles.heroBannerImage}
+            resizeMode="cover"
+          />
+          <View style={styles.heroBannerOverlay}>
+            <View style={styles.heroBannerBadgeRow}>
+              <View style={styles.heroBallBadge}>
+                <MaterialCommunityIcons name="cricket" size={12} color="#FFFFFF" />
+                <Text style={styles.heroBallBadgeText}>
+                  {String(tournament.ballType || 'Tennis').toUpperCase()} BALL
+                </Text>
+              </View>
+              {tournament.overs ? (
+                <View style={styles.heroOversBadge}>
+                  <Text style={styles.heroOversBadgeText}>{tournament.overs} OVERS</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.heroBannerTitle} numberOfLines={1}>
+              {tournament.fullName || tournament.name || tournament.title}
+            </Text>
+            <View style={styles.heroBannerSubRow}>
+              <Ionicons name="calendar-outline" size={12} color="#E2E8F0" />
+              <Text style={styles.heroBannerSubtitle} numberOfLines={1}>
+                {tournament.duration || tournament.startDate || 'Season 2026'} • {tournament.city || 'Ground'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       {/* ── 1. FEATURED MATCHES SECTION ── */}
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Featured Matches</Text>
@@ -827,5 +869,80 @@ const styles = StyleSheet.create({
     fontFamily: systemFont,
     color: themeColors.textSecondary,
     lineHeight: 16
+  },
+  heroBannerWrap: {
+    width: '100%',
+    height: 156,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#18181B',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
+    position: 'relative'
+  },
+  heroBannerImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0
+  },
+  heroBannerOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 14,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    justifyContent: 'flex-end'
+  },
+  heroBannerBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4
+  },
+  heroBallBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#0284C7',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4
+  },
+  heroBallBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontFamily: systemFontBold
+  },
+  heroOversBadge: {
+    backgroundColor: '#334155',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4
+  },
+  heroOversBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontFamily: systemFontMedium
+  },
+  heroBannerTitle: {
+    fontSize: 16,
+    fontFamily: systemFontBold,
+    color: '#FFFFFF',
+    letterSpacing: -0.2
+  },
+  heroBannerSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3
+  },
+  heroBannerSubtitle: {
+    fontSize: 11.5,
+    fontFamily: systemFontMedium,
+    color: '#E2E8F0'
   }
 });
