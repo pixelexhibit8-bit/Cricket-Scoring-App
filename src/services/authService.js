@@ -302,7 +302,8 @@ export async function verifyPhoneOtp(rawPhone, otpToken) {
     console.warn('Profile search in Supabase by phone:', e);
   }
 
-  const userName = existingProfile?.name || `Player ${cleanPhone.slice(-4)}`;
+  const defaultName = cleanPhone === '9983228208' ? 'Basti Ram' : `Player ${cleanPhone.slice(-4)}`;
+  const userName = existingProfile?.name || defaultName;
 
   const userObj = {
     id: userId,
