@@ -188,14 +188,16 @@ export function PublicSeriesViewScreen(props = {}) {
     };
   }, []);
 
-  // Smart Organiser Detection
-  const isUserOrganiser = Boolean(
-    currentUser && (
-      (currentUser.phone && tournament?.organiserPhone && String(tournament.organiserPhone).trim() === String(currentUser.phone).trim()) ||
-      (currentUser.id && tournament?.organiserId && String(tournament.organiserId).trim() === String(currentUser.id).trim()) ||
-      (currentUser.email && tournament?.organiserEmail && String(tournament.organiserEmail).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase())
-    )
-  );
+  // Smart Organiser Detection (Phone / ID / Email)
+  const isUserOrganiser = useMemo(() => {
+    if (!currentUser || !tournament) return false;
+    const userPhone = currentUser.phone ? String(currentUser.phone).replace(/\D/g, '').slice(-10) : '';
+    const tournPhone = tournament.organiserPhone ? String(tournament.organiserPhone).replace(/\D/g, '').slice(-10) : '';
+    const matchPhone = Boolean(userPhone && tournPhone && userPhone === tournPhone);
+    const matchId = Boolean(currentUser.id && tournament.organiserId && String(tournament.organiserId).trim() === String(currentUser.id).trim());
+    const matchEmail = Boolean(currentUser.email && tournament.organiserEmail && String(tournament.organiserEmail).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase());
+    return Boolean(matchPhone || matchId || matchEmail);
+  }, [currentUser, tournament]);
 
   // Switch Active Tournament
   const handleSelectTournament = (selectedItem) => {
@@ -221,8 +223,10 @@ export function PublicSeriesViewScreen(props = {}) {
 
   const userHostedTournaments = useMemo(() => {
     if (!currentUser) return [];
+    const userPhone = currentUser.phone ? String(currentUser.phone).replace(/\D/g, '').slice(-10) : '';
     return filteredSheetTournaments.filter(t => {
-      const matchPhone = currentUser.phone && t.organiserPhone && String(t.organiserPhone).trim() === String(currentUser.phone).trim();
+      const tournPhone = t.organiserPhone ? String(t.organiserPhone).replace(/\D/g, '').slice(-10) : '';
+      const matchPhone = Boolean(userPhone && tournPhone && userPhone === tournPhone);
       const matchId = currentUser.id && t.organiserId && String(t.organiserId).trim() === String(currentUser.id).trim();
       const matchEmail = currentUser.email && t.organiserEmail && String(t.organiserEmail).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase();
       return Boolean(matchPhone || matchId || matchEmail);

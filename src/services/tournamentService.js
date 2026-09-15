@@ -259,6 +259,15 @@ export async function getTournamentsFromStorage() {
     if (existingRplIdx === -1) {
       list = [rpl, ...list];
       changed = true;
+    } else if (list[existingRplIdx].organiserPhone !== rpl.organiserPhone || list[existingRplIdx].organiserName !== rpl.organiserName) {
+      list[existingRplIdx] = {
+        ...list[existingRplIdx],
+        organiserName: rpl.organiserName,
+        organiserPhone: rpl.organiserPhone,
+        organiserId: rpl.organiserId,
+        organiserEmail: rpl.organiserEmail
+      };
+      changed = true;
     }
 
     // Guarantee Sadokan Premier League 2026 is always available with full ball-by-ball data
@@ -268,10 +277,10 @@ export async function getTournamentsFromStorage() {
       list = [...list, spl];
       changed = true;
     } else {
-      // Refresh SPL if it had old 5-player data or empty overHistory
+      // Refresh SPL if it had old 5-player data, empty overHistory, or outdated organizer
       const existingSpl = list[existingSplIdx];
       const hasOverHistory = existingSpl.matches?.[0]?.rawMatchData?.innings?.[0]?.overHistory?.length > 0;
-      if (!hasOverHistory || (existingSpl.teams?.[0]?.players?.length || 0) < 11) {
+      if (!hasOverHistory || (existingSpl.teams?.[0]?.players?.length || 0) < 11 || existingSpl.organiserPhone !== spl.organiserPhone) {
         list[existingSplIdx] = spl;
         changed = true;
       }
@@ -332,7 +341,6 @@ export async function getTournaments() {
 }
 
 /**
-/**
  * Get IDs of tournaments hosted by the current user
  * Dynamically resolved against the authenticated user account (Phone / ID / Email)
  */
@@ -345,11 +353,13 @@ export async function getMyHostedTournamentIds() {
 
     const list = await getTournamentsFromStorage();
     const userPhone = user.phone ? String(user.phone).trim() : null;
+    const cleanUserPhone = userPhone ? userPhone.replace(/\D/g, '').slice(-10) : '';
     const userId = user.id ? String(user.id).trim() : null;
     const userEmail = user.email ? String(user.email).trim().toLowerCase() : null;
 
     const myTournaments = list.filter(t => {
-      const matchPhone = userPhone && t.organiserPhone && String(t.organiserPhone).trim() === userPhone;
+      const cleanTournPhone = t.organiserPhone ? String(t.organiserPhone).replace(/\D/g, '').slice(-10) : '';
+      const matchPhone = Boolean(cleanUserPhone && cleanTournPhone && cleanUserPhone === cleanTournPhone);
       const matchId = userId && t.organiserId && String(t.organiserId).trim() === userId;
       const matchEmail = userEmail && t.organiserEmail && String(t.organiserEmail).trim().toLowerCase() === userEmail;
       return Boolean(matchPhone || matchId || matchEmail);
