@@ -861,55 +861,73 @@ export function PublicSeriesViewScreen(props = {}) {
 
               {rawMatches.length > 0 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-                  {rawMatches.slice(0, 3).map(m => (
-                    <View key={m.id} style={styles.featuredMatchCard}>
-                      <Text style={styles.matchDateHeader}>{m.dateStr || 'Upcoming'}</Text>
-                      <View style={styles.matchTeamRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                          <TeamIdentityMark team={m.team1} size={20} />
-                          <Text style={[styles.teamShortText, { flex: 1 }]} numberOfLines={1}>{m.team1?.name || m.team1 || 'Team 1'}</Text>
+                  {rawMatches.slice(0, 3).map(m => {
+                    const isFinished = Boolean(m.result || m.status === 'FINISHED' || m.phase === 'result');
+                    const isLive = m.status === 'LIVE' || m.phase === 'playing';
+
+                    return (
+                      <TouchableOpacity
+                        key={m.id}
+                        style={styles.featuredMatchCard}
+                        activeOpacity={isFinished || isLive ? 0.85 : 1}
+                        onPress={() => {
+                          if (isFinished) handleViewScorecard(m);
+                          else if (isLive) handleWatchLive(m);
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                          <Text style={styles.matchDateHeader}>{m.dateStr || 'Upcoming'}</Text>
+                          {isLive ? (
+                            <View style={styles.liveTagBadge}>
+                              <View style={styles.liveDot} />
+                              <Text style={styles.liveTagText}>LIVE</Text>
+                            </View>
+                          ) : null}
                         </View>
-                        <Text style={styles.teamScoreText}>{m.team1?.score || 'VS'}</Text>
-                      </View>
-                      <View style={styles.matchTeamRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                          <TeamIdentityMark team={m.team2} size={20} />
-                          <Text style={[styles.teamShortText, { flex: 1 }]} numberOfLines={1}>{m.team2?.name || m.team2 || 'Team 2'}</Text>
+                        <View style={styles.matchTeamRow}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                            <TeamIdentityMark team={m.team1} size={20} />
+                            <Text style={[styles.teamShortText, { flex: 1 }]} numberOfLines={1}>{m.team1?.name || m.team1 || 'Team 1'}</Text>
+                          </View>
+                          <Text style={styles.teamScoreText}>{m.team1?.score || (isFinished ? '' : 'VS')}</Text>
                         </View>
-                        <Text style={styles.teamScoreText}>{m.team2?.score || ''}</Text>
-                      </View>
-                      {m.result ? (
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={() => handleViewScorecard(m)}
-                        >
-                          <Text style={styles.resultBadgeText}>{m.result} • Scorecard ›</Text>
-                        </TouchableOpacity>
-                      ) : isUserOrganiser ? (
-                        <TouchableOpacity
-                          style={styles.cardScoreActionBtn}
-                          onPress={() => handleStartMatchScoring(m)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.cardScoreActionBtnText}>SCORE THIS MATCH</Text>
-                        </TouchableOpacity>
-                      ) : m.status === 'LIVE' ? (
-                        <TouchableOpacity
-                          style={[styles.cardScoreActionBtn, { backgroundColor: '#DC2626' }]}
-                          onPress={() => handleWatchLive(m)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.cardScoreActionBtnText}>WATCH LIVE</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <View style={styles.featuredUpcomingBadge}>
-                          <Text style={styles.featuredUpcomingBadgeText} numberOfLines={1}>
-                            {m.venue || 'Upcoming Match'}
-                          </Text>
+                        <View style={styles.matchTeamRow}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                            <TeamIdentityMark team={m.team2} size={20} />
+                            <Text style={[styles.teamShortText, { flex: 1 }]} numberOfLines={1}>{m.team2?.name || m.team2 || 'Team 2'}</Text>
+                          </View>
+                          <Text style={styles.teamScoreText}>{m.team2?.score || ''}</Text>
                         </View>
-                      )}
-                    </View>
-                  ))}
+                        {isFinished ? (
+                          <View style={styles.resultBadgeContainer}>
+                            <Text style={styles.resultBadgeText} numberOfLines={1}>{m.result || 'Match Completed'}</Text>
+                          </View>
+                        ) : isUserOrganiser ? (
+                          <TouchableOpacity
+                            style={styles.cardScoreActionBtn}
+                            onPress={() => handleStartMatchScoring(m)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.cardScoreActionBtnText}>SCORE THIS MATCH</Text>
+                          </TouchableOpacity>
+                        ) : isLive ? (
+                          <TouchableOpacity
+                            style={[styles.cardScoreActionBtn, { backgroundColor: '#DC2626' }]}
+                            onPress={() => handleWatchLive(m)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.cardScoreActionBtnText}>WATCH LIVE</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.featuredUpcomingBadge}>
+                            <Text style={styles.featuredUpcomingBadgeText} numberOfLines={1}>
+                              {m.venue || 'Upcoming Match'}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
               ) : (
                 <View style={styles.emptyCard}>
@@ -1086,47 +1104,78 @@ export function PublicSeriesViewScreen(props = {}) {
               </View>
 
               {filteredMatches.length > 0 ? (
-                filteredMatches.map((item, idx) => (
-                  <View key={item.id || idx} style={styles.dateMatchCard}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <View style={{ backgroundColor: '#18181B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                          <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontBold }}>
-                            {getCleanMatchStageBadge(item.stage, item.matchNumber || item.matchNo || idx + 1)}
+                filteredMatches.map((item, idx) => {
+                  const isFinished = Boolean(item.result || item.status === 'FINISHED' || item.phase === 'result');
+                  const isLive = item.status === 'LIVE' || item.phase === 'playing';
+
+                  return (
+                    <TouchableOpacity
+                      key={item.id || idx}
+                      style={styles.dateMatchCard}
+                      activeOpacity={isFinished || isLive ? 0.85 : 1}
+                      onPress={() => {
+                        if (isFinished) handleViewScorecard(item);
+                        else if (isLive) handleWatchLive(item);
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{ backgroundColor: '#18181B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: systemFontBold }}>
+                              {getCleanMatchStageBadge(item.stage, item.matchNumber || item.matchNo || idx + 1)}
+                            </Text>
+                          </View>
+                          <Text style={styles.groupDateTitle}>
+                            {item.dateStr || item.date || 'Upcoming Match'} {item.time ? `• ${item.time}` : ''}
                           </Text>
                         </View>
-                        <Text style={styles.groupDateTitle}>
-                          {item.dateStr || item.date || 'Upcoming Match'} {item.time ? `• ${item.time}` : ''}
-                        </Text>
-                      </View>
-                      {item.status === 'LIVE' ? (
-                        <View style={styles.liveTagBadge}>
-                          <View style={styles.liveDot} />
-                          <Text style={styles.liveTagText}>LIVE</Text>
-                        </View>
-                      ) : null}
-                    </View>
-
-                    <View style={styles.matchTeamsRow}>
-                      <View style={{ flex: 1, gap: 6 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <TeamIdentityMark team={item.team1} size={22} />
-                          <Text style={styles.matchTeamTitle} numberOfLines={1}>{item.team1?.name || item.team1 || 'Team 1'}</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <TeamIdentityMark team={item.team2} size={22} />
-                          <Text style={styles.matchTeamTitle} numberOfLines={1}>{item.team2?.name || item.team2 || 'Team 2'}</Text>
-                        </View>
+                        {isLive ? (
+                          <View style={styles.liveTagBadge}>
+                            <View style={styles.liveDot} />
+                            <Text style={styles.liveTagText}>LIVE</Text>
+                          </View>
+                        ) : isFinished ? (
+                          <View style={styles.finishedTagBadge}>
+                            <Text style={styles.finishedTagText}>FINISHED</Text>
+                          </View>
+                        ) : null}
                       </View>
 
-                      {item.result ? (
-                        <TouchableOpacity
-                          style={styles.timeTagBadgeFinished}
-                          onPress={() => handleViewScorecard(item)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.timeTagTextFinished}>SCORECARD ›</Text>
-                        </TouchableOpacity>
+                      {/* Team 1 and Team 2 Rows with Scores */}
+                      <View style={{ gap: 8, marginVertical: 4 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, paddingRight: 8 }}>
+                            <TeamIdentityMark team={item.team1} size={22} />
+                            <Text style={styles.matchTeamTitle} numberOfLines={1}>{item.team1?.name || item.team1 || 'Team 1'}</Text>
+                          </View>
+                          {item.team1?.score ? (
+                            <Text style={styles.matchTeamScoreText}>
+                              {item.team1.score}
+                            </Text>
+                          ) : null}
+                        </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, paddingRight: 8 }}>
+                            <TeamIdentityMark team={item.team2} size={22} />
+                            <Text style={styles.matchTeamTitle} numberOfLines={1}>{item.team2?.name || item.team2 || 'Team 2'}</Text>
+                          </View>
+                          {item.team2?.score ? (
+                            <Text style={styles.matchTeamScoreText}>
+                              {item.team2.score}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+
+                      {/* Bottom Footer: Clean Result line for finished match, or Action button for Organiser/Live */}
+                      {isFinished ? (
+                        <View style={styles.matchResultFooter}>
+                          <Ionicons name="trophy-outline" size={13} color="#0284C7" />
+                          <Text style={styles.matchResultFooterText} numberOfLines={1}>
+                            {item.result || item.resultText || 'Match Completed'}
+                          </Text>
+                        </View>
                       ) : isUserOrganiser ? (
                         <TouchableOpacity
                           style={styles.timeTagBadge}
@@ -1135,7 +1184,7 @@ export function PublicSeriesViewScreen(props = {}) {
                         >
                           <Text style={styles.timeTagText}>SCORE MATCH</Text>
                         </TouchableOpacity>
-                      ) : item.status === 'LIVE' ? (
+                      ) : isLive ? (
                         <TouchableOpacity
                           style={[styles.timeTagBadge, { backgroundColor: '#DC2626' }]}
                           onPress={() => handleWatchLive(item)}
@@ -1145,12 +1194,12 @@ export function PublicSeriesViewScreen(props = {}) {
                         </TouchableOpacity>
                       ) : (
                         <View style={styles.timeTagBadgeUpcoming}>
-                          <Text style={styles.timeTagUpcomingText}>{item.venue || 'Upcoming'}</Text>
+                          <Text style={styles.timeTagUpcomingText}>{item.venue || 'Sadokan Ground'}</Text>
                         </View>
                       )}
-                    </View>
-                  </View>
-                ))
+                    </TouchableOpacity>
+                  );
+                })
               ) : (
                 <View style={styles.emptyCard}>
                   <MaterialCommunityIcons name="cricket" size={32} color={themeColors.textSubtle} />
@@ -2017,11 +2066,16 @@ const styles = StyleSheet.create({
     fontFamily: systemFontMedium,
     color: themeColors.textPrimary
   },
+  resultBadgeContainer: {
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9'
+  },
   resultBadgeText: {
     fontSize: 11,
     fontFamily: systemFontMedium,
-    color: '#059669',
-    marginTop: 4
+    color: '#059669'
   },
   cardScoreActionBtn: {
     backgroundColor: '#18181B',
@@ -2330,6 +2384,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary
+  },
+  matchTeamScoreText: {
+    fontSize: 13,
+    fontFamily: systemFontMedium,
+    color: themeColors.textPrimary
+  },
+  matchResultFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9'
+  },
+  matchResultFooterText: {
+    fontSize: 12,
+    fontFamily: systemFontMedium,
+    color: '#0369A1',
+    flexShrink: 1
+  },
+  finishedTagBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4
+  },
+  finishedTagText: {
+    fontSize: 9,
+    fontFamily: systemFontBold,
+    color: '#64748B'
   },
   finishedResultText: {
     fontSize: 12,
