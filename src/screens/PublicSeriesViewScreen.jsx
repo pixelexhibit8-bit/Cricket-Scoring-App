@@ -274,6 +274,19 @@ export function PublicSeriesViewScreen(props = {}) {
     return calculateTournamentStats(tournament);
   }, [tournament]);
 
+  // Tournament Code Generator
+  const tournamentCode = useMemo(() => {
+    if (!tournament) return 'CF-8421';
+    if (tournament.joinCode) return tournament.joinCode;
+    const rawId = tournament.id || 'TOUR8421';
+    const cleanPrefix = (tournament.name || tournament.title || 'TOUR')
+      .replace(/[^A-Za-z0-9]/g, '')
+      .slice(0, 4)
+      .toUpperCase();
+    const cleanSuffix = rawId.slice(-4).toUpperCase();
+    return `CF-${cleanPrefix}${cleanSuffix}`;
+  }, [tournament]);
+
   // Squad Players for selected team drawer
   const squadPlayers = useMemo(() => {
     const list = selectedTeamDrawer?.players || selectedTeamDrawer?.squad || [];
