@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import {
   themeColors,
@@ -33,6 +33,20 @@ export const PointsTableSection = React.memo(function PointsTableSection({
     );
   }
 
+  // Format team code
+  const getTeamCode = (row) => {
+    if (row.shortName && row.shortName.trim().length > 0) return row.shortName.trim().toUpperCase();
+    if (row.shortCode && row.shortCode.trim().length > 0) return row.shortCode.trim().toUpperCase();
+    if (row.team) {
+      const parts = String(row.team).trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return parts.map(p => p[0]).join('').slice(0, 4).toUpperCase();
+      }
+      return row.team.slice(0, 4).toUpperCase();
+    }
+    return 'TEAM';
+  };
+
   return (
     <View style={styles.container}>
       {/* Table Section Header */}
@@ -64,139 +78,139 @@ export const PointsTableSection = React.memo(function PointsTableSection({
       <View style={styles.tableCard}>
         {/* Table Column Headers */}
         <View style={styles.tableHeaderRow}>
-          <Text style={[styles.tableColHeader, { width: 22, textAlign: 'center' }]}>#</Text>
-          <Text style={[styles.tableColHeader, { flex: 1, paddingLeft: 4 }]}>Team</Text>
-          <Text style={[styles.tableColHeader, { width: 22, textAlign: 'center' }]}>P</Text>
-          <Text style={[styles.tableColHeader, { width: 22, textAlign: 'center' }]}>W</Text>
-          <Text style={[styles.tableColHeader, { width: 22, textAlign: 'center' }]}>L</Text>
-          {!isOverviewPreview && (
-            <Text style={[styles.tableColHeader, { width: 22, textAlign: 'center' }]}>NR</Text>
-          )}
-          <Text style={[styles.tableColHeader, { width: 50, textAlign: 'right' }]}>NRR</Text>
-          <Text style={[styles.tableColHeader, { width: 28, textAlign: 'center' }]}>Pts</Text>
+          <Text style={[styles.tableColHeader, { flex: 1, paddingLeft: 22 }]}>Team</Text>
+          <Text style={[styles.tableColHeader, styles.colP]}>P</Text>
+          <Text style={[styles.tableColHeader, styles.colW]}>W</Text>
+          <Text style={[styles.tableColHeader, styles.colL]}>L</Text>
+          <Text style={[styles.tableColHeader, styles.colNR]}>NR</Text>
+          <Text style={[styles.tableColHeader, styles.colNRR]}>NRR</Text>
+          <Text style={[styles.tableColHeader, styles.colPts]}>Pts</Text>
         </View>
 
         {/* Dynamic Table Rows for ALL Teams */}
         {pointsTableData.map((row, idx) => {
           const rank = idx + 1;
           const isQualifier = rank <= effectiveCutoff;
-          const isLastQualifier = rank === effectiveCutoff;
-          const isEliminated = rank > effectiveCutoff;
+          const teamCode = getTeamCode(row);
 
           const nrrNum = parseFloat(row.nrr || 0);
+          const nrrFormatted = nrrNum > 0 ? `+${nrrNum.toFixed(3)}` : (nrrNum < 0 ? nrrNum.toFixed(3) : '0.000');
           const nrrColor = nrrNum > 0 ? '#16A34A' : (nrrNum < 0 ? '#DC2626' : '#64748B');
 
           return (
-            <React.Fragment key={row.team || idx}>
-              <View
-                style={[
-                  styles.tableDataRow,
-                  isQualifier && styles.qualifierRowHighlight,
-                  idx === pointsTableData.length - 1 && { borderBottomWidth: 0 }
-                ]}
-              >
-                {/* Rank Number */}
-                <Text style={[styles.rankCell, isQualifier && styles.rankCellQualifier]}>
-                  {rank}
-                </Text>
-
-                {/* Team Identity + Name + Qualification Badge */}
-                <View style={styles.teamInfoCell}>
-                  <TeamIdentityMark team={{ name: row.team, shortName: row.shortName }} size={20} />
-                  <Text style={styles.teamNameText} numberOfLines={1}>
-                    {row.team}
-                  </Text>
-
-                  {/* Qualification Badge: Q or E */}
-                  {isQualifier ? (
-                    <View style={styles.qBadge}>
-                      <Text style={styles.qBadgeText}>Q</Text>
-                    </View>
-                  ) : isEliminated ? (
-                    <View style={styles.eBadge}>
-                      <Text style={styles.eBadgeText}>E</Text>
-                    </View>
-                  ) : null}
-
-                  {/* Form Pills if Enabled */}
-                  {teamFormEnabled && row.form && Array.isArray(row.form) ? (
-                    <View style={styles.formPillsWrap}>
-                      {row.form.map((f, fIdx) => (
-                        <View
-                          key={fIdx}
-                          style={[
-                            styles.formPill,
-                            { backgroundColor: f === 'W' ? '#16A34A' : (f === 'L' ? '#DC2626' : '#94A3B8') }
-                          ]}
-                        >
-                          <Text style={styles.formPillText}>{f}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
-                </View>
-
-                {/* Stats Columns */}
-                <Text style={[styles.tableCell, { width: 22, textAlign: 'center' }]}>{row.p ?? 0}</Text>
-                <Text style={[styles.tableCell, { width: 22, textAlign: 'center' }]}>{row.w ?? 0}</Text>
-                <Text style={[styles.tableCell, { width: 22, textAlign: 'center' }]}>{row.l ?? 0}</Text>
-                {!isOverviewPreview && (
-                  <Text style={[styles.tableCell, { width: 22, textAlign: 'center' }]}>{row.nr ?? 0}</Text>
+            <View
+              key={row.team || idx}
+              style={[
+                styles.tableDataRow,
+                isQualifier && styles.qualifierRowHighlight,
+                idx === pointsTableData.length - 1 && { borderBottomWidth: 0 }
+              ]}
+            >
+              {/* Team Identity Column: Q Tag + Logo + Short Name */}
+              <View style={styles.teamInfoCell}>
+                {isQualifier ? (
+                  <View style={styles.qTagBadge}>
+                    <Text style={styles.qTagText}>Q</Text>
+                  </View>
+                ) : (
+                  <View style={styles.qTagPlaceholder} />
                 )}
-                <Text style={[styles.tableCell, { width: 50, textAlign: 'right', fontFamily: systemFontMedium, color: nrrColor }]}>
-                  {row.nrr || '0.000'}
+
+                <TeamIdentityMark team={{ name: row.team, shortName: teamCode }} size={20} />
+
+                <Text style={styles.teamCodeText} numberOfLines={1}>
+                  {teamCode}
                 </Text>
-                <Text style={[styles.tableCell, { width: 28, textAlign: 'center', fontFamily: systemFontBold, color: '#D97706' }]}>
-                  {row.pts ?? 0}
-                </Text>
+
+                {/* Form Pills if Enabled */}
+                {teamFormEnabled && row.form && Array.isArray(row.form) ? (
+                  <View style={styles.formPillsWrap}>
+                    {row.form.map((f, fIdx) => (
+                      <View
+                        key={fIdx}
+                        style={[
+                          styles.formPill,
+                          { backgroundColor: f === 'W' ? '#16A34A' : (f === 'L' ? '#DC2626' : '#94A3B8') }
+                        ]}
+                      >
+                        <Text style={styles.formPillText}>{f}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
 
-              {/* Qualification Cutoff Divider Line */}
-              {isLastQualifier && rank < pointsTableData.length && (
-                <View style={styles.cutoffDivider}>
-                  <View style={styles.cutoffLine} />
-                  <Text style={styles.cutoffText}>
-                    {teamsCount >= 5 ? 'Top 4 Qualify for Semi-Finals' : 'Top 2 Qualify for Final'}
-                  </Text>
-                  <View style={styles.cutoffLine} />
-                </View>
-              )}
-            </React.Fragment>
+              {/* Stats Columns with Exact Proportional Widths */}
+              <Text style={[styles.tableCell, styles.colP]}>{row.p ?? 0}</Text>
+              <Text style={[styles.tableCell, styles.colW]}>{row.w ?? 0}</Text>
+              <Text style={[styles.tableCell, styles.colL]}>{row.l ?? 0}</Text>
+              <Text style={[styles.tableCell, styles.colNR]}>{row.nr ?? 0}</Text>
+              <Text style={[styles.tableCell, styles.colNRR, { color: nrrColor }]}>
+                {nrrFormatted}
+              </Text>
+              <Text style={[styles.tableCell, styles.colPts, styles.ptsCell]}>
+                {row.pts ?? 0}
+              </Text>
+            </View>
           );
         })}
       </View>
 
-      {/* Standard Cricket Standings Legend / Footnote */}
-      <View style={styles.legendCard}>
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={styles.legendDotGreen} />
-            <Text style={styles.legendText}>
-              <Text style={{ fontFamily: systemFontBold }}>Q:</Text> Qualified for Playoffs
-            </Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={styles.legendDotRed} />
-            <Text style={styles.legendText}>
-              <Text style={{ fontFamily: systemFontBold }}>E:</Text> Eliminated
-            </Text>
-          </View>
+      {/* Qualified Badge Indicator below Table */}
+      <View style={styles.qualifierIndicatorRow}>
+        <View style={styles.qTagBadgeSmall}>
+          <Text style={styles.qTagTextSmall}>Q</Text>
         </View>
+        <Text style={styles.qualifierIndicatorText}>Qualified</Text>
+      </View>
 
-        <View style={styles.legendRow}>
-          <Text style={styles.legendMutedText}>
-            <Text style={{ fontFamily: systemFontBold, color: '#475569' }}>NRR:</Text> Net Run Rate = (Runs / Overs Faced) - (Runs / Overs Bowled)
-          </Text>
-        </View>
+      {/* Clean 2-Column Standard Cricket Glossary */}
+      <View style={styles.glossaryContainer}>
+        <Text style={styles.glossaryTitle}>Glossary</Text>
+        <View style={styles.glossaryTwoColRow}>
+          {/* Left Column */}
+          <View style={styles.glossaryCol}>
+            <View style={styles.glossaryItem}>
+              <Text style={styles.glossaryKey}>P:</Text>
+              <Text style={styles.glossaryVal}>The number of matches played</Text>
+            </View>
+            <View style={styles.glossaryItem}>
+              <Text style={styles.glossaryKey}>W:</Text>
+              <Text style={styles.glossaryVal}>The number of matches won</Text>
+            </View>
+            <View style={styles.glossaryItem}>
+              <Text style={styles.glossaryKey}>L:</Text>
+              <Text style={styles.glossaryVal}>The number of matches lost</Text>
+            </View>
+            <View style={styles.glossaryItem}>
+              <Text style={styles.glossaryKey}>NRR:</Text>
+              <Text style={styles.glossaryVal}>Net Run Rate</Text>
+            </View>
+          </View>
 
-        <View style={styles.legendGlossaryRow}>
-          <Text style={styles.legendGlossaryText}>P: Played</Text>
-          <Text style={styles.legendGlossaryText}>•</Text>
-          <Text style={styles.legendGlossaryText}>W: Won</Text>
-          <Text style={styles.legendGlossaryText}>•</Text>
-          <Text style={styles.legendGlossaryText}>L: Lost</Text>
-          <Text style={styles.legendGlossaryText}>•</Text>
-          <Text style={styles.legendGlossaryText}>Pts: Points</Text>
+          {/* Right Column */}
+          <View style={styles.glossaryCol}>
+            <View style={styles.glossaryItem}>
+              <Text style={styles.glossaryKey}>NR:</Text>
+              <Text style={styles.glossaryVal}>No Result</Text>
+            </View>
+            <View style={styles.glossaryItem}>
+              <Text style={styles.glossaryKey}>Pts:</Text>
+              <Text style={styles.glossaryVal}>Points</Text>
+            </View>
+            <View style={styles.glossaryItem}>
+              <View style={styles.eTagBadgeMini}>
+                <Text style={styles.eTagTextMini}>E</Text>
+              </View>
+              <Text style={styles.glossaryVal}>Eliminated</Text>
+            </View>
+            <View style={styles.glossaryItem}>
+              <View style={styles.qTagBadgeMini}>
+                <Text style={styles.qTagTextMini}>Q</Text>
+              </View>
+              <Text style={styles.glossaryVal}>Qualified</Text>
+            </View>
+          </View>
         </View>
       </View>
     </View>
@@ -205,20 +219,20 @@ export const PointsTableSection = React.memo(function PointsTableSection({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16
+    marginBottom: 20
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
     paddingHorizontal: 2
   },
   sectionTitle: {
-    fontSize: 14,
-    fontFamily: systemFontMedium,
+    fontSize: 15,
+    fontFamily: systemFontBold,
     color: '#0F172A',
-    letterSpacing: -0.1
+    letterSpacing: -0.2
   },
   seeAllText: {
     fontSize: 12.5,
@@ -236,7 +250,7 @@ const styles = StyleSheet.create({
     color: '#64748B'
   },
   toggleSwitchTrack: {
-    width: 32,
+    width: 34,
     height: 18,
     borderRadius: 9,
     backgroundColor: '#E2E8F0',
@@ -265,78 +279,83 @@ const styles = StyleSheet.create({
   tableHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F8FA',
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEF0'
-  },
-  tableColHeader: {
-    fontSize: 11,
-    fontFamily: systemFontBold,
-    color: '#64748B',
-    textTransform: 'uppercase'
-  },
-  tableDataRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9'
   },
-  qualifierRowHighlight: {
-    backgroundColor: '#FFFFFF'
-  },
-  rankCell: {
-    width: 22,
-    fontSize: 12,
+  tableColHeader: {
+    fontSize: 11.5,
     fontFamily: systemFontMedium,
-    color: '#94A3B8',
+    color: '#64748B'
+  },
+  colP: {
+    width: 26,
     textAlign: 'center'
   },
-  rankCellQualifier: {
-    color: '#0F172A',
-    fontFamily: systemFontBold
+  colW: {
+    width: 26,
+    textAlign: 'center'
+  },
+  colL: {
+    width: 26,
+    textAlign: 'center'
+  },
+  colNR: {
+    width: 26,
+    textAlign: 'center'
+  },
+  colNRR: {
+    width: 58,
+    textAlign: 'right'
+  },
+  colPts: {
+    width: 32,
+    textAlign: 'center'
+  },
+  tableDataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF'
+  },
+  qualifierRowHighlight: {
+    backgroundColor: '#FFFDF0'
   },
   teamInfoCell: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingRight: 6
+    gap: 8,
+    paddingRight: 4
   },
-  teamNameText: {
-    fontSize: 13,
-    fontFamily: systemFontMedium,
+  qTagBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#FEF08A',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  qTagText: {
+    fontSize: 9,
+    fontFamily: systemFontBold,
+    color: '#854D0E',
+    lineHeight: 11
+  },
+  qTagPlaceholder: {
+    width: 14,
+    height: 14
+  },
+  teamCodeText: {
+    fontSize: 14,
+    fontFamily: systemFontBold,
     color: '#0F172A',
-    flexShrink: 1
-  },
-  qBadge: {
-    backgroundColor: '#DCFCE7',
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1
-  },
-  qBadgeText: {
-    fontSize: 9.5,
-    fontFamily: systemFontBold,
-    color: '#15803D'
-  },
-  eBadge: {
-    backgroundColor: '#FEE2E2',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1
-  },
-  eBadgeText: {
-    fontSize: 9.5,
-    fontFamily: systemFontBold,
-    color: '#DC2626'
+    letterSpacing: 0.2
   },
   formPillsWrap: {
     flexDirection: 'row',
@@ -356,85 +375,104 @@ const styles = StyleSheet.create({
     color: '#FFFFFF'
   },
   tableCell: {
-    fontSize: 12,
-    fontFamily: systemFont,
-    color: '#334155'
-  },
-  cutoffDivider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    gap: 8
-  },
-  cutoffLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#CBD5E1'
-  },
-  cutoffText: {
-    fontSize: 10,
+    fontSize: 13,
     fontFamily: systemFontMedium,
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3
-  },
-  legendCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
-    gap: 4
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5
-  },
-  legendDotGreen: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#16A34A'
-  },
-  legendDotRed: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#DC2626'
-  },
-  legendText: {
-    fontSize: 11,
-    fontFamily: systemFont,
     color: '#334155'
   },
-  legendMutedText: {
-    fontSize: 10.5,
-    fontFamily: systemFont,
-    color: '#64748B',
-    lineHeight: 14
+  ptsCell: {
+    fontFamily: systemFontBold,
+    color: '#D97706',
+    fontSize: 14
   },
-  legendGlossaryRow: {
+  qualifierIndicatorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 2,
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0'
+    marginTop: 10,
+    paddingHorizontal: 4
   },
-  legendGlossaryText: {
-    fontSize: 10,
-    fontFamily: systemFont,
+  qTagBadgeSmall: {
+    width: 14,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#FEF08A',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  qTagTextSmall: {
+    fontSize: 9,
+    fontFamily: systemFontBold,
+    color: '#854D0E',
+    lineHeight: 11
+  },
+  qualifierIndicatorText: {
+    fontSize: 11.5,
+    fontFamily: systemFontMedium,
     color: '#64748B'
+  },
+  glossaryContainer: {
+    marginTop: 20,
+    paddingHorizontal: 2
+  },
+  glossaryTitle: {
+    fontSize: 14,
+    fontFamily: systemFontBold,
+    color: '#0F172A',
+    marginBottom: 12
+  },
+  glossaryTwoColRow: {
+    flexDirection: 'row',
+    gap: 16
+  },
+  glossaryCol: {
+    flex: 1,
+    gap: 8
+  },
+  glossaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  glossaryKey: {
+    fontSize: 11.5,
+    fontFamily: systemFontBold,
+    color: '#0F172A'
+  },
+  glossaryVal: {
+    fontSize: 11.5,
+    fontFamily: systemFont,
+    color: '#64748B',
+    flexShrink: 1
+  },
+  eTagBadgeMini: {
+    width: 14,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 2
+  },
+  eTagTextMini: {
+    fontSize: 9,
+    fontFamily: systemFontBold,
+    color: '#DC2626',
+    lineHeight: 11
+  },
+  qTagBadgeMini: {
+    width: 14,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#FEF08A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 2
+  },
+  qTagTextMini: {
+    fontSize: 9,
+    fontFamily: systemFontBold,
+    color: '#854D0E',
+    lineHeight: 11
   },
   emptyCard: {
     backgroundColor: '#FFFFFF',
@@ -448,7 +486,7 @@ const styles = StyleSheet.create({
   },
   emptyCardTitle: {
     fontSize: 14,
-    fontFamily: systemFontMedium,
+    fontFamily: systemFontBold,
     color: '#0F172A'
   },
   emptyCardSubtitle: {
