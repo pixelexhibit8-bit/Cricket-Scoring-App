@@ -18,6 +18,37 @@ import {
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import { resolveTeamWithRoster } from '../../utils/teamUtils.js';
 
+function getOrdinal(n) {
+  const num = parseInt(n, 10);
+  if (!num || isNaN(num)) return '';
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = num % 100;
+  return num + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function formatMatchHeaderTitle(m, tournament, fallbackIdx = 0) {
+  const overs = Number(m.overs || tournament?.overs || 20);
+  const formatText = overs === 20 ? 'T20' : (overs === 10 ? 'T10' : (overs === 50 ? 'ODI' : `${overs} Ov`));
+  const venue = m.venue || tournament?.city || 'Kensington Oval, Bridgetown, Barbados , West Indies';
+
+  const rawStage = String(m.stage || '').trim();
+  const lowerStage = rawStage.toLowerCase();
+
+  let prefix = '';
+  if (lowerStage.includes('final') || lowerStage.includes('eliminator') || lowerStage.includes('qualifier') || lowerStage.includes('semi')) {
+    prefix = `${rawStage} ${formatText}`;
+  } else if (m.matchNumber || m.matchNo) {
+    prefix = `${getOrdinal(m.matchNumber || m.matchNo)} ${formatText}`;
+  } else if (rawStage && !lowerStage.includes('match')) {
+    prefix = `${rawStage} ${formatText}`;
+  } else {
+    const num = fallbackIdx + 1;
+    prefix = `${getOrdinal(num)} ${formatText}`;
+  }
+
+  return `${prefix}, ${venue}`;
+}
+
 export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
   tournament,
   onStartMatchScoring,
@@ -151,14 +182,14 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
               const t2Name = t2Resolved.shortName || t2Resolved.name || 'Team 2';
 
               const t1Score = m.team1?.score || (m.innings?.[0]?.battingTeam?.runs != null ? `${m.innings[0].battingTeam.runs}/${m.innings[0].battingTeam.wickets || 0}` : '158-7');
-              const t1Overs = m.team1?.overs || (m.innings?.[0]?.overs ? `(${m.innings[0].overs})` : (m.overs ? `${m.overs}.0` : '20.0'));
+              const t1Overs = m.team1?.overs || (m.innings?.[0]?.overs ? `${m.innings[0].overs}` : (m.overs ? `${m.overs}.0` : '20.0'));
+              const t1OversClean = String(t1Overs).replace(/[()]/g, '').trim();
 
               const t2Score = m.team2?.score || (m.innings?.[1]?.battingTeam?.runs != null ? `${m.innings[1].battingTeam.runs}/${m.innings[1].battingTeam.wickets || 0}` : '159-5');
-              const t2Overs = m.team2?.overs || (m.innings?.[1]?.overs ? `(${m.innings[1].overs})` : (m.overs ? `${m.overs}.0` : '19.0'));
+              const t2Overs = m.team2?.overs || (m.innings?.[1]?.overs ? `${m.innings[1].overs}` : (m.overs ? `${m.overs}.0` : '19.0'));
+              const t2OversClean = String(t2Overs).replace(/[()]/g, '').trim();
 
-              const headerTitle = m.venue
-                ? `${m.matchNumber ? `${m.matchNumber}th T20, ` : ''}${m.venue}`
-                : `${idx + 1}th T20, Kensington Oval, Bridgetown, Barbados, West Indies`;
+              const headerTitle = formatMatchHeaderTitle(m, tournament, idx);
 
               const winner = m.winner || m.winnerTeamName || `${t2Name} Won`;
               const resultMargin = m.result || 'by 5 wickets';
@@ -181,25 +212,25 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                     <View style={styles.scoresColumn}>
                       {/* Team 1 */}
                       <View style={styles.teamScoreRow}>
-                        <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={22} />
+                        <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={26} />
                         <Text style={styles.completedTeamCode} numberOfLines={1}>
                           {t1Name}
                         </Text>
                         <Text style={styles.completedScoreMain}>
                           {t1Score}{' '}
-                          <Text style={styles.completedOversSub}>{t1Overs}</Text>
+                          <Text style={styles.completedOversSub}>{t1OversClean}</Text>
                         </Text>
                       </View>
 
                       {/* Team 2 */}
-                      <View style={[styles.teamScoreRow, { marginTop: 6 }]}>
-                        <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={22} />
+                      <View style={[styles.teamScoreRow, { marginTop: 10 }]}>
+                        <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={26} />
                         <Text style={styles.completedTeamCode} numberOfLines={1}>
                           {t2Name}
                         </Text>
                         <Text style={styles.completedScoreMain}>
                           {t2Score}{' '}
-                          <Text style={styles.completedOversSub}>{t2Overs}</Text>
+                          <Text style={styles.completedOversSub}>{t2OversClean}</Text>
                         </Text>
                       </View>
                     </View>
@@ -293,10 +324,7 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                 const t1FullName = t1Resolved.fullName || t1Resolved.name || 'Team 1';
                 const t2FullName = t2Resolved.fullName || t2Resolved.name || 'Team 2';
 
-                const headerSubtitle = m.venue
-                  ? `${m.stage || 'Match'}, ${m.venue}`
-                  : 'Eliminator 1 T20, Kensington Oval, Bridgetown, Barbados, West Indies';
-
+                const headerSubtitle = formatMatchHeaderTitle(m, tournament, mIdx);
                 const startTime = m.time || '07:30 PM';
 
                 return (
@@ -323,13 +351,13 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                       {/* Left: Full Teams Stack */}
                       <View style={styles.upcomingTeamsCol}>
                         <View style={styles.upcomingTeamItem}>
-                          <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={22} />
+                          <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={26} />
                           <Text style={styles.upcomingTeamFullName} numberOfLines={1}>
                             {t1FullName}
                           </Text>
                         </View>
-                        <View style={[styles.upcomingTeamItem, { marginTop: 8 }]}>
-                          <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={22} />
+                        <View style={[styles.upcomingTeamItem, { marginTop: 10 }]}>
+                          <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={26} />
                           <Text style={styles.upcomingTeamFullName} numberOfLines={1}>
                             {t2FullName}
                           </Text>
@@ -363,10 +391,10 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
         ) : null}
       </ScrollView>
 
-      {/* ── TEAM FILTER SELECTION MODAL ── */}
+      {/* ── 3. FILTER DROPDOWN MODAL ── */}
       <Modal
         visible={teamDropdownVisible}
-        transparent
+        transparent={true}
         animationType="fade"
         onRequestClose={() => setTeamDropdownVisible(false)}
       >
@@ -513,16 +541,17 @@ const styles = StyleSheet.create({
   },
   completedMatchCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#EEEEF0',
-    padding: 14
+    paddingHorizontal: 16,
+    paddingVertical: 14
   },
   matchHeaderVenueText: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontFamily: systemFont,
-    color: themeColors.textMuted,
-    marginBottom: 10
+    color: '#71717A',
+    marginBottom: 12
   },
   completedCardBody: {
     flexDirection: 'row',
@@ -534,49 +563,53 @@ const styles = StyleSheet.create({
   teamScoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8
+    gap: 10
   },
   completedTeamCode: {
-    fontSize: 13.5,
-    fontFamily: systemFontBold,
-    color: themeColors.textPrimary,
-    width: 65
+    fontSize: 15.5,
+    fontFamily: systemFontMedium,
+    color: '#0F172A',
+    minWidth: 64,
+    marginRight: 4
   },
   completedScoreMain: {
-    fontSize: 13.5,
+    fontSize: 16.5,
     fontFamily: systemFontBold,
-    color: themeColors.textPrimary
+    color: '#0F172A'
   },
   completedOversSub: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: systemFont,
-    color: themeColors.textMuted
+    color: '#71717A'
   },
   verticalDivider: {
     width: 1,
-    height: 42,
+    height: 52,
     backgroundColor: '#EEEEF0',
-    marginHorizontal: 12
+    marginHorizontal: 14
   },
   resultRightBlock: {
     flex: 1,
-    alignItems: 'flex-start',
-    justifyContent: 'center'
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 4
   },
   resultWonHeadline: {
-    fontSize: 13.5,
+    fontSize: 17.5,
     fontFamily: systemFontBold,
-    color: '#DC2626'
+    color: '#9F1239',
+    textAlign: 'center'
   },
   resultWonMarginText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontFamily: systemFont,
-    color: themeColors.textMuted,
-    marginTop: 2
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 3
   },
   liveMatchCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: '#FECDD3',
     padding: 14
@@ -608,7 +641,7 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold
   },
   liveVenueText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontFamily: systemFont,
     color: themeColors.textMuted
   },
@@ -623,12 +656,12 @@ const styles = StyleSheet.create({
   liveTeamName: {
     flex: 1,
     marginLeft: 8,
-    fontSize: 13.5,
+    fontSize: 14.5,
     fontFamily: systemFontMedium,
     color: themeColors.textPrimary
   },
   liveTeamScore: {
-    fontSize: 13.5,
+    fontSize: 14.5,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary
   },
@@ -660,29 +693,31 @@ const styles = StyleSheet.create({
     gap: 10
   },
   dateGroupHeaderTitle: {
-    fontSize: 14,
+    fontSize: 15.5,
     fontFamily: systemFontBold,
-    color: themeColors.textPrimary,
-    marginTop: 4
+    color: '#0F172A',
+    marginTop: 18,
+    marginBottom: 8
   },
   upcomingMatchCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#EEEEF0',
-    padding: 14
+    paddingHorizontal: 16,
+    paddingVertical: 14
   },
   upcomingHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10
+    marginBottom: 12
   },
   upcomingVenueSubtitle: {
     flex: 1,
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontFamily: systemFont,
-    color: themeColors.textMuted,
+    color: '#71717A',
     marginRight: 8
   },
   upcomingBodyRow: {
@@ -696,12 +731,12 @@ const styles = StyleSheet.create({
   upcomingTeamItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8
+    gap: 10
   },
   upcomingTeamFullName: {
-    fontSize: 13,
+    fontSize: 14.5,
     fontFamily: systemFontMedium,
-    color: themeColors.textPrimary,
+    color: '#0F172A',
     flexShrink: 1
   },
   upcomingStartsAtCol: {
@@ -710,14 +745,14 @@ const styles = StyleSheet.create({
     paddingLeft: 12
   },
   startsAtLabel: {
-    fontSize: 10.5,
+    fontSize: 11.5,
     fontFamily: systemFont,
-    color: themeColors.textMuted
+    color: '#64748B'
   },
   startsAtTimeText: {
-    fontSize: 14,
+    fontSize: 17.5,
     fontFamily: systemFontBold,
-    color: themeColors.textPrimary,
+    color: '#0F172A',
     marginTop: 2
   },
   emptyStateCard: {
