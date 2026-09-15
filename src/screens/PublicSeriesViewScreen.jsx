@@ -1587,23 +1587,51 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: themeColors.border
   },
+  topCarouselContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
   carouselScrollContent: {
     paddingHorizontal: 16,
-    gap: 12
+    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center'
   },
   carouselCard: {
-    width: 120,
-    height: 132,
-    borderRadius: 14,
+    width: 140,
+    height: 86,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    position: 'relative'
+    position: 'relative',
+    marginRight: 12,
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3
+  },
+  carouselCardSelected: {
+    borderColor: '#18181B',
+    borderWidth: 2,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 4
   },
   carouselCardActive: {
     borderColor: '#18181B',
-    borderWidth: 1.5
+    borderWidth: 2,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 4
   },
   carouselCardImage: {
     width: '100%',
@@ -1626,7 +1654,7 @@ const styles = StyleSheet.create({
     fontFamily: systemFontMedium,
     textAlign: 'center',
     lineHeight: 14,
-    marginTop: 6
+    marginTop: 4
   },
   fallbackCardTitleSelected: {
     color: '#FFFFFF',

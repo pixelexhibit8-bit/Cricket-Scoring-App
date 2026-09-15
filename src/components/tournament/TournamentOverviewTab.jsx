@@ -742,8 +742,9 @@ const styles = StyleSheet.create({
     color: themeColors.textMuted
   },
   teamSquadsScrollContent: {
+    paddingHorizontal: 16,
     paddingVertical: 6,
-    gap: 10
+    flexDirection: 'row'
   },
   teamSquadCard: {
     width: 100,
@@ -753,7 +754,8 @@ const styles = StyleSheet.create({
     borderColor: '#EEEEF0',
     padding: 12,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    marginRight: 10
   },
   teamSquadLogoContainer: {
     width: 46,
