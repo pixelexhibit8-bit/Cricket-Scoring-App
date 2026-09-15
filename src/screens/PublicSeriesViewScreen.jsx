@@ -1264,9 +1264,6 @@ export function PublicSeriesViewScreen(props = {}) {
             </ScrollView>
           </View>
 
-            </ScrollView>
-          </View>
-
           {/* ── TAB 5: STATS ── */}
           <View key="stats" style={{ flex: 1 }}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.tabScrollPadding} showsVerticalScrollIndicator={false}>
