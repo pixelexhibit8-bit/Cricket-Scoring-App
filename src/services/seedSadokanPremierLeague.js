@@ -1,4 +1,4 @@
-import { autoCalculatePointsTable } from './tournamentService.js';
+import { autoCalculatePointsTable } from '../utils/cricketUtils.js';
 import { calculateTournamentStats } from './tournamentStatsEngine.js';
 
 export const SPL_TEAMS = [

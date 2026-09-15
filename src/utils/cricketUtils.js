@@ -1234,6 +1234,7 @@ export function generateRoundRobinFixtures(teams = [], options = {}) {
   const baseDate = parseSafeDate(startDate);
   let dayOffset = 0;
   let timeIndex = 0;
+  let matchCounter = 1;
 
   for (let round = 0; round < numRounds; round++) {
     for (let match = 0; match < matchesPerRound; match++) {
@@ -1400,6 +1401,192 @@ export function generateRoundRobinFixtures(teams = [], options = {}) {
   }
 
   return allFixtures;
+}
+
+/**
+ * Calculate Net Run Rate (NRR) = (Total Runs Scored / Total Overs Faced) - (Total Runs Conceded / Total Overs Bowled)
+ */
+export function calculateNetRunRate(runsScored = 0, ballsFaced = 0, runsConceded = 0, ballsBowled = 0) {
+  if (!ballsFaced && !ballsBowled) return '-';
+
+  const oversFaced = ballsFaced > 0 ? (Math.floor(ballsFaced / 6) + (ballsFaced % 6) / 6) : 0;
+  const oversBowled = ballsBowled > 0 ? (Math.floor(ballsBowled / 6) + (ballsBowled % 6) / 6) : 0;
+
+  const forRate = oversFaced > 0 ? runsScored / oversFaced : 0;
+  const againstRate = oversBowled > 0 ? runsConceded / oversBowled : 0;
+
+  const nrr = forRate - againstRate;
+  if (isNaN(nrr)) return '-';
+  const prefix = nrr > 0 ? '+' : '';
+  return `${prefix}${nrr.toFixed(3)}`;
+}
+
+/**
+ * Automatically Calculate Points Table for a list of Teams & Matches
+ */
+export function autoCalculatePointsTable(teams = [], matches = []) {
+  if (!teams || teams.length === 0) return [];
+
+  const norm = (str) => String(str || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const tableMap = {};
+  const teamLookup = new Map();
+
+  teams.forEach(t => {
+    const teamName = typeof t === 'string' ? t : (t.name || t.shortName || 'Team');
+    const teamCode = t.shortName || t.shortCode || teamName.slice(0, 4).toUpperCase();
+    const teamKey = norm(teamName);
+    const shortKey = norm(t.shortName || t.shortCode || '');
+
+    tableMap[teamName] = {
+      team: teamName,
+      shortName: teamCode,
+      p: 0,
+      w: 0,
+      l: 0,
+      nr: 0,
+      pts: 0,
+      runsScored: 0,
+      ballsFaced: 0,
+      runsConceded: 0,
+      ballsBowled: 0,
+      nrr: '-',
+      form: []
+    };
+
+    teamLookup.set(teamKey, teamName);
+    if (shortKey) teamLookup.set(shortKey, teamName);
+    if (t.id) teamLookup.set(norm(t.id), teamName);
+  });
+
+  const resolveTeamName = (val) => {
+    if (!val) return null;
+    if (typeof val === 'object') {
+      const byName = resolveTeamName(val.name);
+      if (byName) return byName;
+      const byShort = resolveTeamName(val.shortName || val.code);
+      if (byShort) return byShort;
+      const byId = resolveTeamName(val.id);
+      if (byId) return byId;
+    }
+    const k = norm(val);
+    if (teamLookup.has(k)) return teamLookup.get(k);
+    for (const [knownKey, standardName] of teamLookup.entries()) {
+      if (k.includes(knownKey) || knownKey.includes(k)) {
+        return standardName;
+      }
+    }
+    return null;
+  };
+
+  (matches || []).forEach(m => {
+    if (!m) return;
+    const isFinished = m.status === 'FINISHED' || m.phase === 'result' || m.phase === 'finished' || Boolean(m.result) || Boolean(m.resultText) || Boolean(m.winner);
+    if (!isFinished) return;
+
+    const t1Resolved = resolveTeamName(m.team1);
+    const t2Resolved = resolveTeamName(m.team2);
+
+    if (!t1Resolved || !t2Resolved || t1Resolved === t2Resolved) return;
+    if (!tableMap[t1Resolved] || !tableMap[t2Resolved]) return;
+
+    tableMap[t1Resolved].p += 1;
+    tableMap[t2Resolved].p += 1;
+
+    const rawWinner = String(m.winnerTeamName || m.winner || m.resultText || m.result || '').trim();
+    const wNorm = norm(rawWinner);
+    const t1Norm = norm(t1Resolved);
+    const t2Norm = norm(t2Resolved);
+
+    let winnerResolved = null;
+    if (m.winnerTeamName && resolveTeamName(m.winnerTeamName)) {
+      winnerResolved = resolveTeamName(m.winnerTeamName);
+    } else if (wNorm.includes(t1Norm) || (t1Norm.length >= 4 && wNorm.includes(t1Norm.slice(0, 4)))) {
+      winnerResolved = t1Resolved;
+    } else if (wNorm.includes(t2Norm) || (t2Norm.length >= 4 && wNorm.includes(t2Norm.slice(0, 4)))) {
+      winnerResolved = t2Resolved;
+    } else if (m.team1?.runs != null && m.team2?.runs != null) {
+      if (Number(m.team1.runs) > Number(m.team2.runs)) winnerResolved = t1Resolved;
+      else if (Number(m.team2.runs) > Number(m.team1.runs)) winnerResolved = t2Resolved;
+    }
+
+    if (winnerResolved === t1Resolved) {
+      tableMap[t1Resolved].w += 1;
+      tableMap[t1Resolved].pts += 2;
+      tableMap[t1Resolved].form.unshift('W');
+
+      tableMap[t2Resolved].l += 1;
+      tableMap[t2Resolved].form.unshift('L');
+    } else if (winnerResolved === t2Resolved) {
+      tableMap[t2Resolved].w += 1;
+      tableMap[t2Resolved].pts += 2;
+      tableMap[t2Resolved].form.unshift('W');
+
+      tableMap[t1Resolved].l += 1;
+      tableMap[t1Resolved].form.unshift('L');
+    } else {
+      tableMap[t1Resolved].nr += 1;
+      tableMap[t1Resolved].pts += 1;
+      tableMap[t1Resolved].form.unshift('NR');
+
+      tableMap[t2Resolved].nr += 1;
+      tableMap[t2Resolved].pts += 1;
+      tableMap[t2Resolved].form.unshift('NR');
+    }
+
+    tableMap[t1Resolved].form = tableMap[t1Resolved].form.slice(0, 5);
+    tableMap[t2Resolved].form = tableMap[t2Resolved].form.slice(0, 5);
+
+    const parseScoreData = (inning, teamObj) => {
+      let runs = 0;
+      let balls = 0;
+      if (inning) {
+        runs = Number(inning.battingTeam?.runs ?? inning.runs ?? 0);
+        balls = Number(inning.totalLegalBalls ?? inning.legalBalls ?? 0);
+      } else if (teamObj) {
+        runs = Number(teamObj.runs || 0);
+        balls = Number(teamObj.legalBalls || 0);
+        if (!runs && teamObj.score) {
+          const match = String(teamObj.score).match(/(\d+)\s*[-/]\s*(\d+)/);
+          if (match) runs = parseInt(match[1], 10);
+        }
+      }
+      return { runs, balls };
+    };
+
+    const inn1 = m.rawMatchData?.innings?.[0] || m.innings?.[0];
+    const inn2 = m.rawMatchData?.innings?.[1] || m.innings?.[1];
+
+    const d1 = parseScoreData(inn1, m.team1);
+    const d2 = parseScoreData(inn2, m.team2);
+
+    if (d1.runs > 0 || d1.balls > 0 || d2.runs > 0 || d2.balls > 0) {
+      tableMap[t1Resolved].runsScored += d1.runs;
+      tableMap[t1Resolved].ballsFaced += (d1.balls || 30);
+      tableMap[t1Resolved].runsConceded += d2.runs;
+      tableMap[t1Resolved].ballsBowled += (d2.balls || 30);
+
+      tableMap[t2Resolved].runsScored += d2.runs;
+      tableMap[t2Resolved].ballsFaced += (d2.balls || 30);
+      tableMap[t2Resolved].runsConceded += d1.runs;
+      tableMap[t2Resolved].ballsBowled += (d1.balls || 30);
+    }
+  });
+
+  const list = Object.values(tableMap).map(row => {
+    row.nrr = calculateNetRunRate(row.runsScored, row.ballsFaced, row.runsConceded, row.ballsBowled);
+    return row;
+  });
+
+  list.sort((a, b) => {
+    if (b.pts !== a.pts) return b.pts - a.pts;
+    const aNrrVal = a.nrr === '-' ? 0 : (parseFloat(a.nrr) || 0);
+    const bNrrVal = b.nrr === '-' ? 0 : (parseFloat(b.nrr) || 0);
+    if (bNrrVal !== aNrrVal) return bNrrVal - aNrrVal;
+    return String(a.team || '').localeCompare(String(b.team || ''));
+  });
+
+  return list;
 }
 
 
