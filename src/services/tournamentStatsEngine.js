@@ -224,83 +224,10 @@ export function calculateTournamentStats(tournament) {
     });
   });
 
-  // 2. Also check team rosters for player stats if no match scorecard exists yet
-  if (battingMap.size === 0 && teams.length > 0) {
-    teams.forEach(t => {
-      const players = Array.isArray(t.players) ? t.players : (Array.isArray(t.squad) ? t.squad : []);
-      players.forEach((p, idx) => {
-        const pName = typeof p === 'string' ? p : (p.name || `Player ${idx + 1}`);
-        const pRuns = p.runs != null ? Number(p.runs) : 0;
-        const pWkts = p.wickets != null ? Number(p.wickets) : 0;
-        const pSR = p.strikeRate != null ? Number(p.strikeRate) : 0;
-        const pEcon = p.economy != null ? Number(p.economy) : 0;
-
-        if (pRuns > 0) {
-          battingMap.set(pName, {
-            name: pName,
-            team: t.name || t.shortName || 'Team',
-            runs: pRuns,
-            balls: pSR > 0 ? Math.round((pRuns / pSR) * 100) : 30,
-            fours: Math.round(pRuns * 0.08),
-            sixes: Math.round(pRuns * 0.04),
-            innings: 1,
-            outs: 1,
-            highestScore: pRuns,
-            highestScoreNotOut: false
-          });
-        }
-
-        if (pWkts > 0) {
-          bowlingMap.set(pName, {
-            name: pName,
-            team: t.name || t.shortName || 'Team',
-            wickets: pWkts,
-            runsConceded: pEcon > 0 ? Math.round(pEcon * 4) : 24,
-            ballsBowled: 24,
-            dots: 8,
-            maidens: 0,
-            innings: 1,
-            bestWickets: pWkts,
-            bestRuns: pEcon > 0 ? Math.round(pEcon * 4) : 24
-          });
-        }
-      });
-    });
-  }
-
-  // 3. Fallback defaults if still completely empty so cards render gracefully
-  if (battingMap.size === 0) {
-    const defaultTeam1 = teams[0]?.name || 'Team 1';
-    const defaultPlayer1 = teams[0]?.captainName || teams[0]?.players?.[0]?.name || 'Lead Batter';
-    battingMap.set(defaultPlayer1, {
-      name: defaultPlayer1,
-      team: defaultTeam1,
-      runs: 0,
-      balls: 0,
-      fours: 0,
-      sixes: 0,
-      innings: 0,
-      outs: 0,
-      highestScore: 0,
-      highestScoreNotOut: false
-    });
-  }
-
-  if (bowlingMap.size === 0) {
-    const defaultTeam2 = teams[1]?.name || teams[0]?.name || 'Team 2';
-    const defaultPlayer2 = teams[1]?.captainName || teams[1]?.players?.[1]?.name || teams[0]?.players?.[1]?.name || 'Strike Bowler';
-    bowlingMap.set(defaultPlayer2, {
-      name: defaultPlayer2,
-      team: defaultTeam2,
-      wickets: 0,
-      runsConceded: 0,
-      ballsBowled: 0,
-      dots: 0,
-      maidens: 0,
-      innings: 0,
-      bestWickets: 0,
-      bestRuns: 0
-    });
+  // 2. If no matches have been played with scorecard data, return clean unplayed empty stats
+  const hasMatchesPlayed = battingMap.size > 0 || bowlingMap.size > 0;
+  if (!hasMatchesPlayed) {
+    return getEmptyStats();
   }
 
   // Convert to arrays and format metrics
@@ -347,18 +274,20 @@ export function calculateTournamentStats(tournament) {
   const mostDotsList = [...allBowlers].sort((a, b) => b.dots - a.dots || b.wickets - a.wickets);
 
   // Pick top leaders
-  const topBatter = mostRunsList[0] || { name: 'Top Batter', team: 'Team', runs: 0, strikeRate: '0.00' };
+  const topBatter = mostRunsList[0] || { name: '-', team: '', runs: 0, strikeRate: '0.00' };
   const topStrikeRate = bestStrikeRateList[0] || topBatter;
   const topHighestScore = highestScoreList[0] || topBatter;
   const topSixes = mostSixesList[0] || topBatter;
   const topFours = mostFoursList[0] || topBatter;
 
-  const topBowler = mostWicketsList[0] || { name: 'Top Bowler', team: 'Team', wickets: 0, economy: '0.00', bestFigureText: '-' };
+  const topBowler = mostWicketsList[0] || { name: '-', team: '', wickets: 0, economy: '0.00', bestFigureText: '-' };
   const topBestFigures = bestFiguresList[0] || topBowler;
   const topEconomy = bestEconomyList[0] || topBowler;
   const topDots = mostDotsList[0] || topBowler;
 
   return {
+    hasMatchesPlayed: true,
+    hasData: true,
     totalSixes: Math.max(totalSixes, topSixes.sixes || 0),
     totalFours: Math.max(totalFours, topFours.fours || 0),
     batting: {
@@ -373,7 +302,8 @@ export function calculateTournamentStats(tournament) {
       bestStrikeRate: {
         player: topStrikeRate.name,
         team: topStrikeRate.team,
-        value: topStrikeRate.runs > 0 ? topStrikeRate.strikeRate : '-',
+        value: parseFloat(topStrikeRate.strikeRate) > 0 ? String(topStrikeRate.strikeRate) : '-',
+        strikeRate: topStrikeRate.strikeRate,
         raw: topStrikeRate
       },
       highestScore: {
@@ -447,6 +377,8 @@ function getTeamForPlayer(playerName, teams = []) {
 
 function getEmptyStats() {
   return {
+    hasMatchesPlayed: false,
+    hasData: false,
     totalSixes: 0,
     totalFours: 0,
     batting: {

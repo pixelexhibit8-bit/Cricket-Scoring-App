@@ -214,137 +214,155 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
       {/* ── 2. KEY STATS SECTION ── */}
       <View style={[styles.sectionHeaderRow, { marginTop: 18 }]}>
         <Text style={styles.sectionTitle}>Key Stats</Text>
-        <TouchableOpacity onPress={onViewAllStats} activeOpacity={0.7}>
-          <Text style={styles.seeAllLink}>See All</Text>
-        </TouchableOpacity>
+        {stats?.hasMatchesPlayed ? (
+          <TouchableOpacity onPress={onViewAllStats} activeOpacity={0.7}>
+            <Text style={styles.seeAllLink}>See All</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      {/* Top Large Highlight Card: Most Runs */}
-      <TouchableOpacity
-        style={styles.heroStatCard}
-        activeOpacity={0.85}
-        onPress={onViewAllStats}
-      >
-        <Text style={styles.heroStatCategoryLabel}>Most Runs</Text>
-        <View style={styles.heroStatRow}>
-          <PlayerAvatar name={mostRuns.player} size={48} />
-          <View style={styles.heroStatPlayerDetails}>
-            <Text style={styles.heroStatPlayerName} numberOfLines={1}>
-              {mostRuns.player || 'Leading Batter'}
-            </Text>
-            <Text style={styles.heroStatPlayerTeam} numberOfLines={1}>
-              {mostRuns.team || tournament?.name || 'Tournament'}
-            </Text>
-          </View>
-          <View style={styles.heroStatValBlock}>
-            <Text style={styles.heroStatNumber}>{mostRuns.value || '-'}</Text>
-            <Text style={styles.heroStatUnit}>runs</Text>
-          </View>
-        </View>
-        {/* Page dot indicator */}
-        <View style={styles.statDotContainer}>
-          <View style={styles.statDotActive} />
-        </View>
-      </TouchableOpacity>
-
-      {/* 2-Column Grid: Most Wickets & Best Figures */}
-      <View style={styles.twoColGridRow}>
-        {/* Most Wickets Card */}
-        <TouchableOpacity
-          style={styles.gridMiniStatCard}
-          activeOpacity={0.85}
-          onPress={onViewAllStats}
-        >
-          <Text style={styles.miniCardCategoryLabel}>Most Wickets</Text>
-          <View style={styles.miniCardPlayerRow}>
-            <PlayerAvatar name={mostWickets.player} size={36} />
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <Text style={styles.miniCardTeamCode} numberOfLines={1}>
-                {mostWickets.team ? String(mostWickets.team).slice(0, 8).toUpperCase() : 'TEAM'}
-              </Text>
-              <Text style={styles.miniCardPlayerName} numberOfLines={1}>
-                {mostWickets.player || '-'}
-              </Text>
+      {stats?.hasMatchesPlayed ? (
+        <>
+          {/* Top Large Highlight Card: Most Runs */}
+          <TouchableOpacity
+            style={styles.heroStatCard}
+            activeOpacity={0.85}
+            onPress={onViewAllStats}
+          >
+            <Text style={styles.heroStatCategoryLabel}>Most Runs</Text>
+            <View style={styles.heroStatRow}>
+              <PlayerAvatar name={mostRuns.player} size={48} />
+              <View style={styles.heroStatPlayerDetails}>
+                <Text style={styles.heroStatPlayerName} numberOfLines={1}>
+                  {mostRuns.player || 'Leading Batter'}
+                </Text>
+                <Text style={styles.heroStatPlayerTeam} numberOfLines={1}>
+                  {mostRuns.team || tournament?.name || 'Tournament'}
+                </Text>
+              </View>
+              <View style={styles.heroStatValBlock}>
+                <Text style={styles.heroStatNumber}>{mostRuns.value || '-'}</Text>
+                <Text style={styles.heroStatUnit}>runs</Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.miniCardValueRow}>
-            <Text style={styles.miniCardNumber}>{mostWickets.value || '-'}</Text>
-            <Text style={styles.miniCardUnit}>wickets</Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* Best Figures Card */}
-        <TouchableOpacity
-          style={styles.gridMiniStatCard}
-          activeOpacity={0.85}
-          onPress={onViewAllStats}
-        >
-          <Text style={styles.miniCardCategoryLabel}>Best Figures</Text>
-          <View style={styles.miniCardPlayerRow}>
-            <PlayerAvatar name={bestFigures.player} size={36} />
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <Text style={styles.miniCardTeamCode} numberOfLines={1}>
-                {bestFigures.team ? String(bestFigures.team).slice(0, 8).toUpperCase() : 'TEAM'}
-              </Text>
-              <Text style={styles.miniCardPlayerName} numberOfLines={1}>
-                {bestFigures.player || '-'}
-              </Text>
+            {/* Page dot indicator */}
+            <View style={styles.statDotContainer}>
+              <View style={styles.statDotActive} />
             </View>
-          </View>
-          <View style={styles.miniCardValueRow}>
-            <Text style={styles.miniCardNumber}>{bestFigures.value || '-'}</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+          </TouchableOpacity>
 
-      {/* Single Row Stat Cards: Highest Score & Most Sixes */}
-      <TouchableOpacity
-        style={styles.singleRowStatCard}
-        activeOpacity={0.85}
-        onPress={onViewAllStats}
-      >
-        <Text style={styles.singleRowCategoryLabel}>Highest Score</Text>
-        <View style={styles.singleRowContent}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-            <Text style={styles.singleRowPlayerName} numberOfLines={1}>
-              {highestScore.player || '-'}
-            </Text>
-            {highestScore.team ? (
-              <Text style={styles.singleRowTeamCode} numberOfLines={1}>
-                {String(highestScore.team).slice(0, 8).toUpperCase()}
-              </Text>
-            ) : null}
+          {/* 2-Column Grid: Most Wickets & Best Figures */}
+          <View style={styles.twoColGridRow}>
+            {/* Most Wickets Card */}
+            <TouchableOpacity
+              style={styles.gridMiniStatCard}
+              activeOpacity={0.85}
+              onPress={onViewAllStats}
+            >
+              <Text style={styles.miniCardCategoryLabel}>Most Wickets</Text>
+              <View style={styles.miniCardPlayerRow}>
+                <PlayerAvatar name={mostWickets.player} size={36} />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={styles.miniCardTeamCode} numberOfLines={1}>
+                    {mostWickets.team ? String(mostWickets.team).slice(0, 8).toUpperCase() : 'TEAM'}
+                  </Text>
+                  <Text style={styles.miniCardPlayerName} numberOfLines={1}>
+                    {mostWickets.player || '-'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.miniCardValueRow}>
+                <Text style={styles.miniCardNumber}>{mostWickets.value || '-'}</Text>
+                <Text style={styles.miniCardUnit}>wickets</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Best Figures Card */}
+            <TouchableOpacity
+              style={styles.gridMiniStatCard}
+              activeOpacity={0.85}
+              onPress={onViewAllStats}
+            >
+              <Text style={styles.miniCardCategoryLabel}>Best Figures</Text>
+              <View style={styles.miniCardPlayerRow}>
+                <PlayerAvatar name={bestFigures.player} size={36} />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={styles.miniCardTeamCode} numberOfLines={1}>
+                    {bestFigures.team ? String(bestFigures.team).slice(0, 8).toUpperCase() : 'TEAM'}
+                  </Text>
+                  <Text style={styles.miniCardPlayerName} numberOfLines={1}>
+                    {bestFigures.player || '-'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.miniCardValueRow}>
+                <Text style={styles.miniCardNumber}>{bestFigures.value || '-'}</Text>
+              </View>
+            </TouchableOpacity>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
-            <Text style={styles.singleRowValueText}>{highestScore.value || '-'}</Text>
-            <Text style={styles.singleRowUnitText}>runs</Text>
+
+          {/* Single Row Stat Cards: Highest Score & Most Sixes */}
+          <TouchableOpacity
+            style={styles.singleRowStatCard}
+            activeOpacity={0.85}
+            onPress={onViewAllStats}
+          >
+            <Text style={styles.singleRowCategoryLabel}>Highest Score</Text>
+            <View style={styles.singleRowContent}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                <Text style={styles.singleRowPlayerName} numberOfLines={1}>
+                  {highestScore.player || '-'}
+                </Text>
+                {highestScore.team ? (
+                  <Text style={styles.singleRowTeamCode} numberOfLines={1}>
+                    {String(highestScore.team).slice(0, 8).toUpperCase()}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+                <Text style={styles.singleRowValueText}>{highestScore.value || '-'}</Text>
+                <Text style={styles.singleRowUnitText}>runs</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.singleRowStatCard}
+            activeOpacity={0.85}
+            onPress={onViewAllStats}
+          >
+            <Text style={styles.singleRowCategoryLabel}>Most Sixes</Text>
+            <View style={styles.singleRowContent}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                <Text style={styles.singleRowPlayerName} numberOfLines={1}>
+                  {mostSixes.player || '-'}
+                </Text>
+                {mostSixes.team ? (
+                  <Text style={styles.singleRowTeamCode} numberOfLines={1}>
+                    {String(mostSixes.team).slice(0, 8).toUpperCase()}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+                <Text style={styles.singleRowValueText}>{mostSixes.value || '-'}</Text>
+                <Text style={styles.singleRowUnitText}>sixes</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={styles.statsNotAvailableCard}>
+          <View style={styles.statsNotAvailableIconWrap}>
+            <MaterialCommunityIcons name="chart-box-outline" size={24} color="#0284C7" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.statsNotAvailableTitle}>Stats Not Available Yet</Text>
+            <Text style={styles.statsNotAvailableSubtitle}>
+              Tournament leaderboards and player stats will appear here after matches are played.
+            </Text>
           </View>
         </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.singleRowStatCard}
-        activeOpacity={0.85}
-        onPress={onViewAllStats}
-      >
-        <Text style={styles.singleRowCategoryLabel}>Most Sixes</Text>
-        <View style={styles.singleRowContent}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-            <Text style={styles.singleRowPlayerName} numberOfLines={1}>
-              {mostSixes.player || '-'}
-            </Text>
-            {mostSixes.team ? (
-              <Text style={styles.singleRowTeamCode} numberOfLines={1}>
-                {String(mostSixes.team).slice(0, 8).toUpperCase()}
-              </Text>
-            ) : null}
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
-            <Text style={styles.singleRowValueText}>{mostSixes.value || '-'}</Text>
-            <Text style={styles.singleRowUnitText}>sixes</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
+      )}
 
       {/* ── 3. POINTS TABLE PREVIEW SECTION ── */}
       <View style={{ marginTop: 14 }}>
@@ -784,5 +802,36 @@ const styles = StyleSheet.create({
     color: themeColors.textPrimary,
     flex: 1,
     textAlign: 'right'
+  },
+  statsNotAvailableCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  statsNotAvailableIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E0F2FE'
+  },
+  statsNotAvailableTitle: {
+    fontSize: 13.5,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary,
+    marginBottom: 2
+  },
+  statsNotAvailableSubtitle: {
+    fontSize: 11.5,
+    fontFamily: systemFont,
+    color: themeColors.textSecondary,
+    lineHeight: 16
   }
 });

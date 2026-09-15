@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   themeColors,
   systemFont,
@@ -22,6 +22,32 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
   onSelectStatCategory,
   onSelectPlayer
 }) {
+  const hasMatchesPlayed = Boolean(stats?.hasMatchesPlayed);
+
+  if (!hasMatchesPlayed) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.emptyScrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.emptyStatsContainer}>
+          <View style={styles.emptyIconCircle}>
+            <MaterialCommunityIcons name="chart-timeline-variant-shimmer" size={38} color="#0284C7" />
+          </View>
+          <Text style={styles.emptyStatsTitle}>Stats Not Available Yet</Text>
+          <Text style={styles.emptyStatsSubtitle}>
+            Tournament statistics, boundary counts, and player rankings will be calculated automatically once matches begin.
+          </Text>
+          <View style={styles.emptyMatchesBadge}>
+            <MaterialCommunityIcons name="clock-outline" size={14} color="#64748B" />
+            <Text style={styles.emptyMatchesBadgeText}>0 Matches Played</Text>
+          </View>
+        </View>
+      </ScrollView>
+    );
+  }
+
   const teams = Array.isArray(tournament?.teams) ? tournament.teams : [];
   const batting = stats?.batting || {};
   const bowling = stats?.bowling || {};
@@ -153,73 +179,55 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
         </TouchableOpacity>
       </View>
 
-      {/* ── 2. BATTING SECTION ── */}
-      <Text style={styles.categorySectionTitle}>Batting</Text>
+      {/* ── 2. BATTING CATEGORY STATS LIST ── */}
+      <Text style={styles.categorySectionTitle}>BATTING LEADERS</Text>
       <View style={styles.statsListContainer}>
         {battingStatsList.map((item, idx) => (
           <TouchableOpacity
             key={item.id}
-            style={[
-              styles.statRowItem,
-              idx === battingStatsList.length - 1 && { borderBottomWidth: 0 }
-            ]}
-            activeOpacity={0.7}
-            onPress={() => {
-              if (onSelectPlayer && item.player && item.player !== '-') {
-                onSelectPlayer({ name: item.player, team: item.team });
-              }
-            }}
+            style={[styles.statRowItem, idx === battingStatsList.length - 1 && { borderBottomWidth: 0 }]}
+            activeOpacity={0.75}
+            onPress={() => onSelectStatCategory && onSelectStatCategory(item.id)}
           >
-            {/* Player Avatar with Team Identity */}
             <View style={styles.avatarWrap}>
-              <PlayerAvatar name={item.player} size={42} />
+              <PlayerAvatar name={item.player} size={38} />
               {item.team ? (
                 <View style={styles.avatarTeamBadge}>
-                  <TeamIdentityMark team={{ name: item.team }} tournamentTeams={teams} size={14} />
+                  <TeamIdentityMark teamName={item.team} size={14} />
                 </View>
               ) : null}
             </View>
 
-            {/* Middle: Category Label + Player Name */}
             <View style={styles.statPlayerInfoCol}>
               <Text style={styles.statCategoryHeaderLabel}>{item.label}</Text>
               <Text style={styles.statPlayerFullName} numberOfLines={1}>
-                {item.player}
+                {item.player} {item.team ? `• ${item.team}` : ''}
               </Text>
             </View>
 
-            {/* Right: Stat Value + Unit + Chevron */}
             <View style={styles.statValueRightCol}>
               <Text style={styles.statBigValueText}>{item.val}</Text>
               <Text style={styles.statUnitSubText}>{item.unit}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#CBD5E1" style={{ marginLeft: 6 }} />
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* ── 3. BOWLING SECTION ── */}
-      <Text style={[styles.categorySectionTitle, { marginTop: 16 }]}>Bowling</Text>
+      {/* ── 3. BOWLING CATEGORY STATS LIST ── */}
+      <Text style={[styles.categorySectionTitle, { marginTop: 22 }]}>BOWLING LEADERS</Text>
       <View style={styles.statsListContainer}>
         {bowlingStatsList.map((item, idx) => (
           <TouchableOpacity
             key={item.id}
-            style={[
-              styles.statRowItem,
-              idx === bowlingStatsList.length - 1 && { borderBottomWidth: 0 }
-            ]}
-            activeOpacity={0.7}
-            onPress={() => {
-              if (onSelectPlayer && item.player && item.player !== '-') {
-                onSelectPlayer({ name: item.player, team: item.team });
-              }
-            }}
+            style={[styles.statRowItem, idx === bowlingStatsList.length - 1 && { borderBottomWidth: 0 }]}
+            activeOpacity={0.75}
+            onPress={() => onSelectStatCategory && onSelectStatCategory(item.id)}
           >
             <View style={styles.avatarWrap}>
-              <PlayerAvatar name={item.player} size={42} />
+              <PlayerAvatar name={item.player} size={38} />
               {item.team ? (
                 <View style={styles.avatarTeamBadge}>
-                  <TeamIdentityMark team={{ name: item.team }} tournamentTeams={teams} size={14} />
+                  <TeamIdentityMark teamName={item.team} size={14} />
                 </View>
               ) : null}
             </View>
@@ -227,7 +235,7 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
             <View style={styles.statPlayerInfoCol}>
               <Text style={styles.statCategoryHeaderLabel}>{item.label}</Text>
               <Text style={styles.statPlayerFullName} numberOfLines={1}>
-                {item.player}
+                {item.player} {item.team ? `• ${item.team}` : ''}
               </Text>
             </View>
 
@@ -235,18 +243,17 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
               <Text style={styles.statBigValueText}>{item.val}</Text>
               <Text style={styles.statUnitSubText}>{item.unit}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#CBD5E1" style={{ marginLeft: 6 }} />
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* ── 4. ALL STATS BUTTON ── */}
+      {/* All Stats Button */}
       <TouchableOpacity
         style={styles.allStatsBottomBtn}
-        activeOpacity={0.85}
+        activeOpacity={0.8}
         onPress={() => onSelectStatCategory && onSelectStatCategory('all')}
       >
-        <Text style={styles.allStatsBtnText}>All Stats ›</Text>
+        <Text style={styles.allStatsBtnText}>View All Tournament Stats</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -255,11 +262,69 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: themeColors.appBackground
+    backgroundColor: '#FCFCFD'
   },
   scrollContent: {
     padding: 16,
     paddingBottom: 40
+  },
+  emptyScrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+    justifyContent: 'center',
+    minHeight: 400
+  },
+  emptyStatsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  emptyIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E0F2FE'
+  },
+  emptyStatsTitle: {
+    fontSize: 16,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary,
+    marginBottom: 8,
+    textAlign: 'center'
+  },
+  emptyStatsSubtitle: {
+    fontSize: 13,
+    fontFamily: systemFont,
+    color: themeColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 20,
+    maxWidth: 280
+  },
+  emptyMatchesBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F8F8FA',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#EEEEF0'
+  },
+  emptyMatchesBadgeText: {
+    fontSize: 11.5,
+    fontFamily: systemFontMedium,
+    color: '#64748B'
   },
   topAggregateCard: {
     backgroundColor: '#FFFFFF',
@@ -269,7 +334,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    marginBottom: 14
+    marginBottom: 18
   },
   aggregateColumn: {
     flex: 1,
@@ -277,21 +342,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   aggregateCountNumber: {
-    fontSize: 22,
+    fontSize: 26,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary,
-    lineHeight: 26
+    marginBottom: 4
   },
   aggregateSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginTop: 4
+    gap: 6
   },
   boundaryBadgeCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
     alignItems: 'center',
     justifyContent: 'center'
   },
