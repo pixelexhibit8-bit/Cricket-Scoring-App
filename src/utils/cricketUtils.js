@@ -8,7 +8,8 @@ import {
   getTeamLogoSource,
   getScorePartsFromText,
   getResultColor,
-  RESULT_PALETTE
+  RESULT_PALETTE,
+  getUpcomingMatchSchedule
 } from './teamUtils.js';
 
 export {
@@ -17,7 +18,8 @@ export {
   getTeamLogoSource,
   getScorePartsFromText,
   getResultColor,
-  RESULT_PALETTE
+  RESULT_PALETTE,
+  getUpcomingMatchSchedule
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────

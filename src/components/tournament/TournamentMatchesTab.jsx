@@ -16,7 +16,7 @@ import {
   systemFontBold
 } from '../../theme.js';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
-import { resolveTeamWithRoster, formatMatchResult, cleanMatchDate, getScorePartsFromText, getResultColor } from '../../utils/teamUtils.js';
+import { resolveTeamWithRoster, formatMatchResult, cleanMatchDate, getScorePartsFromText, getResultColor, getUpcomingMatchSchedule } from '../../utils/teamUtils.js';
 
 function getOrdinal(n) {
   const num = parseInt(n, 10);
@@ -278,16 +278,33 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                     </Text>
                   </View>
 
-                  <View style={styles.liveTeamsContainer}>
-                    <View style={styles.liveTeamRow}>
-                      <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={24} />
-                      <Text style={styles.liveTeamName} numberOfLines={1}>{t1Name}</Text>
-                      <Text style={styles.liveTeamScore}>{t1Score}</Text>
+                  {/* Body: Left Teams & Scores | Vertical Divider | Right Centered Live Block */}
+                  <View style={styles.completedCardBody}>
+                    <View style={styles.scoresColumn}>
+                      <View style={styles.teamScoreRow}>
+                        <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={26} />
+                        <Text style={styles.completedTeamCode} numberOfLines={1}>{t1Name}</Text>
+                        <Text style={styles.completedScoreMain}>{t1Score}</Text>
+                      </View>
+                      <View style={[styles.teamScoreRow, { marginTop: 10 }]}>
+                        <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={26} />
+                        <Text style={styles.completedTeamCode} numberOfLines={1}>{t2Name}</Text>
+                        <Text style={styles.completedScoreMain}>{t2Score}</Text>
+                      </View>
                     </View>
-                    <View style={[styles.liveTeamRow, { marginTop: 6 }]}>
-                      <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={24} />
-                      <Text style={styles.liveTeamName} numberOfLines={1}>{t2Name}</Text>
-                      <Text style={styles.liveTeamScore}>{t2Score}</Text>
+
+                    {/* Vertical Divider */}
+                    <View style={styles.verticalDivider} />
+
+                    {/* Right: Live Status Block perfectly centered */}
+                    <View style={styles.resultRightBlock}>
+                      <View style={styles.liveBadgeRow}>
+                        <View style={styles.livePulseDot} />
+                        <Text style={styles.liveBadgeText}>LIVE</Text>
+                      </View>
+                      <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', textAlign: 'center', marginTop: 3 }} numberOfLines={1}>
+                        {m.venue || tournament?.city || 'Sadokan Ground'}
+                      </Text>
                     </View>
                   </View>
 
@@ -327,7 +344,7 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                 const t2FullName = t2Resolved.fullName || t2Resolved.name || 'Team 2';
 
                 const headerSubtitle = formatMatchHeaderTitle(m, tournament, mIdx);
-                const startTime = m.time || '07:30 PM';
+                const schedule = getUpcomingMatchSchedule(m);
 
                 return (
                   <TouchableOpacity
@@ -352,17 +369,17 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                       <Ionicons name="notifications-outline" size={16} color="#94A3B8" />
                     </View>
 
-                    {/* Body: Teams List on Left | Starts at on Right */}
-                    <View style={styles.upcomingBodyRow}>
+                    {/* Body: Left Teams Stack | Vertical Divider | Right Starts at / Countdown */}
+                    <View style={styles.completedCardBody}>
                       {/* Left: Full Teams Stack */}
-                      <View style={styles.upcomingTeamsCol}>
-                        <View style={styles.upcomingTeamItem}>
+                      <View style={styles.scoresColumn}>
+                        <View style={styles.teamScoreRow}>
                           <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={26} />
                           <Text style={styles.upcomingTeamFullName} numberOfLines={1}>
                             {t1FullName}
                           </Text>
                         </View>
-                        <View style={[styles.upcomingTeamItem, { marginTop: 10 }]}>
+                        <View style={[styles.teamScoreRow, { marginTop: 10 }]}>
                           <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={26} />
                           <Text style={styles.upcomingTeamFullName} numberOfLines={1}>
                             {t2FullName}
@@ -370,10 +387,34 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                         </View>
                       </View>
 
-                      {/* Right: Starts at Time */}
-                      <View style={styles.upcomingStartsAtCol}>
-                        <Text style={styles.startsAtLabel}>Starts at:</Text>
-                        <Text style={styles.startsAtTimeText}>{startTime}</Text>
+                      {/* Vertical Divider */}
+                      <View style={styles.verticalDivider} />
+
+                      {/* Right: Starts at / Countdown Block perfectly centered */}
+                      <View style={styles.resultRightBlock}>
+                        <Text
+                          style={{
+                            fontSize: 15.5,
+                            fontFamily: systemFontMedium,
+                            color: schedule.primaryColor,
+                            textAlign: 'center'
+                          }}
+                          numberOfLines={1}
+                        >
+                          {schedule.topText}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: systemFontMedium,
+                            color: '#64748B',
+                            textAlign: 'center',
+                            marginTop: 3
+                          }}
+                          numberOfLines={1}
+                        >
+                          {schedule.bottomText}
+                        </Text>
                       </View>
                     </View>
 

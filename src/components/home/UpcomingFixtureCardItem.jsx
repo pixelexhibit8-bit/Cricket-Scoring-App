@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { MatchListScoreCard } from '../MatchListScoreCard.jsx';
-import { getCleanMatchStageBadge } from '../../utils/cricketUtils.js';
+import { getCleanMatchStageBadge, getUpcomingMatchSchedule } from '../../utils/cricketUtils.js';
 import { resolveTeamWithRoster } from '../../utils/teamUtils.js';
 
 export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardItem({
@@ -18,8 +18,7 @@ export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardIt
   const tourName = fixture.tournamentName || fixture.tournamentTitle || fixture.seriesName || '';
   const cleanStage = getCleanMatchStageBadge(fixture.stage, fixture.matchNumber || fixture.matchNo);
   const venue = fixture.venue || fixture.venueName || 'Sadokan Ground';
-  const matchDate = fixture.dateText || fixture.matchDate || 'Upcoming';
-  const time = fixture.time || fixture.timeText || (fixture.matchDate && fixture.matchDate.includes('•') ? fixture.matchDate.split('•')[1]?.trim() : 'Scheduled');
+  const schedule = getUpcomingMatchSchedule(fixture);
 
   const subtitle = tourName
     ? (cleanStage ? `${cleanStage} • ${tourName}` : tourName)
@@ -34,10 +33,11 @@ export const UpcomingFixtureCardItem = React.memo(function UpcomingFixtureCardIt
         teamOneScore=""
         teamTwoScore=""
         useFullName={true}
-        statusLabel={time}
-        statusColor={time.toLowerCase().includes('m') || time.toLowerCase().includes('s') ? '#D97706' : '#0F172A'}
+        statusLabel={schedule.topText}
+        statusSubLabel={schedule.bottomText}
+        statusColor={schedule.primaryColor}
         statusDotColor="transparent"
-        footerText={`${matchDate} • ${venue}`}
+        footerText={venue}
         footerColor="#64748B"
         topRightIcon="notifications-outline"
         onPress={onPress}

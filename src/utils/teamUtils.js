@@ -405,3 +405,121 @@ export const cleanMatchDate = (dateStr, fallback = 'Tomorrow') => {
   }
   return trimmed;
 };
+
+/**
+ * Calculate smart schedule / countdown display for upcoming matches
+ */
+export const getUpcomingMatchSchedule = (match = {}) => {
+  const timeStr = String(match.time || match.timeText || '').trim() || '07:30 PM';
+  const dateStr = String(match.date || match.dateStr || match.matchDate || match.dateText || match.scheduledAt || '').trim();
+
+  const isExplicitToday = /today/i.test(dateStr) || /today/i.test(timeStr);
+  const isExplicitTomorrow = /tomorrow/i.test(dateStr) || /tomorrow/i.test(timeStr);
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  let targetDate = null;
+
+  if (dateStr && !isExplicitToday && !isExplicitTomorrow) {
+    let parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) {
+      targetDate = parsed;
+    } else {
+      const withYear = new Date(`${dateStr} ${currentYear}`);
+      if (!isNaN(withYear.getTime())) {
+        targetDate = withYear;
+      }
+    }
+  }
+
+  let hours = 19;
+  let minutes = 30;
+  if (timeStr) {
+    const timeMatch = timeStr.match(/([0-9]{1,2}):([0-9]{2})\s*(AM|PM)?/i);
+    if (timeMatch) {
+      let h = parseInt(timeMatch[1], 10);
+      const m = parseInt(timeMatch[2], 10);
+      const ampm = timeMatch[3] ? timeMatch[3].toUpperCase() : null;
+      if (ampm === 'PM' && h < 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      hours = h;
+      minutes = m;
+    }
+  }
+
+  if (isExplicitToday) {
+    targetDate = new Date(now);
+    targetDate.setHours(hours, minutes, 0, 0);
+  } else if (isExplicitTomorrow) {
+    targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() + 1);
+    targetDate.setHours(hours, minutes, 0, 0);
+  } else if (targetDate) {
+    targetDate.setHours(hours, minutes, 0, 0);
+  }
+
+  if (targetDate) {
+    const diffMs = targetDate.getTime() - now.getTime();
+
+    // Less than 6 hours away -> countdown timer
+    if (diffMs > 0 && diffMs <= 6 * 60 * 60 * 1000) {
+      const totalMinutes = Math.floor(diffMs / (60 * 1000));
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      const hPad = String(h).padStart(2, '0');
+      const mPad = String(m).padStart(2, '0');
+      return {
+        topText: 'Starts in',
+        bottomText: `${hPad} : ${mPad}m`,
+        isCountdown: true,
+        primaryColor: '#0284C7'
+      };
+    }
+
+    const nowZero = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const targetZero = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
+    const dayDiff = Math.round((targetZero - nowZero) / (24 * 60 * 60 * 1000));
+
+    if (dayDiff === 0 || isExplicitToday) {
+      return {
+        topText: 'Today',
+        bottomText: timeStr || '07:30 PM',
+        isCountdown: false,
+        primaryColor: '#0F172A'
+      };
+    }
+
+    if (dayDiff === 1 || isExplicitTomorrow) {
+      return {
+        topText: 'Tomorrow',
+        bottomText: timeStr || '07:30 PM',
+        isCountdown: false,
+        primaryColor: '#0F172A'
+      };
+    }
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formattedDate = `${targetDate.getDate()} ${monthNames[targetDate.getMonth()]}`;
+    return {
+      topText: timeStr || 'Scheduled',
+      bottomText: formattedDate,
+      isCountdown: false,
+      primaryColor: '#0F172A'
+    };
+  }
+
+  if (isExplicitToday) {
+    return { topText: 'Today', bottomText: timeStr || '07:30 PM', isCountdown: false, primaryColor: '#0F172A' };
+  }
+  if (isExplicitTomorrow) {
+    return { topText: 'Tomorrow', bottomText: timeStr || '07:30 PM', isCountdown: false, primaryColor: '#0F172A' };
+  }
+
+  return {
+    topText: timeStr || 'Scheduled',
+    bottomText: cleanMatchDate(dateStr, 'Upcoming'),
+    isCountdown: false,
+    primaryColor: '#0F172A'
+  };
+};

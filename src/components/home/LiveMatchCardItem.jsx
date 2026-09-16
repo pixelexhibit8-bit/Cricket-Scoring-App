@@ -42,6 +42,7 @@ export const LiveMatchCardItem = React.memo(function LiveMatchCardItem({
         teamTwoOvers={t2Overs}
         activeTeamName={activeBattingTeamName}
         statusLabel="Live"
+        statusSubLabel={venue || 'Sadokan Ground'}
         statusColor="#E11D48"
         statusDotColor="#E11D48"
         footerText={`Toss: ${tossWin}, Elected to ${tossDec}`}

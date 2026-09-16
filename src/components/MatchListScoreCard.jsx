@@ -18,6 +18,7 @@ export const MatchListScoreCard = ({
   activeTeamName,
   winnerTeamName,
   statusLabel,
+  statusSubLabel,
   statusColor = '#0284C7',
   statusDotColor = statusColor,
   resultTitle,
@@ -125,14 +126,14 @@ export const MatchListScoreCard = ({
             {renderTeamRow(teamTwo, teamTwoScore, teamTwoOvers, !teamTwoScore)}
           </View>
 
-          <View style={{ width: 1, height: 50, backgroundColor: '#F1F5F9', marginHorizontal: 14 }} />
+          <View style={{ width: 1, height: 50, backgroundColor: '#EEEEF0', marginHorizontal: 14 }} />
 
           {resultTitle ? (
             <View style={{ minWidth: 105, alignItems: 'center', justifyContent: 'center' }}>
               <Text
                 selectable
                 style={{
-                  fontSize: 17,
+                  fontSize: 16.5,
                   lineHeight: 22,
                   color: resultColor || '#0284C7',
                   textAlign: 'center',
@@ -162,23 +163,63 @@ export const MatchListScoreCard = ({
               ) : null}
             </View>
           ) : (statusLabel ? (
-            <View style={{ minWidth: 90, alignItems: 'flex-end', justifyContent: 'center', gap: 2 }}>
+            <View style={{ minWidth: 105, alignItems: 'center', justifyContent: 'center' }}>
               {isUpcoming ? (
                 <>
-                  <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont }}>
-                    {statusLabel.toLowerCase().includes('m') || statusLabel.toLowerCase().includes('s') || statusLabel.toLowerCase().includes(':') ? 'Starting in:' : 'Scheduled'}
-                  </Text>
-                  <Text style={{ fontSize: 14.5, color: statusColor || '#0284C7', fontFamily: systemFontBold }}>
+                  <Text
+                    selectable
+                    style={{
+                      fontSize: 15.5,
+                      lineHeight: 20,
+                      color: statusColor || '#0F172A',
+                      textAlign: 'center',
+                      fontFamily: systemFontMedium
+                    }}
+                    numberOfLines={1}
+                  >
                     {statusLabel}
                   </Text>
+                  {statusSubLabel ? (
+                    <Text
+                      selectable
+                      style={{
+                        fontSize: 12,
+                        lineHeight: 16,
+                        color: '#64748B',
+                        textAlign: 'center',
+                        fontFamily: systemFontMedium,
+                        marginTop: 3
+                      }}
+                      numberOfLines={1}
+                    >
+                      {statusSubLabel}
+                    </Text>
+                  ) : null}
                 </>
               ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <View style={{ width: 6.5, height: 6.5, borderRadius: 3.5, backgroundColor: statusDotColor }} />
-                  <Text style={{ fontSize: 14, color: statusColor, fontFamily: systemFontMedium }}>
-                    {statusLabel}
-                  </Text>
-                </View>
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFE4E6', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4, gap: 4 }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#E11D48' }} />
+                    <Text style={{ color: '#E11D48', fontSize: 10, fontFamily: systemFontBold }}>
+                      LIVE
+                    </Text>
+                  </View>
+                  {statusSubLabel ? (
+                    <Text
+                      selectable
+                      style={{
+                        fontSize: 11.5,
+                        color: '#64748B',
+                        textAlign: 'center',
+                        fontFamily: systemFontMedium,
+                        marginTop: 3
+                      }}
+                      numberOfLines={1}
+                    >
+                      {statusSubLabel}
+                    </Text>
+                  ) : null}
+                </>
               )}
             </View>
           ) : null)}
