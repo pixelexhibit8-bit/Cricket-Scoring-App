@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   themeColors,
@@ -22,6 +23,42 @@ function isKnockoutStage(stage) {
   if (!stage || typeof stage !== 'string') return false;
   const s = stage.trim().toLowerCase();
   return s.includes('eliminator') || s.includes('final') || s.includes('semi') || s.includes('playoff') || s.includes('quarter') || s.includes('qualifier');
+}
+
+function getRibbonConfig(stage, matchNumber) {
+  const rawText = stage || (matchNumber ? `Match ${matchNumber}` : 'MATCH');
+  const upperText = String(rawText).toUpperCase().trim();
+  const lower = upperText.toLowerCase();
+
+  // ONLY FINAL gets the vibrant Golden Orange gradient
+  if (lower.includes('final') && !lower.includes('semi')) {
+    return {
+      text: upperText,
+      gradient: ['#EA580C', '#F97316']
+    };
+  }
+
+  // Semi-Final gets rich Deep Navy / Royal Blue gradient
+  if (lower.includes('semi')) {
+    return {
+      text: upperText,
+      gradient: ['#0F2744', '#1E3A8A']
+    };
+  }
+
+  // Eliminator / Qualifier / Playoffs / Quarter-Final
+  if (lower.includes('eliminator') || lower.includes('qualifier') || lower.includes('playoff') || lower.includes('quarter')) {
+    return {
+      text: upperText,
+      gradient: ['#312E81', '#4F46E5']
+    };
+  }
+
+  // Default League / Group / Match X
+  return {
+    text: upperText,
+    gradient: ['#1E293B', '#334155']
+  };
 }
 
 export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
@@ -118,8 +155,7 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
             const t2Code = t2Resolved.shortName || (typeof t2Name === 'string' ? t2Name.slice(0, 6).toUpperCase() : 'T2');
 
             const hasRibbon = Boolean(m.stage) || isKnockoutStage(m.stage) || isFinished;
-            const ribbonText = m.stage || (m.matchNumber ? `Match ${m.matchNumber}` : 'Match');
-            const ribbonBg = '#EA580C'; // Warm Orange background
+            const ribbonConfig = getRibbonConfig(m.stage, m.matchNumber);
             const resultColor = getResultColor(m, idx);
 
             return (
@@ -135,13 +171,18 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
                   else if (isUserOrganiser && onStartMatchScoring) onStartMatchScoring(m);
                 }}
               >
-                {/* Left Vertical Ribbon: Orange with White Text */}
+                {/* Left Vertical Ribbon: Dynamic Stage Gradient with Uppercase Text */}
                 {hasRibbon ? (
-                  <View style={[styles.cardRibbon, { backgroundColor: ribbonBg }]}>
+                  <LinearGradient
+                    colors={ribbonConfig.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={styles.cardRibbon}
+                  >
                     <Text style={styles.cardRibbonText} numberOfLines={1}>
-                      {ribbonText}
+                      {ribbonConfig.text}
                     </Text>
-                  </View>
+                  </LinearGradient>
                 ) : null}
 
                 {/* Match Card Body */}
@@ -485,17 +526,18 @@ const styles = StyleSheet.create({
     height: 74
   },
   cardRibbon: {
-    width: 24,
+    width: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4
+    height: '100%'
   },
   cardRibbonText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 9.5,
     fontFamily: systemFontBold,
+    letterSpacing: 0.6,
     transform: [{ rotate: '-90deg' }],
-    width: 65,
+    width: 72,
     textAlign: 'center'
   },
   matchCardBody: {
