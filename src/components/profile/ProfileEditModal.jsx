@@ -267,7 +267,7 @@ export const ProfileEditModal = React.memo(function ProfileEditModal({
         currentCity={editCity}
         onClose={() => setLocationPickerVisible(false)}
         onSelectLocation={(loc) => {
-          setEditCity(loc.formatted || loc.city);
+          setEditCity(loc.formattedAddress || loc.formatted || loc.city);
         }}
       />
 

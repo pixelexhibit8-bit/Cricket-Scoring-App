@@ -29,8 +29,9 @@ import {
 import { getCurrentUser } from '../services/authService.js';
 import { PhoneLoginModal } from '../components/modals/PhoneLoginModal.jsx';
 import { CricCalendarModal, formatCricDate } from '../components/modals/CricCalendarModal.jsx';
+import { LocationPickerModal } from '../components/modals/LocationPickerModal.jsx';
+import { getCurrentGpsLocation } from '../services/locationService.js';
 import { useMatch } from '../context/MatchContext.jsx';
-import { searchCities } from '../utils/cityDatabase.js';
 
 export function CreateTournamentScreen(props = {}) {
   const matchCtx = useMatch();
@@ -84,10 +85,11 @@ export function CreateTournamentScreen(props = {}) {
   const [logoUri, setLogoUri] = useState(null);
   const [tournamentName, setTournamentName] = useState('');
 
-  // City Auto-Suggest
+  // Location State (Structured & String)
   const [city, setCity] = useState('');
-  const [citySuggestions, setCitySuggestions] = useState([]);
-  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [location, setLocation] = useState(null);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
 
   // Multi-Ground / Venues Tag Manager
   const [venues, setVenues] = useState([]);
@@ -157,23 +159,31 @@ export function CreateTournamentScreen(props = {}) {
   const [needOfficials, setNeedOfficials] = useState(false);
   const [assignedScorerPhone, setAssignedScorerPhone] = useState('');
 
-  // ── City Auto-Suggest Handlers ──
-  const handleCityChange = (text) => {
-    setCity(text);
-    if (text.trim().length > 0) {
-      const matches = searchCities(text, 6);
-      setCitySuggestions(matches);
-      setShowCityDropdown(matches.length > 0);
-    } else {
-      setCitySuggestions([]);
-      setShowCityDropdown(false);
+  // Quick 1-Tap GPS Auto-Detect Handler
+  const handleQuickGps = async () => {
+    setGpsLoading(true);
+    try {
+      const res = await getCurrentGpsLocation();
+      if (res.success && res.location) {
+        setLocation(res.location);
+        setCity(res.location.formattedAddress || res.location.city);
+      } else {
+        Alert.alert(
+          'GPS Location',
+          res.message || 'Could not auto-detect GPS location. Please tap search to select manually.'
+        );
+      }
+    } catch (e) {
+      Alert.alert('GPS Location', 'GPS detection failed. Please search manually.');
+    } finally {
+      setGpsLoading(false);
     }
   };
 
-  const handleSelectCity = (selectedCity) => {
-    setCity(selectedCity);
-    setShowCityDropdown(false);
-    Keyboard.dismiss();
+  const handleSelectLocation = (selectedLoc) => {
+    if (!selectedLoc) return;
+    setLocation(selectedLoc);
+    setCity(selectedLoc.formattedAddress || selectedLoc.city);
   };
 
   // ── Venue Tag Handlers ──
@@ -283,8 +293,9 @@ export function CreateTournamentScreen(props = {}) {
       name: tournamentName.trim(),
       title: tournamentName.trim(),
       fullName: tournamentName.trim(),
-      city: city.trim(),
-      host: city.trim() || 'Local Ground',
+      city: city.trim() || location?.formattedAddress || location?.city || '',
+      location: location || (city.trim() ? { city: city.trim(), formattedAddress: city.trim() } : null),
+      host: city.trim() || location?.formattedAddress || location?.city || 'Local Ground',
       venues: finalVenues,
       venue: finalVenues[0],
       tournamentType: tournamentType,
@@ -488,55 +499,69 @@ export function CreateTournamentScreen(props = {}) {
                   />
                 </View>
 
-                {/* City Auto-Suggest */}
-                <View style={[styles.inputGroup, { zIndex: 10 }]}>
-                  <Text style={styles.inputLabel}>City / District *</Text>
-                  <View style={styles.cityInputWrapper}>
-                    <Ionicons name="location-outline" size={18} color={themeColors.textSecondary} style={styles.cityInputIcon} />
-                    <TextInput
-                      style={[styles.textInput, styles.cityTextInput]}
-                      placeholder="Type city e.g. Nagaur, Jaipur, Delhi..."
-                      placeholderTextColor={themeColors.textSubtle}
-                      value={city}
-                      onChangeText={handleCityChange}
-                      onFocus={() => {
-                        if (city.trim().length > 0) {
-                          const matches = searchCities(city, 6);
-                          setCitySuggestions(matches);
-                          setShowCityDropdown(matches.length > 0);
-                        }
+                {/* Location / City Selector */}
+                <View style={styles.inputGroup}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <Text style={styles.inputLabel}>City / Ground Location *</Text>
+                    <TouchableOpacity
+                      onPress={handleQuickGps}
+                      disabled={gpsLoading}
+                      activeOpacity={0.7}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        backgroundColor: '#F0F9FF',
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: '#BAE6FD'
                       }}
-                    />
-                    {city.length > 0 && (
-                      <TouchableOpacity
-                        style={styles.clearCityBtn}
-                        onPress={() => {
-                          setCity('');
-                          setCitySuggestions([]);
-                          setShowCityDropdown(false);
-                        }}
-                      >
-                        <Ionicons name="close-circle" size={18} color={themeColors.textMuted} />
-                      </TouchableOpacity>
-                    )}
+                    >
+                      {gpsLoading ? (
+                        <ActivityIndicator size="small" color="#0284C7" />
+                      ) : (
+                        <Ionicons name="navigate-circle-outline" size={14} color="#0284C7" />
+                      )}
+                      <Text style={{ fontSize: 11, fontFamily: systemFontMedium, color: '#0284C7' }}>
+                        {gpsLoading ? 'Detecting...' : 'Auto-Detect (GPS)'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
 
-                  {/* Auto-Suggest Dropdown */}
-                  {showCityDropdown && citySuggestions.length > 0 && (
-                    <View style={styles.suggestionsContainer}>
-                      {citySuggestions.map((item, index) => (
-                        <TouchableOpacity
-                          key={`${item}-${index}`}
-                          style={styles.suggestionItem}
-                          onPress={() => handleSelectCity(item)}
-                          activeOpacity={0.7}
-                        >
-                          <Ionicons name="location" size={15} color="#18181B" style={{ marginRight: 8 }} />
-                          <Text style={styles.suggestionText}>{item}</Text>
-                        </TouchableOpacity>
-                      ))}
+                  <TouchableOpacity
+                    style={[styles.textInput, styles.cityInputWrapper, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 12 }]}
+                    onPress={() => setLocationModalVisible(true)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
+                      <Ionicons name="location-outline" size={18} color="#0284C7" />
+                      <Text
+                        style={[
+                          styles.cityPickerDisplayText,
+                          !city && { color: themeColors.textSubtle }
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {city || 'Search city, town, or tap GPS...'}
+                      </Text>
                     </View>
-                  )}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {city ? (
+                        <TouchableOpacity
+                          onPress={() => {
+                            setCity('');
+                            setLocation(null);
+                          }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="close-circle" size={18} color={themeColors.textMuted} />
+                        </TouchableOpacity>
+                      ) : null}
+                      <Ionicons name="search" size={16} color="#64748B" />
+                    </View>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Tournament Dates */}
@@ -1219,6 +1244,15 @@ export function CreateTournamentScreen(props = {}) {
             setEndDate(eDate);
           }}
         />
+
+        <LocationPickerModal
+          visible={locationModalVisible}
+          currentLocation={location}
+          currentCity={city}
+          title="Select Tournament Location"
+          onClose={() => setLocationModalVisible(false)}
+          onSelectLocation={handleSelectLocation}
+        />
       </View>
     </SafeAreaView>
   );
@@ -1494,6 +1528,11 @@ const styles = StyleSheet.create({
   cityTextInput: {
     paddingLeft: 38,
     paddingRight: 36
+  },
+  cityPickerDisplayText: {
+    fontSize: 14,
+    fontFamily: systemFont,
+    color: themeColors.textPrimary
   },
   clearCityBtn: {
     position: 'absolute',
