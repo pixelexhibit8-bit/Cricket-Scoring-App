@@ -255,7 +255,8 @@ export function useScorerWorkflow({
   const isDummyTeamName = (n) => !n || n === 'Team 1' || n === 'Team 2' || n === 'TM' || n === 'Team A' || n === 'Team B';
 
   const filterLiveMatch = (m) => {
-    if (!m || m.phase === 'result' || m.phase === 'finished' || m.isCompleted) return false;
+    if (!m || m.phase === 'result' || m.phase === 'finished' || m.phase === 'completed' || m.isCompleted) return false;
+    if (m.resultText || m.result || m.winner || m.winnerTeamName) return false;
     const t1Name = m.teams?.[0]?.name || m.team1?.name || m.innings?.[0]?.battingTeam?.name || m.inn1BattingTeam;
     const t2Name = m.teams?.[1]?.name || m.team2?.name || m.innings?.[0]?.bowlingTeam?.name || m.inn1BowlingTeam;
     if (isDummyTeamName(t1Name) || isDummyTeamName(t2Name)) return false;
