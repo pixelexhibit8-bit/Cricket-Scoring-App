@@ -16,7 +16,7 @@ import {
   systemFontBold
 } from '../../theme.js';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
-import { resolveTeamWithRoster, formatMatchResult, cleanMatchDate } from '../../utils/teamUtils.js';
+import { resolveTeamWithRoster, formatMatchResult, cleanMatchDate, getScorePartsFromText } from '../../utils/teamUtils.js';
 
 function getOrdinal(n) {
   const num = parseInt(n, 10);
@@ -156,13 +156,15 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
               const t1Name = t1Resolved.shortName || t1Resolved.name || 'Team 1';
               const t2Name = t2Resolved.shortName || t2Resolved.name || 'Team 2';
 
-              const t1Score = m.team1?.score || (m.innings?.[0]?.battingTeam?.runs != null ? `${m.innings[0].battingTeam.runs}/${m.innings[0].battingTeam.wickets || 0}` : '158-7');
-              const t1Overs = m.team1?.overs || (m.innings?.[0]?.overs ? `${m.innings[0].overs}` : (m.overs ? `${m.overs}.0` : '20.0'));
-              const t1OversClean = String(t1Overs).replace(/[()]/g, '').trim();
+              const t1Raw = m.team1?.score || (m.innings?.[0]?.battingTeam?.runs != null ? `${m.innings[0].battingTeam.runs}-${m.innings[0].battingTeam.wickets || 0}` : (m.team1?.runs != null ? `${m.team1.runs}-${m.team1.wickets || 0}` : ''));
+              const t1Parts = getScorePartsFromText(t1Raw);
+              const t1Score = t1Parts.score || (m.team1?.runs != null ? `${m.team1.runs}-${m.team1.wickets || 0}` : (m.innings?.[0]?.battingTeam?.runs != null ? `${m.innings[0].battingTeam.runs}-${m.innings[0].battingTeam.wickets || 0}` : (t1Raw || '0-0')));
+              const t1Overs = t1Parts.overs || (m.team1?.overs ? String(m.team1.overs).replace(/[()]/g, '').trim() : (m.innings?.[0]?.overs ? String(m.innings[0].overs).replace(/[()]/g, '').trim() : ''));
 
-              const t2Score = m.team2?.score || (m.innings?.[1]?.battingTeam?.runs != null ? `${m.innings[1].battingTeam.runs}/${m.innings[1].battingTeam.wickets || 0}` : '159-5');
-              const t2Overs = m.team2?.overs || (m.innings?.[1]?.overs ? `${m.innings[1].overs}` : (m.overs ? `${m.overs}.0` : '19.0'));
-              const t2OversClean = String(t2Overs).replace(/[()]/g, '').trim();
+              const t2Raw = m.team2?.score || (m.innings?.[1]?.battingTeam?.runs != null ? `${m.innings[1].battingTeam.runs}-${m.innings[1].battingTeam.wickets || 0}` : (m.team2?.runs != null ? `${m.team2.runs}-${m.team2.wickets || 0}` : ''));
+              const t2Parts = getScorePartsFromText(t2Raw);
+              const t2Score = t2Parts.score || (m.team2?.runs != null ? `${m.team2.runs}-${m.team2.wickets || 0}` : (m.innings?.[1]?.battingTeam?.runs != null ? `${m.innings[1].battingTeam.runs}-${m.innings[1].battingTeam.wickets || 0}` : (t2Raw || '0-0')));
+              const t2Overs = t2Parts.overs || (m.team2?.overs ? String(m.team2.overs).replace(/[()]/g, '').trim() : (m.innings?.[1]?.overs ? String(m.innings[1].overs).replace(/[()]/g, '').trim() : ''));
 
               const headerTitle = formatMatchHeaderTitle(m, tournament, idx);
               const { winnerHeadline, marginText } = formatMatchResult(m, t1Resolved, t2Resolved, teams);
@@ -190,8 +192,10 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                           {t1Name}
                         </Text>
                         <Text style={styles.completedScoreMain}>
-                          {t1Score}{' '}
-                          <Text style={styles.completedOversSub}>{t1OversClean}</Text>
+                          {t1Score}
+                          {t1Overs ? (
+                            <Text style={styles.completedOversSub}> ({t1Overs})</Text>
+                          ) : null}
                         </Text>
                       </View>
 
@@ -202,8 +206,10 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                           {t2Name}
                         </Text>
                         <Text style={styles.completedScoreMain}>
-                          {t2Score}{' '}
-                          <Text style={styles.completedOversSub}>{t2OversClean}</Text>
+                          {t2Score}
+                          {t2Overs ? (
+                            <Text style={styles.completedOversSub}> ({t2Overs})</Text>
+                          ) : null}
                         </Text>
                       </View>
                     </View>
@@ -610,7 +616,7 @@ const styles = StyleSheet.create({
   },
   completedScoreMain: {
     fontSize: 16.5,
-    fontFamily: systemFontBold,
+    fontFamily: systemFontMedium,
     color: '#0F172A'
   },
   completedOversSub: {
@@ -631,8 +637,8 @@ const styles = StyleSheet.create({
     paddingLeft: 4
   },
   resultWonHeadline: {
-    fontSize: 17.5,
-    fontFamily: systemFontBold,
+    fontSize: 16.5,
+    fontFamily: systemFontMedium,
     color: '#9F1239',
     textAlign: 'center'
   },
