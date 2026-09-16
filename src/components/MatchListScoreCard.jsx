@@ -197,29 +197,12 @@ export const MatchListScoreCard = ({
                   ) : null}
                 </>
               ) : (
-                <>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFE4E6', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4, gap: 4 }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#E11D48' }} />
-                    <Text style={{ color: '#E11D48', fontSize: 10, fontFamily: systemFontBold }}>
-                      LIVE
-                    </Text>
-                  </View>
-                  {statusSubLabel ? (
-                    <Text
-                      selectable
-                      style={{
-                        fontSize: 11.5,
-                        color: '#64748B',
-                        textAlign: 'center',
-                        fontFamily: systemFontMedium,
-                        marginTop: 3
-                      }}
-                      numberOfLines={1}
-                    >
-                      {statusSubLabel}
-                    </Text>
-                  ) : null}
-                </>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFE4E6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, gap: 5 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#E11D48' }} />
+                  <Text style={{ color: '#E11D48', fontSize: 11, fontFamily: systemFontBold, letterSpacing: 0.3 }}>
+                    LIVE
+                  </Text>
+                </View>
               )}
             </View>
           ) : null)}

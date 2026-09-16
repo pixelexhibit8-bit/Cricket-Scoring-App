@@ -164,7 +164,6 @@ export function MatchesScreen(props = {}) {
           teamTwoOvers={t2Overs}
           activeTeamName={activeBattingTeamName}
           statusLabel="Live"
-          statusSubLabel={venue || 'Sadokan Ground'}
           statusColor="#E11D48"
           statusDotColor="#E11D48"
           footerText={`Toss: ${tossWin}, Elected to ${tossDec}`}

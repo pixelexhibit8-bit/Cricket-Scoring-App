@@ -302,9 +302,6 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                         <View style={styles.livePulseDot} />
                         <Text style={styles.liveBadgeText}>LIVE</Text>
                       </View>
-                      <Text style={{ fontSize: 11.5, fontFamily: systemFontMedium, color: '#64748B', textAlign: 'center', marginTop: 3 }} numberOfLines={1}>
-                        {m.venue || tournament?.city || 'Sadokan Ground'}
-                      </Text>
                     </View>
                   </View>
 
