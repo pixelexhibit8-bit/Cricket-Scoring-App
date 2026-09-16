@@ -36,15 +36,9 @@ export function AutoGenerateFixturesModal({
   const completedMatches = currentMatches.filter(
     m => m.status === 'FINISHED' || Boolean(m.result) || m.phase === 'result' || m.phase === 'finished'
   );
-  const liveMatches = currentMatches.filter(
-    m => m.status === 'LIVE' || m.phase === 'playing'
-  );
 
   const numTeams = teams.length;
-  const numLeagueMatches = (numTeams * Math.max(1, numTeams - 1)) / 2;
-
-  // Step: 'guidelines' (Screenshot 1)
-  const [step, setStep] = useState('guidelines');
+  const numLeagueMatches = Math.max(0, (numTeams * Math.max(1, numTeams - 1)) / 2);
 
   const tournamentVenues = Array.isArray(tournament?.venues) && tournament.venues.length > 0
     ? tournament.venues
@@ -59,9 +53,10 @@ export function AutoGenerateFixturesModal({
   const [includePlayoffs, setIncludePlayoffs] = useState(numTeams >= 4);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const totalMatches = includePlayoffs ? (numLeagueMatches + (numTeams >= 4 ? 3 : 1)) : numLeagueMatches;
+
   useEffect(() => {
     if (visible) {
-      setStep('guidelines');
       setVenue(defaultVenue);
       setOvers(String(defaultOvers));
       setIncludePlayoffs(numTeams >= 4);
@@ -81,8 +76,8 @@ export function AutoGenerateFixturesModal({
 
     setIsGenerating(true);
     try {
-      const targetVenue = tournamentVenues[0] || tournament?.ground || tournament?.venue || (tournament?.city ? `${tournament.city} Cricket Ground` : 'Cricket Ground');
-      const targetOvers = parseInt(tournament?.overs || tournament?.matchOvers || tournament?.oversPerMatch || overs || 10, 10);
+      const targetVenue = venue.trim() || defaultVenue;
+      const targetOvers = parseInt(overs || defaultOvers || 10, 10);
       const targetStartDate = tournament?.startDate || defaultStartDate;
 
       const generated = generateRoundRobinFixtures(teams, {
@@ -90,12 +85,12 @@ export function AutoGenerateFixturesModal({
         matchTimes: ['09:30 AM', '02:00 PM', '05:30 PM'],
         venue: targetVenue,
         overs: targetOvers,
-        includePlayoffs: numTeams >= 4,
+        includePlayoffs: includePlayoffs && numTeams >= 4,
         tournamentId: tournament.id,
         tournamentName: tournament.name || tournament.title || 'Tournament'
       });
 
-      // ── CRITICAL SAFEGUARD: PRESERVE ONLY GENUINELY FINISHED MATCHES ──
+      // ── SAFEGUARD: PRESERVE ONLY GENUINELY FINISHED MATCHES ──
       const lockedMatches = currentMatches.filter(
         m => m.status === 'FINISHED' || Boolean(m.result) || m.phase === 'finished'
       );
@@ -120,7 +115,7 @@ export function AutoGenerateFixturesModal({
         await onSaveFixtures(finalFixturesList);
       }
 
-      showToast(`Generated ${generated.length} tournament fixtures successfully!`, 'success', 'Fixtures Scheduled');
+      showToast(`Scheduled ${generated.length} tournament fixtures successfully!`, 'success', 'Fixtures Scheduled');
       onClose();
     } catch (err) {
       console.warn('Fixture generation error:', err);
@@ -130,301 +125,196 @@ export function AutoGenerateFixturesModal({
     }
   };
 
-  const handleProceedFromGuidelines = () => {
-    handleGenerate();
-  };
-
   return (
     <Modal
       visible={visible}
-      animationType="fade"
+      animationType="slide"
       transparent={true}
       onRequestClose={onClose}
     >
-      {step === 'guidelines' ? (
-        /* ── STEP 1: AUTO SCHEDULE GUIDELINES DIALOG (MATCHES SCREENSHOT) ── */
-        <Pressable style={styles.modalOverlayCenter} onPress={onClose}>
-          <Pressable style={styles.guidelinesDialogCard} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.guidelinesTitle}>Auto schedule guidelines</Text>
-
-            <View style={styles.guidelinesContentBlock}>
-              <Text style={styles.guidelineBulletItem}>
-                • Add all teams to the tournament first (at least team names).
-              </Text>
-              <Text style={[styles.guidelineBulletItem, { marginTop: 12 }]}>
-                • Add all required rounds and groups before you start
-              </Text>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeftCol}>
+              <View style={styles.headerIconBox}>
+                <MaterialCommunityIcons name="lightning-bolt" size={20} color="#18181B" />
+              </View>
+              <Text style={styles.headerTitle}>Auto Schedule Fixtures</Text>
             </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
+              <Ionicons name="close" size={22} color="#64748B" />
+            </TouchableOpacity>
+          </View>
 
+          <ScrollView
+            style={styles.scrollContent}
+            contentContainerStyle={styles.scrollContentContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Safe Reschedule Info Banner if matches already completed */}
             {completedMatches.length > 0 ? (
-              <View style={styles.safeRescheduleNotice}>
-                <MaterialCommunityIcons name="shield-check" size={16} color="#0D9488" />
-                <Text style={styles.safeRescheduleNoticeText}>
-                  {completedMatches.length} completed match scorecards are locked and will be preserved.
-                </Text>
+              <View style={styles.safeRescheduleCard}>
+                <Ionicons name="shield-checkmark-outline" size={18} color="#18181B" />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={styles.safeRescheduleTitle}>Safe Reschedule Active</Text>
+                  <Text style={styles.safeRescheduleText}>
+                    {completedMatches.length} completed match scorecards are locked and will be preserved. Only upcoming fixtures will be generated.
+                  </Text>
+                </View>
               </View>
             ) : null}
 
-            {/* Dialog Footer Actions */}
-            <View style={styles.dialogFooterRow}>
-              <TouchableOpacity
-                style={styles.dialogCancelBtn}
-                onPress={onClose}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.dialogCancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.dialogOkBtn, isGenerating && { opacity: 0.7 }]}
-                onPress={handleProceedFromGuidelines}
-                disabled={isGenerating}
-                activeOpacity={0.85}
-              >
-                {isGenerating ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.dialogOkText}>Ok</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      ) : (
-        /* ── STEP 2: FIXTURE GENERATOR CONFIG FORM ── */
-        <View style={styles.modalOverlayBottom}>
-          <View style={styles.modalContainer}>
-            {/* Header */}
-            <View style={styles.headerRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <MaterialCommunityIcons name="lightning-bolt" size={22} color="#0284C7" />
-                <Text style={styles.headerTitle}>Auto Fixture Generator</Text>
+            {/* Participating Teams Summary */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Participating Teams ({numTeams})</Text>
+                <View style={styles.matchCountBadge}>
+                  <Text style={styles.matchCountBadgeText}>{totalMatches} Matches</Text>
+                </View>
               </View>
-              <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
-                <Ionicons name="close" size={22} color="#64748B" />
-              </TouchableOpacity>
-            </View>
 
-            <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-              {/* Safe Reschedule Info Banner if in-progress */}
-              {completedMatches.length > 0 ? (
-                <View style={styles.activeTournamentBanner}>
-                  <MaterialCommunityIcons name="shield-lock" size={18} color="#0D9488" />
-                  <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={styles.activeBannerTitle}>Safe Reschedule Active</Text>
-                    <Text style={styles.activeBannerDesc}>
-                      {completedMatches.length} completed match results and points table records are locked. Only upcoming fixtures will be generated.
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
-
-              {/* Participating Teams Summary */}
-              <View style={styles.summaryCard}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <Text style={styles.summaryTitle}>Participating Teams ({numTeams})</Text>
-                  <View style={styles.matchCountBadge}>
-                    <Text style={styles.matchCountBadgeText}>{totalMatches} Matches</Text>
-                  </View>
-                </View>
-
+              {teams.length > 0 ? (
                 <View style={styles.teamsListRow}>
                   {teams.map((t, idx) => (
-                    <View key={t.id || idx} style={styles.teamChip}>
-                      <TeamIdentityMark team={t} size={18} />
-                      <Text style={styles.teamChipText} numberOfLines={1}>{t.shortName || t.name || `Team ${idx + 1}`}</Text>
+                    <View key={t.id || `team_${idx}`} style={styles.teamChip}>
+                      <TeamIdentityMark team={t} size={16} />
+                      <Text style={styles.teamChipText} numberOfLines={1}>
+                        {t.shortName || t.name || `Team ${idx + 1}`}
+                      </Text>
                     </View>
                   ))}
                 </View>
-              </View>
+              ) : (
+                <Text style={styles.emptyNoticeText}>
+                  No teams added yet. Please add at least 2 teams to generate fixtures.
+                </Text>
+              )}
+            </View>
 
-              {/* Config Fields */}
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Start Date</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={startDate}
-                  onChangeText={setStartDate}
-                  placeholder="e.g. 24 Oct 2026"
-                  placeholderTextColor="#94A3B8"
-                />
+            {/* Guidelines Card */}
+            <View style={styles.guidelinesCard}>
+              <View style={styles.guidelineRow}>
+                <Ionicons name="checkmark-circle-outline" size={16} color="#18181B" style={{ marginTop: 2 }} />
+                <Text style={styles.guidelineText}>
+                  Generates balanced round-robin fixtures where every team plays against each other.
+                </Text>
               </View>
-
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Ground / Venue</Text>
-                {tournamentVenues.length > 1 ? (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 8 }}>
-                    {tournamentVenues.map(v => (
-                      <TouchableOpacity
-                        key={`v_${v}`}
-                        style={[styles.venueSelectChip, venue === v && styles.venueSelectChipActive]}
-                        onPress={() => setVenue(v)}
-                      >
-                        <Text style={[styles.venueSelectChipText, venue === v && styles.venueSelectChipTextActive]}>{v}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                ) : null}
-                <TextInput
-                  style={styles.textInput}
-                  value={venue}
-                  onChangeText={setVenue}
-                  placeholder="Ground Name"
-                  placeholderTextColor="#94A3B8"
-                />
+              <View style={[styles.guidelineRow, { marginTop: 8 }]}>
+                <Ionicons name="checkmark-circle-outline" size={16} color="#18181B" style={{ marginTop: 2 }} />
+                <Text style={styles.guidelineText}>
+                  Evenly distributes matches across morning, afternoon, and evening slots.
+                </Text>
               </View>
+            </View>
 
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Overs Per Match</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={overs}
-                  onChangeText={setOvers}
-                  keyboardType="numeric"
-                  placeholder="10"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
+            {/* Ground / Venue Field */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Ground / Venue</Text>
+              {tournamentVenues.length > 1 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.venueChipsScroll}>
+                  {tournamentVenues.map(v => (
+                    <TouchableOpacity
+                      key={`venue_${v}`}
+                      style={[styles.venueChip, venue === v && styles.venueChipActive]}
+                      onPress={() => setVenue(v)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.venueChipText, venue === v && styles.venueChipTextActive]}>
+                        {v}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              ) : null}
+              <TextInput
+                style={styles.textInput}
+                value={venue}
+                onChangeText={setVenue}
+                placeholder="Enter Ground Name"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
 
-              {/* Playoffs Toggle */}
+            {/* Overs Per Match */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Overs Per Match</Text>
+              <TextInput
+                style={styles.textInput}
+                value={overs}
+                onChangeText={setOvers}
+                keyboardType="numeric"
+                placeholder="10"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+
+            {/* Playoffs Toggle (Semi-Finals & Final) */}
+            {numTeams >= 4 ? (
               <View style={styles.switchRow}>
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={styles.switchLabel}>Include Playoffs (Semi-Finals & Final)</Text>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text style={styles.switchLabel}>Include Playoffs</Text>
                   <Text style={styles.switchSubLabel}>
-                    Top 4 teams qualify from Round-Robin standings for playoffs
+                    Top 4 teams qualify from standings for Semi-Finals & Final
                   </Text>
                 </View>
                 <Switch
                   value={includePlayoffs}
                   onValueChange={setIncludePlayoffs}
-                  trackColor={{ false: '#E2E8F0', true: '#0284C7' }}
+                  trackColor={{ false: '#E2E8F0', true: '#18181B' }}
                   thumbColor="#FFFFFF"
                 />
               </View>
+            ) : null}
 
-              <View style={{ height: 20 }} />
-            </ScrollView>
+            <View style={{ height: 16 }} />
+          </ScrollView>
 
-            {/* Action Footer */}
-            <View style={styles.footerRow}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.8}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
+          {/* Action Footer */}
+          <View style={styles.footerRow}>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.generateBtn, isGenerating && { opacity: 0.6 }]}
-                onPress={handleGenerate}
-                disabled={isGenerating}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons name="lightning-bolt" size={18} color="#FFFFFF" />
-                <Text style={styles.generateBtnText}>
-                  {isGenerating ? 'GENERATING...' : (completedMatches.length > 0 ? 'RESCHEDULE UPCOMING' : 'GENERATE FIXTURES')}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.generateBtn, (isGenerating || numTeams < 2) && { opacity: 0.6 }]}
+              onPress={handleGenerate}
+              disabled={isGenerating || numTeams < 2}
+              activeOpacity={0.85}
+            >
+              {isGenerating ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <MaterialCommunityIcons name="lightning-bolt" size={18} color="#FFFFFF" />
+                  <Text style={styles.generateBtnText}>
+                    {completedMatches.length > 0 ? 'Reschedule Upcoming' : 'Generate Fixtures'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-        </View>
-      )}
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlayCenter: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24
-  },
-  guidelinesDialogCard: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8
-  },
-  guidelinesTitle: {
-    fontSize: 18,
-    fontFamily: systemFontBold,
-    color: '#DC2626',
-    paddingHorizontal: 22,
-    paddingTop: 22,
-    paddingBottom: 10
-  },
-  guidelinesContentBlock: {
-    paddingHorizontal: 22,
-    paddingBottom: 22
-  },
-  guidelineBulletItem: {
-    fontSize: 13.5,
-    fontFamily: systemFontMedium,
-    color: '#334155',
-    lineHeight: 20
-  },
-  safeRescheduleNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginHorizontal: 22,
-    marginBottom: 16,
-    padding: 10,
-    backgroundColor: '#F0FDFA',
-    borderRadius: 6,
-    borderWidth: 0,
-    borderColor: '#CCFBF1'
-  },
-  safeRescheduleNoticeText: {
-    fontSize: 12,
-    fontFamily: systemFontMedium,
-    color: '#0F766E',
-    flex: 1
-  },
-  dialogFooterRow: {
-    flexDirection: 'row',
-    borderTopWidth: 0,
-    borderTopColor: '#F1F5F9'
-  },
-  dialogCancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F8FAFC'
-  },
-  dialogCancelText: {
-    fontSize: 14,
-    fontFamily: systemFontMedium,
-    color: '#64748B'
-  },
-  dialogOkBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0D9488'
-  },
-  dialogOkText: {
-    fontSize: 14,
-    fontFamily: systemFontBold,
-    color: '#FFFFFF'
-  },
-  modalOverlayBottom: {
+  modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'flex-end'
   },
-  modalContainer: {
+  modalCard: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
+    maxHeight: '92%',
     paddingTop: 16,
     paddingBottom: 24,
     borderWidth: 0,
@@ -436,11 +326,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 14,
-    borderBottomWidth: 0,
+    borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9'
   },
+  headerLeftCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  headerIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F4F4F5',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   headerTitle: {
-    fontSize: 16.5,
+    fontSize: 17,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary
   },
@@ -448,46 +351,55 @@ const styles = StyleSheet.create({
     padding: 4
   },
   scrollContent: {
+    maxHeight: 480
+  },
+  scrollContentContainer: {
     paddingHorizontal: 20,
     paddingTop: 14
   },
-  activeTournamentBanner: {
+  safeRescheduleCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#F0FDFA',
-    borderWidth: 0,
-    borderColor: '#99F6E4',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 14
   },
-  activeBannerTitle: {
-    fontSize: 12.5,
+  safeRescheduleTitle: {
+    fontSize: 13,
     fontFamily: systemFontBold,
-    color: '#0F766E'
+    color: themeColors.textPrimary
   },
-  activeBannerDesc: {
-    fontSize: 11.5,
+  safeRescheduleText: {
+    fontSize: 12,
     fontFamily: systemFont,
-    color: '#115E59',
+    color: themeColors.textSecondary,
     marginTop: 2,
-    lineHeight: 16
+    lineHeight: 17
   },
-  summaryCard: {
+  sectionCard: {
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
     padding: 14,
-    borderWidth: 0,
-    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
     marginBottom: 14
   },
-  summaryTitle: {
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10
+  },
+  sectionTitle: {
     fontSize: 13.5,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary
   },
   matchCountBadge: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: '#18181B',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6
@@ -495,7 +407,7 @@ const styles = StyleSheet.create({
   matchCountBadgeText: {
     fontSize: 11,
     fontFamily: systemFontBold,
-    color: '#0284C7'
+    color: '#FFFFFF'
   },
   teamsListRow: {
     flexDirection: 'row',
@@ -505,19 +417,44 @@ const styles = StyleSheet.create({
   teamChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: '#FFFFFF',
-    borderWidth: 0,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5
   },
   teamChipText: {
-    fontSize: 11.5,
+    fontSize: 12,
+    fontFamily: systemFontMedium,
+    color: themeColors.textPrimary,
+    maxWidth: 120
+  },
+  emptyNoticeText: {
+    fontSize: 12,
+    fontFamily: systemFont,
+    color: themeColors.textMuted
+  },
+  guidelinesCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
+    marginBottom: 14
+  },
+  guidelineRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8
+  },
+  guidelineText: {
+    flex: 1,
+    fontSize: 12.5,
     fontFamily: systemFontMedium,
     color: '#334155',
-    maxWidth: 100
+    lineHeight: 18
   },
   fieldGroup: {
     marginBottom: 14
@@ -528,34 +465,38 @@ const styles = StyleSheet.create({
     color: themeColors.textPrimary,
     marginBottom: 6
   },
-  venueSelectChip: {
+  venueChipsScroll: {
+    gap: 6,
+    marginBottom: 8
+  },
+  venueChip: {
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 0,
-    borderColor: '#E2E8F0'
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F4F4F5',
+    borderWidth: 1,
+    borderColor: '#E4E4E7'
   },
-  venueSelectChipActive: {
-    backgroundColor: '#F0F9FF',
-    borderColor: '#0284C7'
+  venueChipActive: {
+    backgroundColor: '#18181B',
+    borderColor: '#18181B'
   },
-  venueSelectChipText: {
+  venueChipText: {
     fontSize: 12,
     fontFamily: systemFontMedium,
-    color: '#64748B'
+    color: '#52525B'
   },
-  venueSelectChipTextActive: {
-    color: '#0284C7',
+  venueChipTextActive: {
+    color: '#FFFFFF',
     fontFamily: systemFontBold
   },
   textInput: {
     backgroundColor: '#FAFAFC',
-    borderWidth: 0,
-    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
     borderRadius: 10,
     paddingHorizontal: 14,
-    height: 42,
+    height: 44,
     fontSize: 13.5,
     fontFamily: systemFontMedium,
     color: themeColors.textPrimary
@@ -565,11 +506,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 0,
-    borderColor: '#E2E8F0',
-    marginTop: 4
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
+    marginBottom: 14
   },
   switchLabel: {
     fontSize: 13,
@@ -588,26 +529,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     gap: 12,
-    borderTopWidth: 0,
+    borderTopWidth: 1,
     borderTopColor: '#F1F5F9'
   },
   cancelBtn: {
     flex: 1,
-    height: 44,
-    borderRadius: 10,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center'
   },
   cancelBtnText: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontFamily: systemFontMedium,
     color: '#64748B'
   },
   generateBtn: {
     flex: 2,
-    height: 44,
-    borderRadius: 10,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: '#18181B',
     flexDirection: 'row',
     alignItems: 'center',
@@ -615,7 +556,7 @@ const styles = StyleSheet.create({
     gap: 6
   },
   generateBtnText: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontFamily: systemFontBold,
     color: '#FFFFFF'
   }
