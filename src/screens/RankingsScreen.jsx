@@ -250,7 +250,8 @@ export function RankingsScreen(props = {}) {
   }, [activeCategory, tabLayouts]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.surface }} edges={['top', 'bottom', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" translucent={true} backgroundColor="transparent" />
       {/* ─── TOP HEADER BAR WITH BACK BUTTON ─── */}
       <View style={styles.topHeaderBar}>
         <TouchableOpacity

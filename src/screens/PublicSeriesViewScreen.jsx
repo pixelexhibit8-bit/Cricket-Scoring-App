@@ -737,8 +737,8 @@ export function PublicSeriesViewScreen(props = {}) {
   // Empty State View if no tournament
   if (!tournament || !tournament.id) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-        <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <StatusBar barStyle="dark-content" translucent={true} backgroundColor="transparent" />
         <View style={styles.container}>
           <View style={styles.headerBar}>
             {!isTab ? (
@@ -799,8 +799,8 @@ export function PublicSeriesViewScreen(props = {}) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" translucent={true} backgroundColor="transparent" />
       <View style={styles.container}>
 
         {/* ── 1. TOP CAROUSEL OF SERIES STORIES / BADGES ── */}

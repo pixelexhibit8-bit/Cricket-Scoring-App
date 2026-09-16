@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { systemFontMedium, themeColors } from '../theme.js';
-import { useMatch } from '../context/MatchContext.jsx';
 import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { OpeningPlayersSelector } from '../components/OpeningPlayersSelector.jsx';
 import { formatOvers } from '../utils/cricketUtils.js';
@@ -35,44 +35,47 @@ export function InningBreakScreen(props = {}) {
 
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
+      <StatusBar barStyle="dark-content" translucent={true} backgroundColor="transparent" />
       {/* TOP INNINGS BREAK BANNER */}
-      <View style={{ backgroundColor: themeColors.surface, borderBottomWidth: 1, borderBottomColor: themeColors.border }}>
-        <View style={{ minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: themeColors.surfaceOffWhite, borderBottomWidth: 1, borderBottomColor: themeColors.border }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="pause-circle" size={18} color="#18181B" />
-            <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }}>INNINGS BREAK</Text>
-          </View>
-          <View style={{ backgroundColor: '#F8F8FA', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#EEEEF0' }}>
-            <Text style={{ color: '#18181B', fontSize: 11, fontFamily: systemFontMedium }}>1ST INNINGS COMPLETED</Text>
-          </View>
-        </View>
-
-        {/* 1ST INNINGS SUMMARY SCORE */}
-        <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <TeamIdentityMark team={firstInningTeamMeta} size={44} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }} numberOfLines={1}>
-              {inn1.battingTeam.name.toUpperCase()}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
-              <Text selectable style={{ color: '#0F172A', fontSize: 22, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
-                {inn1.battingTeam.runs}-{inn1.battingTeam.wickets}
-              </Text>
-              <Text selectable style={{ color: '#64748B', fontSize: 12.5, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
-                {formatOvers(inn1.totalLegalBalls)} ({activeMatch.maxOvers} ov)
-              </Text>
+      <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: themeColors.surface }}>
+        <View style={{ backgroundColor: themeColors.surface, borderBottomWidth: 1, borderBottomColor: themeColors.border }}>
+          <View style={{ minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: themeColors.surfaceOffWhite, borderBottomWidth: 1, borderBottomColor: themeColors.border }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="pause-circle" size={18} color="#18181B" />
+              <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }}>INNINGS BREAK</Text>
+            </View>
+            <View style={{ backgroundColor: '#F8F8FA', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#EEEEF0' }}>
+              <Text style={{ color: '#18181B', fontSize: 11, fontFamily: systemFontMedium }}>1ST INNINGS COMPLETED</Text>
             </View>
           </View>
 
-          {/* TARGET CALLOUT BADGE */}
-          <View style={{ alignItems: 'flex-end', backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
-            <Text style={{ color: '#92400E', fontSize: 9.5, fontFamily: systemFontMedium }}>TARGET</Text>
-            <Text selectable style={{ color: '#B45309', fontSize: 18, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
-              {target}
-            </Text>
+          {/* 1ST INNINGS SUMMARY SCORE */}
+          <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TeamIdentityMark team={firstInningTeamMeta} size={44} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }} numberOfLines={1}>
+                {inn1.battingTeam.name.toUpperCase()}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+                <Text selectable style={{ color: '#0F172A', fontSize: 22, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
+                  {inn1.battingTeam.runs}-{inn1.battingTeam.wickets}
+                </Text>
+                <Text selectable style={{ color: '#64748B', fontSize: 12.5, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
+                  {formatOvers(inn1.totalLegalBalls)} ({activeMatch.maxOvers} ov)
+                </Text>
+              </View>
+            </View>
+
+            {/* TARGET CALLOUT BADGE */}
+            <View style={{ alignItems: 'flex-end', backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
+              <Text style={{ color: '#92400E', fontSize: 9.5, fontFamily: systemFontMedium }}>TARGET</Text>
+              <Text selectable style={{ color: '#B45309', fontSize: 18, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
+                {target}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      </SafeAreaView>
 
       {/* SHARED OPENING PLAYERS SELECTOR */}
       <OpeningPlayersSelector

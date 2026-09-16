@@ -7,8 +7,10 @@ import {
   Animated,
   RefreshControl,
   useWindowDimensions,
-  StyleSheet
+  StyleSheet,
+  StatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PagerView from 'react-native-pager-view';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
@@ -75,6 +77,7 @@ export function PublicLiveViewScreen(props = {}) {
     setPlayingXiVisible = matchCtx.setPlayingXiVisible,
     selectedMatch = matchCtx.selectedMatch
   } = props;
+  const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const [publicTabLayouts, setPublicTabLayouts] = useState({});
   const [scorecardInningIndex, setScorecardInningIndex] = useState(0);
@@ -258,10 +261,11 @@ export function PublicLiveViewScreen(props = {}) {
 
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
+      <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
       {/* ─── TOP DARK NAVY HEADER (MATCH TITLE + TABS + INTEGRATED LIVE HERO) ─── */}
       <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
         {/* Top Title & Back */}
-        <View style={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ paddingHorizontal: 14, paddingTop: insets.top + 8, paddingBottom: 6, flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => setCurrentScreen && setCurrentScreen(liveViewReturnScreen)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
             <Ionicons name="arrow-back" size={18} color="#E0F2FE" />
             <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: systemFontMedium }} numberOfLines={1}>

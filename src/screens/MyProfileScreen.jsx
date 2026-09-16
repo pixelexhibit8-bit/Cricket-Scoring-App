@@ -11,8 +11,10 @@ import {
   ActivityIndicator,
   Linking,
   AppState,
-  Animated
+  Animated,
+  StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PagerView from 'react-native-pager-view';
 import * as ImagePicker from 'expo-image-picker';
@@ -681,7 +683,8 @@ export function MyProfileScreen(props = {}) {
   // ─── 1. SIGN IN SCREEN ───
   if (!currentUser && !isPublicView) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.surface }} edges={['top', 'bottom', 'left', 'right']}>
+        <StatusBar barStyle="dark-content" translucent={true} backgroundColor="transparent" />
         {onBack ? (
           <View style={styles.headerBar}>
             <TouchableOpacity
@@ -827,13 +830,14 @@ export function MyProfileScreen(props = {}) {
             </Text>
           </View>
         </ScrollView>
-      </View>
+      </SafeAreaView>
     );
   }
 
   // ─── 2. MAIN PROFILE SCREEN ───
   return (
-    <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.surface }} edges={['top', 'bottom', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" translucent={true} backgroundColor="transparent" />
       {/* SCREEN HEADER BAR */}
       <View style={styles.headerBar}>
         {onBack ? (
@@ -1031,7 +1035,7 @@ export function MyProfileScreen(props = {}) {
         onPickFromCamera={handlePickFromCamera}
         onPickFromGallery={handlePickFromGallery}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

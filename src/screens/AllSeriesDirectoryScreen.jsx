@@ -112,8 +112,8 @@ export function AllSeriesDirectoryScreen(props = {}) {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" translucent={true} backgroundColor="transparent" />
       <View style={styles.container}>
 
         {/* ── 1. TOP HEADER BAR ── */}

@@ -47,7 +47,7 @@ export const WicketDismissalModal = ({
       animationType="slide"
       onRequestClose={onRequestClose || (() => pendingFielderDismissal ? setPendingFielderDismissal('') : cancelWicketEntry && cancelWicketEntry())}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom', 'left', 'right']}>
         {/* Header */}
         <View style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
           <TouchableOpacity

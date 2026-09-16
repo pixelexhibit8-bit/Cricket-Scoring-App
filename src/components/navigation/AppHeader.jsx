@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { systemFontBold, systemFontMedium, themeColors } from '../../theme.js';
 
@@ -21,7 +22,9 @@ export function AppHeader({
   scrollY = null   // kept in API for compatibility but no longer used
 }) {
   return (
-    <View style={styles.headerRoot}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeAreaWrapper}>
+      <View style={styles.headerRoot}>
+
       {/* 1. TOP BRAND ROW */}
       <View style={styles.brandRow}>
         <View style={styles.logoAndTitle}>
@@ -74,11 +77,16 @@ export function AppHeader({
           </View>
         </View>
       ) : null}
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeAreaWrapper: {
+    backgroundColor: themeColors.surface,
+    zIndex: 10
+  },
   headerRoot: {
     backgroundColor: themeColors.surface,
     borderBottomWidth: 1,

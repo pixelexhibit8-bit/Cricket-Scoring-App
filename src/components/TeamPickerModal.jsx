@@ -99,8 +99,8 @@ export function TeamPickerModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <StatusBar barStyle="light-content" backgroundColor="#071B2C" />
-      <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         {/* Header - CricFlow Dark Hero Style */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backBtn} activeOpacity={0.7}>
@@ -374,7 +374,7 @@ export function TeamPickerModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EBF0F5'
+    backgroundColor: '#071B2C'
   },
   header: {
     height: 56,

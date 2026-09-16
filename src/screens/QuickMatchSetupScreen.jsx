@@ -539,97 +539,99 @@ export function QuickMatchSetupScreen(props = {}) {
     };
 
     return (
-      <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-        {/* Main Header Bar */}
-        <View style={{
-          height: 50,
-          paddingHorizontal: 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <TouchableOpacity
-            onPress={() => {
-              if (stepNum === 1) {
-                if (onCancel) onCancel();
-              } else {
-                setWizardStep(prev => prev - 1);
-              }
-            }}
-            activeOpacity={0.7}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4, minWidth: 60 }}
-          >
-            <Ionicons name="arrow-back" size={20} color="#0F172A" />
-            <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#0F172A' }}>
-              {stepNum === 1 ? 'Exit' : 'Back'}
-            </Text>
-          </TouchableOpacity>
+      <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: '#FFFFFF' }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+          {/* Main Header Bar */}
+          <View style={{
+            height: 50,
+            paddingHorizontal: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <TouchableOpacity
+              onPress={() => {
+                if (stepNum === 1) {
+                  if (onCancel) onCancel();
+                } else {
+                  setWizardStep(prev => prev - 1);
+                }
+              }}
+              activeOpacity={0.7}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4, minWidth: 60 }}
+            >
+              <Ionicons name="arrow-back" size={20} color="#0F172A" />
+              <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#0F172A' }}>
+                {stepNum === 1 ? 'Exit' : 'Back'}
+              </Text>
+            </TouchableOpacity>
 
-          <Text style={{ fontSize: 15.5, fontFamily: systemFontBold, color: '#0F172A' }}>
-            {stepTitles[stepNum] || 'Quick Match'}
-          </Text>
-
-          <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 0.5, borderColor: '#BAE6FD', minWidth: 60, alignItems: 'center' }}>
-            <Text style={{ color: '#0284C7', fontSize: 11, fontFamily: systemFontBold }}>
-              Step {stepNum}/3
+            <Text style={{ fontSize: 15.5, fontFamily: systemFontBold, color: '#0F172A' }}>
+              {stepTitles[stepNum] || 'Quick Match'}
             </Text>
+
+            <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 0.5, borderColor: '#BAE6FD', minWidth: 60, alignItems: 'center' }}>
+              <Text style={{ color: '#0284C7', fontSize: 11, fontFamily: systemFontBold }}>
+                Step {stepNum}/3
+              </Text>
+            </View>
+          </View>
+
+          {/* Clean Sub-Bar Stepper */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 7,
+            paddingHorizontal: 20,
+            backgroundColor: '#F8FAFC',
+            borderTopWidth: 1,
+            borderTopColor: '#F1F5F9',
+            gap: 8
+          }}>
+            {[
+              { step: 1, label: 'Setup' },
+              { step: 2, label: 'Toss' },
+              { step: 3, label: 'Openers' }
+            ].map((s, idx) => {
+              const isCurrent = stepNum === s.step;
+              const isCompleted = stepNum > s.step;
+              return (
+                <View key={s.step} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    backgroundColor: isCompleted ? '#0284C7' : isCurrent ? '#0284C7' : '#FFFFFF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: isCompleted || isCurrent ? '#0284C7' : '#CBD5E1'
+                  }}>
+                    {isCompleted ? (
+                      <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                    ) : (
+                      <Text style={{ color: isCurrent ? '#FFFFFF' : '#64748B', fontSize: 10.5, fontFamily: systemFontBold }}>
+                        {s.step}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={{
+                    fontSize: 11.5,
+                    fontFamily: isCurrent ? systemFontBold : systemFontMedium,
+                    color: isCurrent ? '#0284C7' : '#64748B'
+                  }}>
+                    {s.label}
+                  </Text>
+                  {idx < 2 ? (
+                    <View style={{ width: 18, height: 1.5, backgroundColor: isCompleted ? '#0284C7' : '#E2E8F0', marginHorizontal: 2 }} />
+                  ) : null}
+                </View>
+              );
+            })}
           </View>
         </View>
-
-        {/* Clean Sub-Bar Stepper */}
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 7,
-          paddingHorizontal: 20,
-          backgroundColor: '#F8FAFC',
-          borderTopWidth: 1,
-          borderTopColor: '#F1F5F9',
-          gap: 8
-        }}>
-          {[
-            { step: 1, label: 'Setup' },
-            { step: 2, label: 'Toss' },
-            { step: 3, label: 'Openers' }
-          ].map((s, idx) => {
-            const isCurrent = stepNum === s.step;
-            const isCompleted = stepNum > s.step;
-            return (
-              <View key={s.step} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  backgroundColor: isCompleted ? '#0284C7' : isCurrent ? '#0284C7' : '#FFFFFF',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: isCompleted || isCurrent ? '#0284C7' : '#CBD5E1'
-                }}>
-                  {isCompleted ? (
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                  ) : (
-                    <Text style={{ color: isCurrent ? '#FFFFFF' : '#64748B', fontSize: 10.5, fontFamily: systemFontBold }}>
-                      {s.step}
-                    </Text>
-                  )}
-                </View>
-                <Text style={{
-                  fontSize: 11.5,
-                  fontFamily: isCurrent ? systemFontBold : systemFontMedium,
-                  color: isCurrent ? '#0284C7' : '#64748B'
-                }}>
-                  {s.label}
-                </Text>
-                {idx < 2 ? (
-                  <View style={{ width: 18, height: 1.5, backgroundColor: isCompleted ? '#0284C7' : '#E2E8F0', marginHorizontal: 2 }} />
-                ) : null}
-              </View>
-            );
-          })}
-        </View>
-      </View>
+      </SafeAreaView>
     );
   };
 

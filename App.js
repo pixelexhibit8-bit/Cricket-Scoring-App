@@ -51,14 +51,17 @@ function AppShell() {
 
   return (
     <View style={{ flex: 1, backgroundColor: shellBackgroundColor }}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={shellBackgroundColor} />
-      <SafeAreaView style={{ flex: 1, backgroundColor: shellBackgroundColor }} edges={['top', 'left', 'right']}>
-        {/* CENTRAL APP NAVIGATOR & ROUTER */}
-        <AppNavigator />
-      </SafeAreaView>
+      <StatusBar
+        translucent={true}
+        backgroundColor="transparent"
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+      />
+      {/* CENTRAL APP NAVIGATOR & ROUTER */}
+      <AppNavigator />
 
       {/* Global Floating Toast for entire CricFlow App */}
       <CricGlobalToast />
     </View>
   );
 }
+

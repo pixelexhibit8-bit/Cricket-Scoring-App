@@ -4,8 +4,10 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  useWindowDimensions
+  useWindowDimensions,
+  StatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   systemFont,
@@ -49,6 +51,7 @@ export function ScorerConsoleScreen(props = {}) {
     handleStartNewMatchSetup = matchCtx.handleStartNewMatchSetup
   } = props;
 
+  const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
 
   if (!activeMatch) {
@@ -68,6 +71,7 @@ export function ScorerConsoleScreen(props = {}) {
   if (!inn?.battingTeam || !inn?.bowlingTeam) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#071B2C', gap: 12 }}>
+        <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
         <Ionicons name="alert-circle-outline" size={32} color="#0284C7" />
         <Text style={{ fontSize: 18, color: '#FFFFFF', fontFamily: systemFontBold, textAlign: 'center' }}>No Active Match Selected</Text>
         <Text style={{ fontSize: 13, color: '#94A3B8', fontFamily: systemFont, textAlign: 'center', lineHeight: 19 }}>
@@ -113,7 +117,7 @@ export function ScorerConsoleScreen(props = {}) {
   const keypadBoundariesFontSize = isSmallScreen ? 18 : (isMediumScreen ? 21 : 24);
   const keypadActionFontSize = isSmallScreen ? 17 : (isMediumScreen ? 19 : 21);
 
-  const scoreHeroPaddingTop = isSmallScreen ? 10 : (isMediumScreen ? 14 : 16);
+  const scoreHeroPaddingTop = insets.top + (isSmallScreen ? 8 : 12);
   const scoreHeroPaddingBottom = isSmallScreen ? 12 : (isMediumScreen ? 16 : 18);
   const scoreFontSize = isSmallScreen ? 38 : (isMediumScreen ? 42 : 46);
   const containerPadding = isSmallScreen ? 6 : 10;
@@ -121,6 +125,7 @@ export function ScorerConsoleScreen(props = {}) {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#EBF0F5' }}>
+      <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
       {/* SPACIOUS DARK CREX SCORE HERO */}
       <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 16, paddingTop: scoreHeroPaddingTop, paddingBottom: scoreHeroPaddingBottom, borderBottomWidth: 1, borderBottomColor: '#123A56', gap: isSmallScreen ? 6 : 10, alignItems: 'center' }}>
         {/* Big Score Center Row (No Brackets, Thin | Line Separator) */}
