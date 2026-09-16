@@ -141,74 +141,41 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── 1. PREMIUM 2-CARD BOUNDARY SECTION (6s & 4s) ── */}
-      <View style={styles.boundaryCardsContainer}>
-        {/* Sixes Card (Violet Accent) */}
+      {/* ── 1. TOP 2-COLUMN BOUNDARIES AGGREGATE STRIP ── */}
+      <View style={styles.topAggregateCard}>
+        {/* Sixes Block */}
         <TouchableOpacity
-          style={[styles.boundaryCard, styles.sixesCard]}
-          activeOpacity={0.8}
+          style={styles.aggregateColumn}
+          activeOpacity={0.7}
           onPress={() => onSelectStatCategory && onSelectStatCategory('sixes')}
         >
-          <View style={styles.boundaryCardTopRow}>
-            <View style={[styles.boundaryIconPill, { backgroundColor: '#7C3AED' }]}>
-              <MaterialCommunityIcons name="baseball" size={13} color="#FFFFFF" />
-              <Text style={styles.boundaryIconPillText}>6s</Text>
+          <Text style={styles.aggregateCountNumber}>{totalSixes}</Text>
+          <View style={styles.aggregateSubRow}>
+            <View style={[styles.boundaryBadgeCircle, { backgroundColor: '#16A34A' }]}>
+              <Text style={styles.boundaryBadgeText}>6</Text>
             </View>
-            <Ionicons name="chevron-forward" size={14} color="#A78BFA" />
+            <Text style={styles.aggregateUnitLabel}>sixes</Text>
+            <Ionicons name="chevron-forward" size={13} color="#64748B" />
           </View>
-
-          <Text style={[styles.boundaryBigCount, { color: '#FFFFFF' }]}>{totalSixes}</Text>
-          <Text style={[styles.boundaryCardLabel, { color: '#C4B5FD' }]}>TOTAL SIXES</Text>
-
-          {batting.mostSixes?.player && batting.mostSixes.player !== '-' ? (
-            <View style={styles.boundaryLeaderSnippet}>
-              <Text style={[styles.boundaryLeaderName, { color: '#EDE9FE' }]} numberOfLines={1}>
-                {batting.mostSixes.player}
-              </Text>
-              <Text style={[styles.boundaryLeaderVal, { color: '#A78BFA' }]}>
-                {batting.mostSixes.value} Sixes
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.boundaryLeaderSnippet}>
-              <Text style={[styles.boundaryLeaderName, { color: '#94A3B8' }]}>Leaderboard</Text>
-              <Text style={[styles.boundaryLeaderVal, { color: '#A78BFA' }]}>View Top Hitters ›</Text>
-            </View>
-          )}
         </TouchableOpacity>
 
-        {/* Fours Card (Sky Blue Accent) */}
+        {/* Middle Separator Line */}
+        <View style={styles.verticalSeparator} />
+
+        {/* Fours Block */}
         <TouchableOpacity
-          style={[styles.boundaryCard, styles.foursCard]}
-          activeOpacity={0.8}
+          style={styles.aggregateColumn}
+          activeOpacity={0.7}
           onPress={() => onSelectStatCategory && onSelectStatCategory('fours')}
         >
-          <View style={styles.boundaryCardTopRow}>
-            <View style={[styles.boundaryIconPill, { backgroundColor: '#0284C7' }]}>
-              <MaterialCommunityIcons name="cricket" size={13} color="#FFFFFF" />
-              <Text style={styles.boundaryIconPillText}>4s</Text>
+          <Text style={styles.aggregateCountNumber}>{totalFours}</Text>
+          <View style={styles.aggregateSubRow}>
+            <View style={[styles.boundaryBadgeCircle, { backgroundColor: '#0284C7' }]}>
+              <Text style={styles.boundaryBadgeText}>4</Text>
             </View>
-            <Ionicons name="chevron-forward" size={14} color="#64748B" />
+            <Text style={styles.aggregateUnitLabel}>fours</Text>
+            <Ionicons name="chevron-forward" size={13} color="#64748B" />
           </View>
-
-          <Text style={[styles.boundaryBigCount, { color: '#0F172A' }]}>{totalFours}</Text>
-          <Text style={[styles.boundaryCardLabel, { color: '#64748B' }]}>TOTAL FOURS</Text>
-
-          {batting.mostFours?.player && batting.mostFours.player !== '-' ? (
-            <View style={styles.boundaryLeaderSnippet}>
-              <Text style={[styles.boundaryLeaderName, { color: '#334155' }]} numberOfLines={1}>
-                {batting.mostFours.player}
-              </Text>
-              <Text style={[styles.boundaryLeaderVal, { color: '#0284C7' }]}>
-                {batting.mostFours.value} Fours
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.boundaryLeaderSnippet}>
-              <Text style={[styles.boundaryLeaderName, { color: '#94A3B8' }]}>Leaderboard</Text>
-              <Text style={[styles.boundaryLeaderVal, { color: '#0284C7' }]}>View Top Hitters ›</Text>
-            </View>
-          )}
         </TouchableOpacity>
       </View>
 
@@ -356,72 +323,52 @@ const styles = StyleSheet.create({
     fontFamily: systemFontMedium,
     color: '#64748B'
   },
-  boundaryCardsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20
-  },
-  boundaryCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 14,
+  topAggregateCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     borderWidth: 0,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3
-  },
-  sixesCard: {
-    backgroundColor: '#1E1B4B'
-  },
-  foursCard: {
-    backgroundColor: '#FFFFFF'
-  },
-  boundaryCardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8
+    paddingVertical: 14,
+    marginBottom: 18
   },
-  boundaryIconPill: {
+  aggregateColumn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  aggregateCountNumber: {
+    fontSize: 26,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary,
+    marginBottom: 4
+  },
+  aggregateSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8
+    gap: 6
   },
-  boundaryIconPillText: {
+  boundaryBadgeCircle: {
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  boundaryBadgeText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 9.5,
     fontFamily: systemFontBold
   },
-  boundaryBigCount: {
-    fontSize: 28,
-    fontFamily: systemFontBold,
-    letterSpacing: -0.5,
-    marginBottom: 2
-  },
-  boundaryCardLabel: {
-    fontSize: 10.5,
+  aggregateUnitLabel: {
+    fontSize: 12,
     fontFamily: systemFontMedium,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase'
+    color: '#0284C7'
   },
-  boundaryLeaderSnippet: {
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 0
-  },
-  boundaryLeaderName: {
-    fontSize: 11.5,
-    fontFamily: systemFontMedium
-  },
-  boundaryLeaderVal: {
-    fontSize: 10.5,
-    fontFamily: systemFontBold,
-    marginTop: 1
+  verticalSeparator: {
+    width: 1,
+    height: 36,
+    backgroundColor: '#EEEEF0'
   },
   categorySectionTitle: {
     fontSize: 12.5,
