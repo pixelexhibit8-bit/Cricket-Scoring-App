@@ -33,6 +33,7 @@ import {
 import {
   getTournaments,
   getTournamentsFromStorage,
+  getInitialTournamentsSync,
   addTeamToTournament,
   updateTournamentTeam,
   removeTournamentTeam,
@@ -89,14 +90,17 @@ export function PublicSeriesViewScreen(props = {}) {
   const tabsScrollRef = useRef(null);
   const matchCtx = useMatch();
 
+  // Synchronous Initial Cache (0ms instant render without empty screen flash)
+  const initialTourns = useMemo(() => getInitialTournamentsSync(), []);
+
   // Tournaments List & Hosted State
-  const [tournamentsList, setTournamentsList] = useState([]);
+  const [tournamentsList, setTournamentsList] = useState(() => initialTourns);
   const [savedTeamsList, setSavedTeamsList] = useState([]);
   const [myHostedIds, setMyHostedIds] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Active Tournament State
-  const [tournament, setTournament] = useState(() => seriesData || null);
+  // Active Tournament State (Guaranteed Frame-1 Active Tournament)
+  const [tournament, setTournament] = useState(() => seriesData || initialTourns[0] || null);
 
   // Select Series Modal Drawer State & Search
   const [selectSeriesModalVisible, setSelectSeriesModalVisible] = useState(false);

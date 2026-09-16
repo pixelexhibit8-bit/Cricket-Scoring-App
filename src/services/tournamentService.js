@@ -306,6 +306,17 @@ import { buildSadokanPremierLeagueTournament } from './seedSadokanPremierLeague.
 export const TOURNAMENT_SCHEMA_VERSION = 5;
 
 /**
+ * Get synchronous initial tournament list for 0ms frame-1 rendering
+ */
+export function getInitialTournamentsSync() {
+  try {
+    return [buildRajasthanLeagueTournament(), buildSadokanPremierLeagueTournament()];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
  * Fetch all tournaments from Local Storage (Offline-First)
  */
 export async function getTournamentsFromStorage() {
