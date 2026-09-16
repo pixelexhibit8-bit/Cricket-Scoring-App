@@ -192,12 +192,16 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                         <Text style={styles.completedTeamCode} numberOfLines={1}>
                           {t1Name}
                         </Text>
-                        <Text style={styles.completedScoreMain}>
-                          {t1Score}
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1 }}>
+                          <Text style={styles.completedScoreMain} numberOfLines={1}>
+                            {t1Score}
+                          </Text>
                           {t1Overs ? (
-                            <Text style={styles.completedOversSub}> ({t1Overs})</Text>
+                            <Text style={styles.completedOversSub} numberOfLines={1}>
+                              {t1Overs}
+                            </Text>
                           ) : null}
-                        </Text>
+                        </View>
                       </View>
 
                       {/* Team 2 */}
@@ -206,12 +210,16 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                         <Text style={styles.completedTeamCode} numberOfLines={1}>
                           {t2Name}
                         </Text>
-                        <Text style={styles.completedScoreMain}>
-                          {t2Score}
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1 }}>
+                          <Text style={styles.completedScoreMain} numberOfLines={1}>
+                            {t2Score}
+                          </Text>
                           {t2Overs ? (
-                            <Text style={styles.completedOversSub}> ({t2Overs})</Text>
+                            <Text style={styles.completedOversSub} numberOfLines={1}>
+                              {t2Overs}
+                            </Text>
                           ) : null}
-                        </Text>
+                        </View>
                       </View>
                     </View>
 
@@ -618,12 +626,14 @@ const styles = StyleSheet.create({
   completedScoreMain: {
     fontSize: 16.5,
     fontFamily: systemFontMedium,
-    color: '#0F172A'
+    color: '#0F172A',
+    fontVariant: ['tabular-nums']
   },
   completedOversSub: {
     fontSize: 13,
-    fontFamily: systemFont,
-    color: '#71717A'
+    fontFamily: systemFontMedium,
+    color: '#64748B',
+    fontVariant: ['tabular-nums']
   },
   verticalDivider: {
     width: 1,
