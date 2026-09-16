@@ -89,8 +89,8 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
     const upcoming = [];
 
     filteredMatches.forEach(m => {
-      const isFinished = Boolean(m.result || m.status === 'FINISHED' || m.phase === 'result');
-      const isLive = m.status === 'LIVE' || m.phase === 'playing';
+      const isFinished = Boolean(m.result || m.status === 'FINISHED' || m.phase === 'result' || m.phase === 'finished');
+      const isLive = m.status === 'LIVE' || m.phase === 'playing' || m.phase === 'inningBreak' || (m.rawMatchData && (m.rawMatchData.phase === 'playing' || m.rawMatchData.phase === 'inningBreak'));
 
       if (isFinished) {
         completed.push(m);
@@ -237,6 +237,32 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
               const t1Name = t1Resolved.name || t1Resolved.shortName || 'Team 1';
               const t2Name = t2Resolved.name || t2Resolved.shortName || 'Team 2';
 
+              const inn1 = m.innings?.[0] || m.rawMatchData?.innings?.[0];
+              const inn2 = m.innings?.[1] || m.rawMatchData?.innings?.[1];
+
+              const formatOversClean = (balls = 0) => {
+                const b = Number(balls) || 0;
+                return `${Math.floor(b / 6)}.${b % 6}`;
+              };
+
+              let t1ScoreDisplay = m.team1?.score;
+              let t2ScoreDisplay = m.team2?.score;
+
+              if (inn1?.battingTeam) {
+                const runs1 = inn1.battingTeam.runs ?? 0;
+                const wkts1 = inn1.battingTeam.wickets ?? 0;
+                const ov1 = formatOversClean(inn1.totalLegalBalls || 0);
+                t1ScoreDisplay = `${runs1}-${wkts1}  (${ov1})`;
+              }
+              if (inn2?.battingTeam) {
+                const runs2 = inn2.battingTeam.runs ?? 0;
+                const wkts2 = inn2.battingTeam.wickets ?? 0;
+                const ov2 = formatOversClean(inn2.totalLegalBalls || 0);
+                t2ScoreDisplay = `${runs2}-${wkts2}  (${ov2})`;
+              } else if (!t2ScoreDisplay) {
+                t2ScoreDisplay = 'Yet to bat';
+              }
+
               return (
                 <TouchableOpacity
                   key={m.id || `live_${idx}`}
@@ -258,12 +284,12 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                     <View style={styles.liveTeamRow}>
                       <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={24} />
                       <Text style={styles.liveTeamName} numberOfLines={1}>{t1Name}</Text>
-                      <Text style={styles.liveTeamScore}>{m.team1?.score || '0-0  0.0'}</Text>
+                      <Text style={styles.liveTeamScore}>{t1ScoreDisplay || '0-0 (0.0)'}</Text>
                     </View>
-                    <View style={[styles.liveTeamRow, { marginTop: 6 }]}>
+                    <View style={[styles.liveTeamRow, { marginTop: 8 }]}>
                       <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={24} />
                       <Text style={styles.liveTeamName} numberOfLines={1}>{t2Name}</Text>
-                      <Text style={styles.liveTeamScore}>{m.team2?.score || 'Yet to bat'}</Text>
+                      <Text style={[styles.liveTeamScore, t2ScoreDisplay === 'Yet to bat' && { color: '#64748B', fontFamily: systemFontMedium }]}>{t2ScoreDisplay}</Text>
                     </View>
                   </View>
 
@@ -567,8 +593,7 @@ const styles = StyleSheet.create({
   completedMatchCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
+    borderWidth: 0,
     paddingHorizontal: 16,
     paddingVertical: 14
   },
@@ -635,8 +660,7 @@ const styles = StyleSheet.create({
   liveMatchCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#FECDD3',
+    borderWidth: 0,
     padding: 14
   },
   liveHeaderRow: {
@@ -727,8 +751,7 @@ const styles = StyleSheet.create({
   upcomingMatchCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E2E2',
+    borderWidth: 0,
     paddingHorizontal: 16,
     paddingVertical: 14
   },
@@ -824,8 +847,7 @@ const styles = StyleSheet.create({
   emptyStateCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',

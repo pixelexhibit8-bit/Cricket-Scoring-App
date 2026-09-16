@@ -1098,26 +1098,72 @@ export async function syncLiveMatchToTournament(tournamentId, liveMatch) {
 
     const currentMatches = Array.isArray(target.matches) ? target.matches : [];
     const matchId = liveMatch.tournamentMatchId || liveMatch.id;
-    const matchIndex = currentMatches.findIndex(m => m.id === matchId);
-
     const t1Name = liveMatch.team1?.name || liveMatch.teams?.[0]?.name || 'Team 1';
     const t2Name = liveMatch.team2?.name || liveMatch.teams?.[1]?.name || 'Team 2';
 
+    let matchIndex = currentMatches.findIndex(m => m.id === matchId);
+    if (matchIndex === -1) {
+      const norm1 = String(t1Name).trim().toLowerCase();
+      const norm2 = String(t2Name).trim().toLowerCase();
+      matchIndex = currentMatches.findIndex(m => {
+        const m1 = String(m.team1?.name || m.team1 || '').trim().toLowerCase();
+        const m2 = String(m.team2?.name || m.team2 || '').trim().toLowerCase();
+        return (m1 === norm1 && m2 === norm2) || (m1 === norm2 && m2 === norm1);
+      });
+    }
+
+    const inn1 = liveMatch.innings?.[0];
+    const inn2 = liveMatch.innings?.[1];
+
+    let t1Score = '';
+    let t2Score = '';
+
+    const formatOversLocal = (balls = 0) => {
+      const b = Number(balls) || 0;
+      return `${Math.floor(b / 6)}.${b % 6}`;
+    };
+
+    if (inn1) {
+      const runs1 = inn1.battingTeam?.runs ?? 0;
+      const wkts1 = inn1.battingTeam?.wickets ?? 0;
+      const ov1 = formatOversLocal(inn1.totalLegalBalls || 0);
+      t1Score = `${runs1}/${wkts1} (${ov1})`;
+    }
+    if (inn2) {
+      const runs2 = inn2.battingTeam?.runs ?? 0;
+      const wkts2 = inn2.battingTeam?.wickets ?? 0;
+      const ov2 = formatOversLocal(inn2.totalLegalBalls || 0);
+      t2Score = `${runs2}/${wkts2} (${ov2})`;
+    }
+
+    const existing = matchIndex >= 0 ? currentMatches[matchIndex] : null;
     const liveMatchObj = {
-      id: matchId,
-      team1: { name: t1Name, score: liveMatch.team1?.score || '' },
-      team2: { name: t2Name, score: liveMatch.team2?.score || '' },
-      dateStr: liveMatch.matchDate || 'Live Now',
+      ...(existing || {}),
+      id: existing?.id || matchId,
+      matchNumber: existing?.matchNumber || existing?.matchNo || currentMatches.length + 1,
+      stage: existing?.stage || 'LEAGUE',
+      team1: {
+        ...(typeof existing?.team1 === 'object' ? existing.team1 : {}),
+        name: existing?.team1?.name || (typeof existing?.team1 === 'string' ? existing.team1 : null) || t1Name,
+        score: t1Score || liveMatch.team1?.score || ''
+      },
+      team2: {
+        ...(typeof existing?.team2 === 'object' ? existing.team2 : {}),
+        name: existing?.team2?.name || (typeof existing?.team2 === 'string' ? existing.team2 : null) || t2Name,
+        score: t2Score || liveMatch.team2?.score || ''
+      },
+      dateStr: liveMatch.matchDate || existing?.dateStr || 'Live Now',
       status: 'LIVE',
-      phase: 'playing',
-      venue: liveMatch.venue || target.city || 'Local Ground',
+      phase: liveMatch.phase || 'playing',
+      venue: liveMatch.venue || existing?.venue || target.city || 'Local Ground',
+      innings: liveMatch.innings || existing?.innings || [],
       rawMatchData: liveMatch
     };
 
     let newMatchesList;
     if (matchIndex >= 0) {
       newMatchesList = [...currentMatches];
-      newMatchesList[matchIndex] = { ...newMatchesList[matchIndex], ...liveMatchObj };
+      newMatchesList[matchIndex] = liveMatchObj;
     } else {
       newMatchesList = [...currentMatches, liveMatchObj];
     }
@@ -1126,8 +1172,24 @@ export async function syncLiveMatchToTournament(tournamentId, liveMatch) {
     target.updatedAt = new Date().toISOString();
 
     await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+
+    if (supabase) {
+      try {
+        await supabase
+          .from('tournaments')
+          .update({
+            matches: newMatchesList,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase sync error on live match:', cloudErr);
+      }
+    }
+
     return target;
   } catch (err) {
+    console.warn('[TournamentService] syncLiveMatchToTournament error:', err);
     return null;
   }
 }

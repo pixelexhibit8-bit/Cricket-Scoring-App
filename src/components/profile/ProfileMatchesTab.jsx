@@ -93,8 +93,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
     marginBottom: 8
   },
   matchTitle: {
@@ -120,8 +119,7 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
     gap: 6
   },
   emptyTitle: {

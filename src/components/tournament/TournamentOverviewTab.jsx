@@ -167,15 +167,30 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
                         );
                       })()
                     ) : isLive ? (
-                      <View style={styles.liveCenterBlock}>
-                        <View style={styles.liveBadge}>
-                          <View style={styles.liveDot} />
-                          <Text style={styles.liveBadgeText}>LIVE</Text>
-                        </View>
-                        <Text style={styles.liveScoreText}>
-                          {m.team1?.score || 'In Progress'}
-                        </Text>
-                      </View>
+                      (() => {
+                        const inn1 = m.innings?.[0] || m.rawMatchData?.innings?.[0];
+                        const inn2 = m.innings?.[1] || m.rawMatchData?.innings?.[1];
+                        const activeInn = inn2?.battingTeam ? inn2 : (inn1?.battingTeam ? inn1 : null);
+                        const formatOversClean = (balls = 0) => {
+                          const b = Number(balls) || 0;
+                          return `${Math.floor(b / 6)}.${b % 6}`;
+                        };
+                        const liveScore = activeInn
+                          ? `${activeInn.battingTeam.runs ?? 0}-${activeInn.battingTeam.wickets ?? 0} (${formatOversClean(activeInn.totalLegalBalls || 0)})`
+                          : (m.team1?.score || 'In Progress');
+
+                        return (
+                          <View style={styles.liveCenterBlock}>
+                            <View style={styles.liveBadge}>
+                              <View style={styles.liveDot} />
+                              <Text style={styles.liveBadgeText}>LIVE</Text>
+                            </View>
+                            <Text style={styles.liveScoreText}>
+                              {liveScore}
+                            </Text>
+                          </View>
+                        );
+                      })()
                     ) : (
                       <View style={styles.upcomingCenterBlock}>
                         <Text style={styles.matchTimeText}>
@@ -475,8 +490,7 @@ const styles = StyleSheet.create({
   featuredMatchCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     flexDirection: 'row',
     overflow: 'hidden',
     height: 74
@@ -585,8 +599,7 @@ const styles = StyleSheet.create({
   emptyFeaturedCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',

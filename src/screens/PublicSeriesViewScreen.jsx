@@ -277,20 +277,102 @@ export function PublicSeriesViewScreen(props = {}) {
     });
   }, [filteredSheetTournaments, currentUser]);
 
+  // Dynamic Live & Finished Match Overlay on Tournament
+  const effectiveTournament = useMemo(() => {
+    if (!tournament) return null;
+    const originalMatches = Array.isArray(tournament.matches) ? tournament.matches : [];
+    if (originalMatches.length === 0) return tournament;
+
+    const livePool = [];
+    if (matchCtx?.activeMatch && (matchCtx.activeMatch.phase === 'playing' || matchCtx.activeMatch.phase === 'inningBreak')) {
+      livePool.push(matchCtx.activeMatch);
+    }
+    if (Array.isArray(matchCtx?.liveMatches)) {
+      matchCtx.liveMatches.forEach(lm => {
+        if (!livePool.some(m => (m.id && m.id === lm.id) || (m.supabaseId && m.supabaseId === lm.id))) {
+          livePool.push(lm);
+        }
+      });
+    }
+
+    const formatOversLocal = (balls = 0) => {
+      const b = Number(balls) || 0;
+      return `${Math.floor(b / 6)}.${b % 6}`;
+    };
+
+    const enrichedMatches = originalMatches.map(m => {
+      // 1. Check if matching any Live match
+      const matchingLive = livePool.find(lm => {
+        if (m.id && (lm.tournamentMatchId === m.id || lm.id === m.id)) return true;
+        const tournMatch = (lm.tournamentId && lm.tournamentId === tournament.id) || (lm.tournamentName && lm.tournamentName === tournament.name);
+        if (tournMatch) {
+          const t1A = String(m.team1?.name || m.team1 || '').trim().toLowerCase();
+          const t2A = String(m.team2?.name || m.team2 || '').trim().toLowerCase();
+          const t1B = String(lm.team1?.name || lm.teams?.[0]?.name || '').trim().toLowerCase();
+          const t2B = String(lm.team2?.name || lm.teams?.[1]?.name || '').trim().toLowerCase();
+          return (t1A === t1B && t2A === t2B) || (t1A === t2B && t2A === t1B);
+        }
+        return false;
+      });
+
+      if (matchingLive) {
+        const inn1 = matchingLive.innings?.[0];
+        const inn2 = matchingLive.innings?.[1];
+        let t1Score = '';
+        let t2Score = '';
+        if (inn1?.battingTeam) {
+          t1Score = `${inn1.battingTeam.runs ?? 0}/${inn1.battingTeam.wickets ?? 0} (${formatOversLocal(inn1.totalLegalBalls || 0)})`;
+        }
+        if (inn2?.battingTeam) {
+          t2Score = `${inn2.battingTeam.runs ?? 0}/${inn2.battingTeam.wickets ?? 0} (${formatOversLocal(inn2.totalLegalBalls || 0)})`;
+        }
+
+        return {
+          ...m,
+          ...matchingLive,
+          id: m.id || matchingLive.id,
+          status: 'LIVE',
+          phase: matchingLive.phase || 'playing',
+          team1: {
+            ...(typeof m.team1 === 'object' ? m.team1 : {}),
+            name: matchingLive.team1?.name || matchingLive.teams?.[0]?.name || m.team1?.name || m.team1,
+            score: t1Score || matchingLive.team1?.score || ''
+          },
+          team2: {
+            ...(typeof m.team2 === 'object' ? m.team2 : {}),
+            name: matchingLive.team2?.name || matchingLive.teams?.[1]?.name || m.team2?.name || m.team2,
+            score: t2Score || matchingLive.team2?.score || ''
+          },
+          innings: matchingLive.innings || m.innings || [],
+          rawMatchData: matchingLive
+        };
+      }
+
+      return m;
+    });
+
+    return {
+      ...tournament,
+      matches: enrichedMatches
+    };
+  }, [tournament, matchCtx?.activeMatch, matchCtx?.liveMatches]);
+
   // Dynamic Calculated Points Table Data
   const pointsTableData = useMemo(() => {
-    if (!tournament) return [];
-    const teamsList = tournament.teams || [];
-    const matchesList = tournament.matches || [];
+    const currentTourn = effectiveTournament || tournament;
+    if (!currentTourn) return [];
+    const teamsList = currentTourn.teams || [];
+    const matchesList = currentTourn.matches || [];
     if (teamsList.length === 0) return [];
     return autoCalculatePointsTable(teamsList, matchesList);
-  }, [tournament?.teams, tournament?.matches]);
+  }, [effectiveTournament, tournament]);
 
   // Comprehensive Calculated Stats from Engine
   const tournamentStats = useMemo(() => {
-    if (!tournament) return null;
-    return calculateTournamentStats(tournament);
-  }, [tournament]);
+    const currentTourn = effectiveTournament || tournament;
+    if (!currentTourn) return null;
+    return calculateTournamentStats(currentTourn);
+  }, [effectiveTournament, tournament]);
 
   // Tournament Code Generator
   const tournamentCode = useMemo(() => {
@@ -370,6 +452,12 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Start Instant Scoring
   const handleStartMatchScoring = (match = null) => {
+    const isLive = match?.status === 'LIVE' || match?.phase === 'playing' || (match?.rawMatchData && match.rawMatchData.phase === 'playing');
+    if (isLive) {
+      handleWatchLive(match);
+      return;
+    }
+
     const t1Name = match?.team1?.name || match?.team1 || tournament?.teams?.[0]?.name || 'Team 1';
     const t2Name = match?.team2?.name || match?.team2 || tournament?.teams?.[1]?.name || 'Team 2';
 
@@ -410,12 +498,22 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Watch Live
   const handleWatchLive = (match = null) => {
+    const liveTarget = match?.rawMatchData || match || matchCtx?.activeMatch;
+    if (matchCtx?.setActiveMatch && liveTarget) {
+      matchCtx.setActiveMatch(liveTarget);
+    }
     const nav = navigation || props.navigation;
     const params = {
-      matchId: match?.id,
+      matchId: liveTarget?.id || match?.id,
       tournamentId: tournament?.id,
-      matchData: match
+      matchData: liveTarget
     };
+    if (nav?.navigate) {
+      nav.navigate('PublicLiveView', params);
+    } else {
+      navigate('publicLiveView', params);
+    }
+  };
     if (nav?.navigate) {
       nav.navigate('PublicLiveView', params);
     } else {
@@ -961,7 +1059,7 @@ export function PublicSeriesViewScreen(props = {}) {
           {/* TAB 1: OVERVIEW */}
           <View key="overview" style={{ flex: 1 }}>
             <TournamentOverviewTab
-              tournament={tournament}
+              tournament={effectiveTournament || tournament}
               stats={tournamentStats}
               pointsTableData={pointsTableData}
               teamFormEnabled={teamFormEnabled}
@@ -980,7 +1078,7 @@ export function PublicSeriesViewScreen(props = {}) {
           {/* TAB 2: MATCHES */}
           <View key="matches" style={{ flex: 1 }}>
             <TournamentMatchesTab
-              tournament={tournament}
+              tournament={effectiveTournament || tournament}
               onStartMatchScoring={handleStartMatchScoring}
               onWatchLive={handleWatchLive}
               onViewScorecard={handleViewScorecard}
@@ -1000,7 +1098,7 @@ export function PublicSeriesViewScreen(props = {}) {
           {/* TAB 3: TEAMS */}
           <View key="teams" style={{ flex: 1 }}>
             <TournamentTeamsTab
-              tournament={tournament}
+              tournament={effectiveTournament || tournament}
               onSelectTeam={(team) => setSelectedTeamDrawer(team)}
               onAddTeam={() => setAddTeamModalVisible(true)}
               onShareInvite={handleShareInvite}
@@ -1012,7 +1110,7 @@ export function PublicSeriesViewScreen(props = {}) {
           {/* TAB 4: POINTS TABLE */}
           <View key="pointsTable" style={{ flex: 1 }}>
             <TournamentPointsTableTab
-              tournament={tournament}
+              tournament={effectiveTournament || tournament}
               pointsTableData={pointsTableData}
               teamFormEnabled={teamFormEnabled}
               onToggleTeamForm={() => setTeamFormEnabled(!teamFormEnabled)}
@@ -1022,7 +1120,7 @@ export function PublicSeriesViewScreen(props = {}) {
           {/* TAB 5: STATS */}
           <View key="stats" style={{ flex: 1 }}>
             <TournamentStatsTab
-              tournament={tournament}
+              tournament={effectiveTournament || tournament}
               stats={tournamentStats}
               onSelectStatCategory={() => {}}
               onSelectPlayer={(p) => {}}
@@ -1032,7 +1130,7 @@ export function PublicSeriesViewScreen(props = {}) {
           {/* TAB 6: VENUES */}
           <View key="venues" style={{ flex: 1 }}>
             <TournamentVenuesTab
-              tournament={tournament}
+              tournament={effectiveTournament || tournament}
               onSelectVenue={() => {}}
             />
           </View>
@@ -1040,7 +1138,7 @@ export function PublicSeriesViewScreen(props = {}) {
           {/* TAB 7: INFO */}
           <View key="info" style={{ flex: 1 }}>
             <TournamentInfoTab
-              tournament={tournament}
+              tournament={effectiveTournament || tournament}
             />
           </View>
         </PagerView>

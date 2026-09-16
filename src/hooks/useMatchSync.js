@@ -231,7 +231,7 @@ export function useMatchSync({
     return () => clearInterval(timer);
   }, [flushOfflineSyncQueue]);
 
-  // Scorer Broadcast: Auto-sync activeMatch to Supabase with offline queue fallback
+  // Scorer Broadcast: Auto-sync activeMatch to Supabase and tournament with offline queue fallback
   useEffect(() => {
     if (activeMatch && currentScreen === 'scorerWizard') {
       syncMatchToSupabase(activeMatch).then(res => {
@@ -248,6 +248,11 @@ export function useMatchSync({
           flushOfflineSyncQueue();
         }
       }).catch(() => { });
+
+      // Automatically sync live match score & state to tournament fixtures
+      if (activeMatch.tournamentId) {
+        syncLiveMatchToTournament(activeMatch.tournamentId, activeMatch).catch(() => {});
+      }
     }
   }, [activeMatch, currentScreen, flushOfflineSyncQueue]);
 
