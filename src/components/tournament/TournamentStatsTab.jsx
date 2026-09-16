@@ -190,10 +190,10 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
             onPress={() => onSelectStatCategory && onSelectStatCategory(item.id)}
           >
             <View style={styles.avatarWrap}>
-              <PlayerAvatar name={item.player} size={38} />
+              <PlayerAvatar name={item.player} size={46} />
               {item.team ? (
                 <View style={styles.avatarTeamBadge}>
-                  <TeamIdentityMark teamName={item.team} size={14} />
+                  <TeamIdentityMark teamName={item.team} size={16} />
                 </View>
               ) : null}
             </View>
@@ -224,10 +224,10 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
             onPress={() => onSelectStatCategory && onSelectStatCategory(item.id)}
           >
             <View style={styles.avatarWrap}>
-              <PlayerAvatar name={item.player} size={38} />
+              <PlayerAvatar name={item.player} size={46} />
               {item.team ? (
                 <View style={styles.avatarTeamBadge}>
-                  <TeamIdentityMark teamName={item.team} size={14} />
+                  <TeamIdentityMark teamName={item.team} size={16} />
                 </View>
               ) : null}
             </View>

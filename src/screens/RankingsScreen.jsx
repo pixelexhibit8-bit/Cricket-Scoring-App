@@ -93,7 +93,7 @@ const RankingCategoryTable = React.memo(function RankingCategoryTable({
               </View>
 
               {/* Avatar */}
-              <PlayerAvatar name={player.name} photoUrl={player.photoUrl} size={40} />
+              <PlayerAvatar name={player.name} photoUrl={player.photoUrl} size={46} />
 
               {/* Info */}
               <View style={styles.playerInfo}>

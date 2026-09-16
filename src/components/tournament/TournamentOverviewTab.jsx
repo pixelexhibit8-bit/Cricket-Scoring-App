@@ -272,7 +272,7 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
           >
             <Text style={styles.heroStatCategoryLabel}>Most Runs</Text>
             <View style={styles.heroStatRow}>
-              <PlayerAvatar name={mostRuns.player} size={48} />
+              <PlayerAvatar name={mostRuns.player} size={54} />
               <View style={styles.heroStatPlayerDetails}>
                 <Text style={styles.heroStatPlayerName} numberOfLines={1}>
                   {mostRuns.player || 'Leading Batter'}
@@ -302,8 +302,8 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
             >
               <Text style={styles.miniCardCategoryLabel}>Most Wickets</Text>
               <View style={styles.miniCardPlayerRow}>
-                <PlayerAvatar name={mostWickets.player} size={36} />
-                <View style={{ flex: 1, marginLeft: 8 }}>
+                <PlayerAvatar name={mostWickets.player} size={42} />
+                <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={styles.miniCardTeamCode} numberOfLines={1}>
                     {mostWickets.team ? String(mostWickets.team).slice(0, 8).toUpperCase() : 'TEAM'}
                   </Text>
@@ -326,8 +326,8 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
             >
               <Text style={styles.miniCardCategoryLabel}>Best Figures</Text>
               <View style={styles.miniCardPlayerRow}>
-                <PlayerAvatar name={bestFigures.player} size={36} />
-                <View style={{ flex: 1, marginLeft: 8 }}>
+                <PlayerAvatar name={bestFigures.player} size={42} />
+                <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={styles.miniCardTeamCode} numberOfLines={1}>
                     {bestFigures.team ? String(bestFigures.team).slice(0, 8).toUpperCase() : 'TEAM'}
                   </Text>

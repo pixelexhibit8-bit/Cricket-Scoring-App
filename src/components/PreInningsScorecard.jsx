@@ -150,8 +150,8 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
                 borderTopColor: '#F1F5F9'
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                <PlayerAvatar name={playerName} size={28} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                <PlayerAvatar name={playerName} size={38} />
                 <Text
                   selectable
                   style={{

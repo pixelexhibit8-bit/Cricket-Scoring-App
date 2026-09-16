@@ -212,7 +212,7 @@ export function ScorerConsoleScreen(props = {}) {
                     activeOpacity={0.7}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
                   >
-                    <PlayerAvatar name={row1Batter.name} photoUrl={row1Batter.photoUrl || row1Batter.photo_url} size={isSmallScreen ? 28 : 32} />
+                    <PlayerAvatar name={row1Batter.name} photoUrl={row1Batter.photoUrl || row1Batter.photo_url} size={isSmallScreen ? 34 : 38} />
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={{ fontSize: isSmallScreen ? 12.5 : 13.5, color: isRow1Striker ? '#0F172A' : '#475569', fontFamily: isRow1Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
@@ -256,7 +256,7 @@ export function ScorerConsoleScreen(props = {}) {
                     activeOpacity={0.7}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
                   >
-                    <PlayerAvatar name={row2Batter.name} photoUrl={row2Batter.photoUrl || row2Batter.photo_url} size={isSmallScreen ? 28 : 32} />
+                    <PlayerAvatar name={row2Batter.name} photoUrl={row2Batter.photoUrl || row2Batter.photo_url} size={isSmallScreen ? 34 : 38} />
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={{ fontSize: isSmallScreen ? 12.5 : 13.5, color: isRow2Striker ? '#0F172A' : '#475569', fontFamily: isRow2Striker ? systemFontBold : systemFontMedium }} numberOfLines={1}>
@@ -295,7 +295,7 @@ export function ScorerConsoleScreen(props = {}) {
                 activeOpacity={0.7}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
               >
-                <PlayerAvatar name={displayBowler.name} photoUrl={displayBowler.photoUrl || displayBowler.photo_url} size={isSmallScreen ? 28 : 32} />
+                <PlayerAvatar name={displayBowler.name} photoUrl={displayBowler.photoUrl || displayBowler.photo_url} size={isSmallScreen ? 34 : 38} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Text style={{ fontSize: isSmallScreen ? 12.5 : 13.5, color: '#0F172A', fontFamily: systemFontBold }} numberOfLines={1}>

@@ -572,15 +572,18 @@ export function PublicLiveViewScreen(props = {}) {
                               <TouchableOpacity
                                 activeOpacity={0.7}
                                 onPress={() => handleOpenPlayerProfile && handleOpenPlayerProfile(b.name)}
-                                style={{ minHeight: 54, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' }}
+                                style={{ minHeight: 56, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' }}
                               >
-                                <View style={{ flex: 1, paddingRight: 6 }}>
-                                  <Text selectable style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
-                                    {b.name} {b.name === viewInningObj.striker?.name ? '*' : ''}
-                                  </Text>
-                                  <Text selectable style={{ color: b.isOut ? '#64748B' : '#0284C7', fontSize: 10.5, marginTop: 2, fontFamily: systemFontMedium }} numberOfLines={1}>
-                                    {b.dismissal || 'Not out'}
-                                  </Text>
+                                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 6 }}>
+                                  <PlayerAvatar name={b.name} photoUrl={b.avatar || b.photoUrl} size={36} />
+                                  <View style={{ flex: 1, minWidth: 0 }}>
+                                    <Text selectable style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
+                                      {b.name} {b.name === viewInningObj.striker?.name ? '*' : ''}
+                                    </Text>
+                                    <Text selectable style={{ color: b.isOut ? '#64748B' : '#0284C7', fontSize: 10.5, marginTop: 2, fontFamily: systemFontMedium }} numberOfLines={1}>
+                                      {b.dismissal || 'Not out'}
+                                    </Text>
+                                  </View>
                                 </View>
                                 <Text selectable style={{ color: '#0F172A', fontSize: 13.5, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>{b.runs}</Text>
                                 <Text selectable style={{ color: '#64748B', fontSize: 12, width: 30, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{b.balls}</Text>
@@ -612,9 +615,10 @@ export function PublicLiveViewScreen(props = {}) {
                           <Text style={{ color: '#7C8793', fontSize: 11.5, width: 50, textAlign: 'right', fontFamily: systemFontBold }}>ECO</Text>
                         </View>
                         {scorecardBowlingRows.length > 0 ? scorecardBowlingRows.map((bowlerRow, bowlerIndex) => (
-                          <View key={`${bowlerRow.name}-${bowlerIndex}`} style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderTopWidth: bowlerIndex > 0 ? 1 : 0, borderTopColor: '#F1F5F9' }}>
-                            <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                              <Text selectable style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>{bowlerRow.name}</Text>
+                          <View key={`${bowlerRow.name}-${bowlerIndex}`} style={{ minHeight: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderTopWidth: bowlerIndex > 0 ? 1 : 0, borderTopColor: '#F1F5F9' }}>
+                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0, paddingRight: 8 }}>
+                              <PlayerAvatar name={bowlerRow.name} photoUrl={bowlerRow.avatar || bowlerRow.photoUrl} size={36} />
+                              <Text selectable style={{ flex: 1, color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>{bowlerRow.name}</Text>
                             </View>
                             <Text selectable style={{ color: '#64748B', fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{bowlerRow.overs}</Text>
                             <Text selectable style={{ color: '#64748B', fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{bowlerRow.runs}</Text>
@@ -640,7 +644,7 @@ export function PublicLiveViewScreen(props = {}) {
                                 activeOpacity={0.7}
                                 style={{ width: '48%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
                               >
-                                <PlayerAvatar name={p.name} photoUrl={p.avatar} size={32} />
+                                <PlayerAvatar name={p.name} photoUrl={p.avatar} size={38} />
                                 <View style={{ flex: 1, minWidth: 0 }}>
                                   <Text selectable style={{ color: '#0F172A', fontSize: 12.5, fontFamily: systemFontMedium }} numberOfLines={1}>
                                     {p.name}

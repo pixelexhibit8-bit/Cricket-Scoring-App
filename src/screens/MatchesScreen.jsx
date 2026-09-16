@@ -544,7 +544,7 @@ export function MatchesScreen(props = {}) {
                             }}
                             onPress={() => handlePlayerPress(p.name, { role: p.role, photoUrl: p.photoUrl, city: p.city })}
                           >
-                            <PlayerAvatar name={p.name} photoUrl={p.photoUrl} size={42} />
+                            <PlayerAvatar name={p.name} photoUrl={p.photoUrl} size={46} />
                             <View style={{ flex: 1 }}>
                               <Text style={{ fontSize: 14, fontFamily: systemFontMedium, color: '#0F172A' }}>
                                 {p.name}

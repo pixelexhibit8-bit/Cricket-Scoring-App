@@ -1440,7 +1440,7 @@ export function PublicSeriesViewScreen(props = {}) {
                         <View style={{ width: 24, alignItems: 'center' }}>
                           <Text style={{ fontSize: 11, fontFamily: systemFontMedium, color: themeColors.textMuted }}>{pIdx + 1}</Text>
                         </View>
-                        <PlayerAvatar name={player.name} size={36} />
+                        <PlayerAvatar name={player.name} photoUrl={player.photoUrl || player.avatar} size={44} />
                         <View style={{ flex: 1, marginLeft: 10 }}>
                           <Text style={styles.squadPlayerName}>{player.name}</Text>
                           <Text style={styles.squadPlayerRole}>

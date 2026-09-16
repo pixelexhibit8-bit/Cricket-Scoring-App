@@ -42,7 +42,7 @@ export const getPlayerInitials = (name = '') => {
  * On-the-fly Cloudinary Image Optimizer & Dynamic Resizer
  * Adds automatic format (WebP/AVIF), auto compression (q_auto), and exact width scaling (w_XX).
  */
-export const optimizeCloudinaryUrl = (url, size = 36) => {
+export const optimizeCloudinaryUrl = (url, size = 42) => {
   if (!url || typeof url !== 'string') return url;
   if (!url.includes('cloudinary.com') || url.includes('/w_')) return url;
 
@@ -51,7 +51,7 @@ export const optimizeCloudinaryUrl = (url, size = 36) => {
   return url.replace('/image/upload/', `/image/upload/${transformation}/`);
 };
 
-export const PlayerAvatar = ({ name, photoUrl, size = 36, style }) => {
+export const PlayerAvatar = ({ name, photoUrl, size = 42, style }) => {
   const [loadError, setLoadError] = useState(false);
   const [resolvedUri, setResolvedUri] = useState('');
 
