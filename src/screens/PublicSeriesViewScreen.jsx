@@ -32,6 +32,7 @@ import {
 } from '../utils/teamUtils.js';
 import {
   getTournaments,
+  getTournamentsFromStorage,
   addTeamToTournament,
   updateTournamentTeam,
   removeTournamentTeam,
@@ -85,6 +86,7 @@ export function PublicSeriesViewScreen(props = {}) {
   } = props;
 
   const pagerRef = useRef(null);
+  const tabsScrollRef = useRef(null);
   const matchCtx = useMatch();
 
   // Tournaments List & Hosted State
@@ -124,6 +126,7 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Selected Team for Squad Drawer
   const [selectedTeamDrawer, setSelectedTeamDrawer] = useState(null);
+  const [drawerPlayerSearch, setDrawerPlayerSearch] = useState('');
   const [captainRegModalVisible, setCaptainRegModalVisible] = useState(false);
   const [addPlayerInlineVisible, setAddPlayerInlineVisible] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -144,47 +147,51 @@ export function PublicSeriesViewScreen(props = {}) {
   const [groupsModalVisible, setGroupsModalVisible] = useState(false);
   const [rulesModalVisible, setRulesModalVisible] = useState(false);
 
-  // Load tournaments data
+  // Load tournaments data instantly (Offline-First 0ms, then background cloud sync)
   const loadTournamentsData = useCallback(async () => {
     try {
-      const [allTourns, hosted, savedActiveId, loggedUser, allGlobalTeams] = await Promise.all([
-        getTournaments(),
+      // 1. FAST PATH: Instant local storage read (0ms render)
+      const [localTourns, hosted, savedActiveId, loggedUser, allGlobalTeams] = await Promise.all([
+        getTournamentsFromStorage(),
         getMyHostedTournamentIds(),
         getActiveTournamentId(),
         getCurrentUser(),
         fetchGlobalTeams()
       ]);
 
-      const list = Array.isArray(allTourns) ? allTourns : [];
-      setTournamentsList(list);
+      const localList = Array.isArray(localTourns) ? localTourns : [];
+      setTournamentsList(localList);
       setSavedTeamsList(Array.isArray(allGlobalTeams) ? allGlobalTeams : []);
       setMyHostedIds(Array.isArray(hosted) ? hosted : []);
       setCurrentUser(loggedUser || null);
 
+      const targetId = seriesData?.id || tournament?.id || savedActiveId;
       if (targetId) {
-        const freshFromList = list.find(t => String(t.id) === String(targetId));
+        const freshFromList = localList.find(t => String(t.id) === String(targetId));
         if (freshFromList) {
           setTournament(freshFromList);
           saveActiveTournamentId(freshFromList.id);
         } else if (seriesData) {
           setTournament(seriesData);
         }
-      } else if (savedActiveId) {
-        const found = list.find(t => t.id === savedActiveId);
-        if (found) {
-          setTournament(found);
-        } else if (list.length > 0) {
-          setTournament(list[0]);
-          saveActiveTournamentId(list[0].id);
-        } else {
-          setTournament(null);
-        }
-      } else if (list.length > 0) {
-        setTournament(list[0]);
-        saveActiveTournamentId(list[0].id);
-      } else {
-        setTournament(null);
+      } else if (localList.length > 0) {
+        setTournament(localList[0]);
+        saveActiveTournamentId(localList[0].id);
       }
+
+      // 2. BACKGROUND SYNC: Fetch latest cloud tournaments silently without blocking UI
+      getTournaments().then(cloudList => {
+        if (Array.isArray(cloudList) && cloudList.length > 0) {
+          setTournamentsList(cloudList);
+          const currentId = targetId || localList[0]?.id;
+          if (currentId) {
+            const updatedActive = cloudList.find(t => String(t.id) === String(currentId));
+            if (updatedActive) {
+              setTournament(updatedActive);
+            }
+          }
+        }
+      }).catch(() => {});
     } catch (err) {
       console.warn('Failed to load tournament data:', err);
     }
@@ -386,18 +393,30 @@ export function PublicSeriesViewScreen(props = {}) {
   const squadPlayers = useMemo(() => {
     const list = selectedTeamDrawer?.players || selectedTeamDrawer?.squad || [];
     if (list.length > 0) {
-      return list.map((p, idx) => ({
+      let mapped = list.map((p, idx) => ({
         id: p.id || `sp_${idx}`,
         name: typeof p === 'string' ? p : (p.name || `Player ${idx + 1}`),
         role: p.role || 'Player',
+        phone: p.phone || '',
         isCaptain: Boolean(p.isCaptain || (selectedTeamDrawer?.captain && String(selectedTeamDrawer.captain).trim() === (p.name || '').trim()) || (selectedTeamDrawer?.captainName && String(selectedTeamDrawer.captainName).trim() === (p.name || '').trim())),
         isWicketKeeper: Boolean(p.isWicketKeeper || p.role === 'Wicket Keeper'),
         runs: p.runs != null ? p.runs : null,
         wickets: p.wickets != null ? p.wickets : null
       }));
+
+      if (drawerPlayerSearch.trim()) {
+        const q = drawerPlayerSearch.trim().toLowerCase();
+        mapped = mapped.filter(p => (
+          p.name.toLowerCase().includes(q) ||
+          p.role.toLowerCase().includes(q) ||
+          p.phone.toLowerCase().includes(q)
+        ));
+      }
+
+      return mapped;
     }
     return [];
-  }, [selectedTeamDrawer]);
+  }, [selectedTeamDrawer, drawerPlayerSearch]);
 
   // Measure tab layout for underline
   const onTabLayout = (tabId, event) => {
@@ -426,6 +445,10 @@ export function PublicSeriesViewScreen(props = {}) {
         Animated.spring(animatedUnderlineX, { toValue: layout.x, useNativeDriver: false }),
         Animated.spring(animatedUnderlineWidth, { toValue: layout.width, useNativeDriver: false })
       ]).start();
+      tabsScrollRef.current?.scrollTo({
+        x: Math.max(0, layout.x - 50),
+        animated: true
+      });
     }
   };
 
@@ -441,6 +464,10 @@ export function PublicSeriesViewScreen(props = {}) {
           Animated.spring(animatedUnderlineX, { toValue: layout.x, useNativeDriver: false }),
           Animated.spring(animatedUnderlineWidth, { toValue: layout.width, useNativeDriver: false })
         ]).start();
+        tabsScrollRef.current?.scrollTo({
+          x: Math.max(0, layout.x - 50),
+          animated: true
+        });
       }
     }
   };
@@ -1033,6 +1060,7 @@ export function PublicSeriesViewScreen(props = {}) {
         {/* ── 3. SCROLLABLE TAB STRIP WITH ANIMATED UNDERLINE ── */}
         <View style={styles.tabStripContainer}>
           <ScrollView
+            ref={tabsScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabStripContent}
@@ -1201,7 +1229,7 @@ export function PublicSeriesViewScreen(props = {}) {
           onSaveMatch={handleSaveManualMatch}
         />
 
-        {/* ── MODAL 4: UPGRADED SQUAD & TEAM MANAGEMENT DRAWER ── */}
+        {/* ── MODAL 4: UPGRADED FULL-HEIGHT (92%) SQUAD & TEAM MANAGEMENT DRAWER ── */}
         <Modal
           visible={Boolean(selectedTeamDrawer)}
           animationType="slide"
@@ -1209,29 +1237,34 @@ export function PublicSeriesViewScreen(props = {}) {
           onRequestClose={() => {
             setSelectedTeamDrawer(null);
             setAddPlayerInlineVisible(false);
+            setDrawerPlayerSearch('');
           }}
         >
           <Pressable style={styles.modalOverlay} onPress={() => {
             setSelectedTeamDrawer(null);
             setAddPlayerInlineVisible(false);
+            setDrawerPlayerSearch('');
           }}>
-            <Pressable style={styles.modalContent} onPress={() => { }}>
-              <View style={styles.modalHandle} />
+            <Pressable style={styles.squadDrawerFullSheet} onPress={(e) => {
+              if (e?.stopPropagation) e.stopPropagation();
+            }}>
+              <View style={styles.sheetHandle} />
 
               {/* Header */}
-              <View style={styles.modalHeaderRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <TeamIdentityMark team={selectedTeamDrawer} size={36} />
-                  <View>
-                    <Text style={styles.modalTitle}>{selectedTeamDrawer?.name}</Text>
-                    <Text style={{ fontSize: 11.5, fontFamily: systemFont, color: themeColors.textMuted }}>
-                      {selectedTeamDrawer?.city || 'Local Ground'} • {squadPlayers.length} Players{selectedTeamDrawer?.captainName ? ` • Capt: ${selectedTeamDrawer.captainName}` : ''}
+              <View style={styles.squadDrawerHeaderRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <TeamIdentityMark team={selectedTeamDrawer} size={42} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.squadDrawerTitle} numberOfLines={1}>{selectedTeamDrawer?.name}</Text>
+                    <Text style={styles.squadDrawerSubtitle} numberOfLines={1}>
+                      {selectedTeamDrawer?.city || 'Local Ground'} • {selectedTeamDrawer?.players?.length || 0} Players{selectedTeamDrawer?.captainName ? ` • Capt: ${selectedTeamDrawer.captainName}` : ''}
                     </Text>
                   </View>
                 </View>
                 <TouchableOpacity onPress={() => {
                   setSelectedTeamDrawer(null);
                   setAddPlayerInlineVisible(false);
+                  setDrawerPlayerSearch('');
                 }} style={styles.closeBtn}>
                   <Ionicons name="close" size={22} color={themeColors.textPrimary} />
                 </TouchableOpacity>
@@ -1260,6 +1293,23 @@ export function PublicSeriesViewScreen(props = {}) {
                   </TouchableOpacity>
                 </View>
               ) : null}
+
+              {/* Search Squad Bar */}
+              <View style={styles.squadSearchWrap}>
+                <Ionicons name="search" size={16} color="#94A3B8" />
+                <TextInput
+                  style={styles.squadSearchInput}
+                  placeholder="Search squad players..."
+                  placeholderTextColor="#94A3B8"
+                  value={drawerPlayerSearch}
+                  onChangeText={setDrawerPlayerSearch}
+                />
+                {drawerPlayerSearch ? (
+                  <TouchableOpacity onPress={() => setDrawerPlayerSearch('')}>
+                    <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
 
               {/* Inline Add Player Form (If Visible) */}
               {addPlayerInlineVisible && (
@@ -1310,17 +1360,17 @@ export function PublicSeriesViewScreen(props = {}) {
                 </View>
               )}
 
-              {/* Squad Players List */}
-              <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+              {/* Squad Players List (Scrollable to fill available height) */}
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
                 {squadPlayers.length > 0 ? (
                   squadPlayers.map((player, pIdx) => {
                     return (
                       <View key={player.id || pIdx} style={styles.squadPlayerRow}>
-                        <View style={{ width: 22, alignItems: 'center' }}>
-                          <Text style={{ fontSize: 11, fontFamily: systemFontBold, color: themeColors.textMuted }}>{pIdx + 1}</Text>
+                        <View style={{ width: 24, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 11, fontFamily: systemFontMedium, color: themeColors.textMuted }}>{pIdx + 1}</Text>
                         </View>
-                        <PlayerAvatar name={player.name} size={34} />
-                        <View style={{ flex: 1, marginLeft: 8 }}>
+                        <PlayerAvatar name={player.name} size={36} />
+                        <View style={{ flex: 1, marginLeft: 10 }}>
                           <Text style={styles.squadPlayerName}>{player.name}</Text>
                           <Text style={styles.squadPlayerRole}>
                             {player.role}{player.phone ? ` • ${player.phone}` : ''}
@@ -1366,7 +1416,7 @@ export function PublicSeriesViewScreen(props = {}) {
                             <>
                               {player.isCaptain && (
                                 <View style={styles.captainBadge}>
-                                  <Text style={styles.captainBadgeText}>C</Text>
+                                  <Text style={styles.captainBadgeText}>CAPTAIN</Text>
                                 </View>
                               )}
                               {player.isWicketKeeper && (
@@ -1381,12 +1431,12 @@ export function PublicSeriesViewScreen(props = {}) {
                     );
                   })
                 ) : (
-                  <View style={{ paddingVertical: 24, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <Ionicons name="people-outline" size={32} color="#94A3B8" />
-                    <Text style={{ fontSize: 13, fontFamily: systemFont, color: themeColors.textSecondary }}>
-                      No squad players registered yet
+                  <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <Ionicons name="people-outline" size={36} color="#94A3B8" />
+                    <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: themeColors.textSecondary }}>
+                      {drawerPlayerSearch ? 'No matching players found' : 'No squad players registered yet'}
                     </Text>
-                    {isUserOrganiser && (
+                    {isUserOrganiser && !drawerPlayerSearch && (
                       <TouchableOpacity
                         style={styles.emptyAddPlayersBtn}
                         onPress={() => setAddPlayerInlineVisible(true)}
@@ -1777,16 +1827,16 @@ const styles = StyleSheet.create({
     marginRight: 8
   },
   headerTitle: {
-    fontSize: 15.5,
-    fontFamily: systemFontMedium,
+    fontSize: 18.5,
+    fontFamily: systemFontBold,
     color: themeColors.textPrimary,
-    letterSpacing: -0.2
+    letterSpacing: -0.3
   },
   headerSubtitle: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontFamily: systemFont,
     color: themeColors.textMuted,
-    marginTop: 1
+    marginTop: 2
   },
   organiserPill: {
     flexDirection: 'row',
@@ -1825,16 +1875,16 @@ const styles = StyleSheet.create({
   },
   tabStripContent: {
     flexDirection: 'row',
-    paddingHorizontal: 12
+    paddingHorizontal: 8
   },
   tabItemBtn: {
     paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center'
   },
   tabLabelText: {
-    fontSize: 13,
+    fontSize: 14.5,
     fontFamily: systemFontMedium,
     color: themeColors.textMuted
   },
@@ -2300,6 +2350,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: systemFontBold,
     color: '#16A34A'
+  },
+  squadDrawerFullSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '92%',
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 24,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6
+  },
+  squadDrawerHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    borderBottomWidth: 0
+  },
+  squadDrawerTitle: {
+    fontSize: 17,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary
+  },
+  squadDrawerSubtitle: {
+    fontSize: 12,
+    fontFamily: systemFont,
+    color: themeColors.textMuted,
+    marginTop: 2
+  },
+  squadSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F8FA',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 40,
+    borderWidth: 0,
+    marginVertical: 10,
+    gap: 8
+  },
+  squadSearchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: systemFont,
+    color: themeColors.textPrimary,
+    paddingVertical: 0
   }
 });
 
