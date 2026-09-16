@@ -190,10 +190,21 @@ export function useScorerWorkflow({
       if (tournamentId) {
         syncLiveMatchToTournament(tournamentId, newMatch).catch(() => {});
       }
-
       if (setLiveMatches) {
         setLiveMatches(prev => {
-          const filtered = (prev || []).filter(m => (m.id !== newMatch.id && m.supabaseId !== newMatch.id));
+          const filtered = (prev || []).filter(m => {
+            if (!m) return false;
+            if (m.id === newMatch.id || m.supabaseId === newMatch.id) return false;
+            if (tournamentId && m.tournamentId && String(m.tournamentId) === String(tournamentId)) {
+              if (tournamentMatchId && m.tournamentMatchId && String(m.tournamentMatchId) === String(tournamentMatchId)) return false;
+              const mT1 = String(m.team1?.name || m.teams?.[0]?.name || '').trim().toLowerCase();
+              const mT2 = String(m.team2?.name || m.teams?.[1]?.name || '').trim().toLowerCase();
+              const nT1 = String(t1).trim().toLowerCase();
+              const nT2 = String(t2).trim().toLowerCase();
+              if ((mT1 === nT1 && mT2 === nT2) || (mT1 === nT2 && mT2 === nT1)) return false;
+            }
+            return true;
+          });
           return [newMatch, ...filtered];
         });
       }
@@ -218,25 +229,11 @@ export function useScorerWorkflow({
     if (finishedSnapshot && (finishedSnapshot.title || finishedSnapshot.id)) {
       if (setFinishedArchive) {
         setFinishedArchive(prev => {
-          const list = Array.isArray(prev) ? prev : [];
-          if (list.some(m => m.id === finishedSnapshot.id)) return list;
-          return [finishedSnapshot, ...list];
+          const filtered = (prev || []).filter(m => (m.id !== finishedSnapshot.id && m.title !== finishedSnapshot.title));
+          return [finishedSnapshot, ...filtered];
         });
       }
-      syncMatchToSupabase({
-        ...(target.sourceMatch || target),
-        phase: 'result',
-        winnerTeamName: finishedSnapshot.winnerTeamName,
-        resultText: finishedSnapshot.winner
-      }).catch(() => { });
-
-      const tourId = target.tournamentId || finishedSnapshot.tournamentId || target.sourceMatch?.tournamentId;
-      if (tourId) {
-        syncFinishedMatchToTournament(tourId, {
-          ...finishedSnapshot,
-          tournamentMatchId: target.tournamentMatchId || finishedSnapshot.tournamentMatchId || target.sourceMatch?.tournamentMatchId
-        }).catch(err => console.warn('[useScorerWorkflow] Tournament rematch sync error:', err));
-      }
+      if (setSelectedMatch) setSelectedMatch(finishedSnapshot);
     }
 
     setRematchSetup({
@@ -245,15 +242,12 @@ export function useScorerWorkflow({
       team1Roster: r1,
       team2Roster: r2,
       totalOvers: target.maxOvers || 5,
-      venueName: target.venue && target.venue !== 'Venue not added' ? target.venue : '',
-      scorerPin: '',
-      isRematch: true
+      ballType: target.ballType || 'tennis',
+      pitchType: target.pitchType || 'turf',
+      umpireName: target.umpireName || DEFAULT_UMPIRE_NAME,
+      startAtStep: 2
     });
-
-    if (setActiveMatch) setActiveMatch(null);
-    if (setSelectedMatch) setSelectedMatch(null);
-    setIsScorerUnlocked(true);
-    if (setCurrentScreen) setCurrentScreen('scorerWizard');
+    if (setCurrentScreen) setCurrentScreen('quickMatchSetup');
   };
 
   // ── Match List Filtering ──
@@ -270,12 +264,38 @@ export function useScorerWorkflow({
   };
 
   const visibleLiveMatches = useMemo(() => {
-    const list = Array.isArray(liveMatches) ? [...liveMatches] : [];
+    const rawList = Array.isArray(liveMatches) ? [...liveMatches] : [];
     if (activeMatch && filterLiveMatch(activeMatch)) {
-      const exists = list.some(m => (m.id && m.id === activeMatch.id) || (m.supabaseId && m.supabaseId === activeMatch.supabaseId));
-      if (!exists) list.unshift(activeMatch);
+      const exists = rawList.some(m =>
+        (m.id && m.id === activeMatch.id) ||
+        (m.supabaseId && m.supabaseId === activeMatch.supabaseId) ||
+        (m.tournamentId && activeMatch.tournamentId && String(m.tournamentId) === String(activeMatch.tournamentId) && (
+          (m.tournamentMatchId && activeMatch.tournamentMatchId && String(m.tournamentMatchId) === String(activeMatch.tournamentMatchId)) ||
+          (m.team1?.name && activeMatch.team1?.name && m.team2?.name && activeMatch.team2?.name &&
+            String(m.team1.name).toLowerCase() === String(activeMatch.team1.name).toLowerCase() &&
+            String(m.team2.name).toLowerCase() === String(activeMatch.team2.name).toLowerCase())
+        ))
+      );
+      if (!exists) rawList.unshift(activeMatch);
     }
-    return list.filter(filterLiveMatch);
+
+    const seen = new Set();
+    const uniqueList = [];
+    for (const m of rawList) {
+      if (!filterLiveMatch(m)) continue;
+      const idKey = m.id || m.supabaseId;
+      const t1Norm = String(m.team1?.name || m.teams?.[0]?.name || '').trim().toLowerCase();
+      const t2Norm = String(m.team2?.name || m.teams?.[1]?.name || '').trim().toLowerCase();
+      const pairKey = (t1Norm && t2Norm) ? `${m.tournamentId || 'local'}_${[t1Norm, t2Norm].sort().join('_vs_')}` : null;
+
+      if (idKey && seen.has(idKey)) continue;
+      if (pairKey && seen.has(pairKey)) continue;
+
+      if (idKey) seen.add(idKey);
+      if (pairKey) seen.add(pairKey);
+      uniqueList.push(m);
+    }
+    return uniqueList;
   }, [liveMatches, activeMatch, searchNeedle]);
 
   const activeMatchVisible = visibleLiveMatches.length > 0;

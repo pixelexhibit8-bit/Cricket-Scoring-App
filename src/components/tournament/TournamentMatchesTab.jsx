@@ -276,35 +276,22 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                     </View>
                   </View>
 
-                  <View style={styles.liveFooterRow}>
-                    <Text style={styles.liveStatusText} numberOfLines={1}>
-                      {m.equation || m.statusText || 'Match is live in progress'}
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      {isUserOrganiser ? (
-                        <TouchableOpacity
-                          style={styles.resumeScoringLiveBtn}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            if (onStartMatchScoring) onStartMatchScoring(m);
-                          }}
-                          activeOpacity={0.85}
-                        >
-                          <MaterialCommunityIcons name="cricket" size={12} color="#FFFFFF" />
-                          <Text style={styles.resumeScoringLiveText}>Resume Scoring</Text>
-                        </TouchableOpacity>
-                      ) : null}
+                  {isUserOrganiser ? (
+                    <View style={styles.liveFooterRow}>
+                      <View style={{ flex: 1 }} />
                       <TouchableOpacity
-                        style={styles.watchLiveBtn}
+                        style={styles.resumeScoringLiveBtn}
                         onPress={(e) => {
                           e.stopPropagation();
-                          if (onWatchLive) onWatchLive(m);
+                          if (onStartMatchScoring) onStartMatchScoring(m);
                         }}
+                        activeOpacity={0.85}
                       >
-                        <Text style={styles.watchLiveBtnText}>Watch Live ›</Text>
+                        <MaterialCommunityIcons name="cricket" size={13} color="#FFFFFF" />
+                        <Text style={styles.resumeScoringLiveText}>Resume Scoring</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  ) : null}
                 </TouchableOpacity>
               );
             })}
@@ -731,14 +718,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#18181B',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6
+    justifyContent: 'center',
+    gap: 5,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 8
   },
   resumeScoringLiveText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 11.5,
     fontFamily: systemFontBold
   },
   watchLiveBtn: {
