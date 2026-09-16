@@ -273,7 +273,6 @@ export function CreateTournamentScreen(props = {}) {
         Alert.alert('Required Field', 'Please select or enter City / Location.');
         return;
       }
-      setShowCityDropdown(false);
       setCurrentStep(2);
     } else if (currentStep === 2) {
       setCurrentStep(3);
@@ -395,7 +394,6 @@ export function CreateTournamentScreen(props = {}) {
                 Alert.alert('Complete Step 1', 'Please enter Tournament Name and City first.');
                 return;
               }
-              setShowCityDropdown(false);
               setCurrentStep(2);
             }}
             activeOpacity={0.8}
@@ -412,7 +410,6 @@ export function CreateTournamentScreen(props = {}) {
                 Alert.alert('Complete Step 1', 'Please enter Tournament Name and City first.');
                 return;
               }
-              setShowCityDropdown(false);
               setCurrentStep(3);
             }}
             activeOpacity={0.8}
