@@ -16,7 +16,7 @@ import {
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
 import { PointsTableSection } from './PointsTableSection.jsx';
-import { resolveTeamWithRoster, formatMatchResult, cleanMatchDate } from '../../utils/teamUtils.js';
+import { resolveTeamWithRoster, formatMatchResult, cleanMatchDate, getResultColor } from '../../utils/teamUtils.js';
 
 function isKnockoutStage(stage) {
   if (!stage || typeof stage !== 'string') return false;
@@ -49,7 +49,7 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
   const highestScore = stats?.batting?.highestScore || {};
   const mostSixes = stats?.batting?.mostSixes || {};
 
-  // Smart Featured Matches Selection: 1 Latest Completed Match + Next 2 Upcoming/Live Matches (in chronological order)
+  // Smart Featured Matches Selection: Last 3 Completed Matches (latest on top) if finished, or Latest Completed + Next Upcoming
   const featuredMatches = useMemo(() => {
     if (!matches || matches.length === 0) return [];
 
@@ -59,6 +59,11 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
     const completed = matches.filter(
       m => m.status === 'FINISHED' || Boolean(m.result) || m.phase === 'result' || m.phase === 'finished'
     );
+
+    // If tournament has completed all fixtures, show the last 3 matches with the latest (Final) at the top
+    if (upcomingOrLive.length === 0 && completed.length > 0) {
+      return completed.slice(-3).reverse();
+    }
 
     const result = [];
 
@@ -112,11 +117,10 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
             const t1Code = t1Resolved.shortName || (typeof t1Name === 'string' ? t1Name.slice(0, 6).toUpperCase() : 'T1');
             const t2Code = t2Resolved.shortName || (typeof t2Name === 'string' ? t2Name.slice(0, 6).toUpperCase() : 'T2');
 
-            const hasRibbon = isKnockoutStage(m.stage);
-            const ribbonText = m.stage || 'Final';
-            const ribbonBg = String(m.stage || '').toLowerCase().includes('final') && !String(m.stage || '').toLowerCase().includes('semi')
-              ? '#334155'
-              : '#1D4ED8';
+            const hasRibbon = Boolean(m.stage) || isKnockoutStage(m.stage) || isFinished;
+            const ribbonText = m.stage || (m.matchNumber ? `Match ${m.matchNumber}` : 'Match');
+            const ribbonBg = '#EA580C'; // Warm Orange background
+            const resultColor = getResultColor(m, idx);
 
             return (
               <TouchableOpacity
@@ -131,7 +135,7 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
                   else if (isUserOrganiser && onStartMatchScoring) onStartMatchScoring(m);
                 }}
               >
-                {/* Left Vertical Ribbon: ONLY for Knockout / Big Matches */}
+                {/* Left Vertical Ribbon: Orange with White Text */}
                 {hasRibbon ? (
                   <View style={[styles.cardRibbon, { backgroundColor: ribbonBg }]}>
                     <Text style={styles.cardRibbonText} numberOfLines={1}>
@@ -157,7 +161,7 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
                         const { winnerHeadline, marginText } = formatMatchResult(m, t1Resolved, t2Resolved, teams);
                         return (
                           <View style={styles.finishedResultCenter}>
-                            <Text style={styles.winnerHeadline} numberOfLines={1}>
+                            <Text style={[styles.winnerHeadline, { color: resultColor }]} numberOfLines={1}>
                               {winnerHeadline}
                             </Text>
                             <Text style={styles.winnerSubMargin} numberOfLines={1}>
@@ -481,14 +485,14 @@ const styles = StyleSheet.create({
     height: 74
   },
   cardRibbon: {
-    width: 22,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4
   },
   cardRibbonText: {
     color: '#FFFFFF',
-    fontSize: 8.5,
+    fontSize: 9,
     fontFamily: systemFontBold,
     transform: [{ rotate: '-90deg' }],
     width: 65,
@@ -515,8 +519,8 @@ const styles = StyleSheet.create({
     width: 90
   },
   teamCodeText: {
-    fontSize: 13.5,
-    fontFamily: systemFontBold,
+    fontSize: 14,
+    fontFamily: systemFontMedium,
     color: themeColors.textPrimary
   },
   matchCenterBlock: {
@@ -528,15 +532,15 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   winnerHeadline: {
-    fontSize: 14,
-    fontFamily: systemFontBold,
+    fontSize: 14.5,
+    fontFamily: systemFontMedium,
     color: '#991B1B'
   },
   winnerSubMargin: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontFamily: systemFont,
     color: themeColors.textMuted,
-    marginTop: 1
+    marginTop: 2
   },
   liveCenterBlock: {
     alignItems: 'center'
