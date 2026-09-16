@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert
+  Alert,
+  StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   themeColors,
@@ -145,12 +147,14 @@ export function TournamentGroupsModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.modalContainer}>
-        {/* Header Bar */}
-        <View style={styles.headerBar}>
-          <TouchableOpacity style={styles.backBtn} onPress={onClose} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
-          </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
+        <View style={styles.modalContainer}>
+          {/* Header Bar */}
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.backBtn} onPress={onClose} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
+            </TouchableOpacity>
           <View style={styles.headerTitleWrap}>
             <Text style={styles.headerTitle}>Groups</Text>
             <Text style={styles.headerSub}>Points table pool allocation</Text>
@@ -382,12 +386,17 @@ export function TournamentGroupsModal({
             </View>
           </View>
         </Modal>
-      </View>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: themeColors.surface
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: themeColors.appBackground

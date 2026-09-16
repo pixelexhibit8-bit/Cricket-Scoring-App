@@ -10,8 +10,10 @@ import {
   Image,
   StyleSheet,
   Alert,
-  Keyboard
+  Keyboard,
+  StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -280,12 +282,14 @@ export function EditTournamentModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.modalContainer}>
-        {/* Header Bar */}
-        <View style={styles.modalHeader}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color={themeColors.textPrimary} />
-          </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
+        <View style={styles.modalContainer}>
+          {/* Header Bar */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
+              <Ionicons name="close" size={24} color={themeColors.textPrimary} />
+            </TouchableOpacity>
           <View style={styles.modalHeaderTitleWrap}>
             <Text style={styles.modalHeaderTitle}>Edit Tournament</Text>
             <Text style={styles.modalHeaderSub}>Update details or delete tournament</Text>
@@ -672,12 +676,17 @@ export function EditTournamentModal({
             setEndDate(eDate);
           }}
         />
-      </View>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: themeColors.surface
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: themeColors.appBackground

@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert
+  Alert,
+  StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   themeColors,
@@ -168,102 +170,109 @@ export function TournamentAdminMenuModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.modalContainer}>
-        {/* Header Bar */}
-        <View style={styles.headerBar}>
-          <TouchableOpacity style={styles.backBtn} onPress={onClose} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle} numberOfLines={1}>{tournamentName}</Text>
-            <View style={styles.hostBadge}>
-              <MaterialCommunityIcons name="shield-crown-outline" size={11} color="#FFFFFF" />
-              <Text style={styles.hostBadgeText}>Tournament Admin Settings</Text>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <StatusBar barStyle="dark-content" backgroundColor={themeColors.surface} />
+        <View style={styles.modalContainer}>
+          {/* Header Bar */}
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.backBtn} onPress={onClose} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleWrap}>
+              <Text style={styles.headerTitle} numberOfLines={1}>{tournamentName}</Text>
+              <View style={styles.hostBadge}>
+                <MaterialCommunityIcons name="shield-crown-outline" size={11} color="#FFFFFF" />
+                <Text style={styles.hostBadgeText}>Tournament Admin Settings</Text>
+              </View>
             </View>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
+              <Ionicons name="close" size={24} color={themeColors.textPrimary} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color={themeColors.textPrimary} />
-          </TouchableOpacity>
-        </View>
 
-        {/* Menu Items List */}
-        <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.menuContainer}>
-            {menuItems.map((item, index) => {
-              const isLast = index === menuItems.length - 1;
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.menuRow, isLast && { borderBottomWidth: 0 }]}
-                  onPress={item.onPress}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuLeft}>
-                    <View
-                      style={[
-                        styles.iconCircle,
-                        item.destructive && styles.iconCircleDestructive,
-                        item.highlight && styles.iconCircleHighlight
-                      ]}
-                    >
-                      {item.iconFamily === 'Ionicons' ? (
-                        <Ionicons
-                          name={item.icon}
-                          size={20}
-                          color={item.destructive ? '#EF4444' : item.highlight ? '#FFFFFF' : '#18181B'}
-                        />
-                      ) : (
-                        <MaterialCommunityIcons
-                          name={item.icon}
-                          size={20}
-                          color={item.destructive ? '#EF4444' : item.highlight ? '#FFFFFF' : '#18181B'}
-                        />
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.menuTitle,
-                        item.destructive && styles.menuTitleDestructive,
-                        item.highlight && styles.menuTitleHighlight
-                      ]}
-                    >
-                      {item.title}
-                    </Text>
-                  </View>
-
-                  <View style={styles.menuRight}>
-                    {item.badge && (
-                      <View style={styles.newBadge}>
-                        <Text style={styles.newBadgeText}>{item.badge}</Text>
+          {/* Menu Items List */}
+          <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.menuContainer}>
+              {menuItems.map((item, index) => {
+                const isLast = index === menuItems.length - 1;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.menuRow, isLast && { borderBottomWidth: 0 }]}
+                    onPress={item.onPress}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.menuLeft}>
+                      <View
+                        style={[
+                          styles.iconCircle,
+                          item.destructive && styles.iconCircleDestructive,
+                          item.highlight && styles.iconCircleHighlight
+                        ]}
+                      >
+                        {item.iconFamily === 'Ionicons' ? (
+                          <Ionicons
+                            name={item.icon}
+                            size={20}
+                            color={item.destructive ? '#EF4444' : item.highlight ? '#FFFFFF' : '#18181B'}
+                          />
+                        ) : (
+                          <MaterialCommunityIcons
+                            name={item.icon}
+                            size={20}
+                            color={item.destructive ? '#EF4444' : item.highlight ? '#FFFFFF' : '#18181B'}
+                          />
+                        )}
                       </View>
-                    )}
-                    <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                      <Text
+                        style={[
+                          styles.menuTitle,
+                          item.destructive && styles.menuTitleDestructive,
+                          item.highlight && styles.menuTitleHighlight
+                        ]}
+                      >
+                        {item.title}
+                      </Text>
+                    </View>
 
-          {/* Footer Helpline / Help Section */}
-          <View style={styles.footerHelpCard}>
-            <View style={styles.footerHelpHeader}>
-              <Text style={styles.footerHelpTitle}>Tournament Support & Guidance</Text>
-              <TouchableOpacity onPress={() => Alert.alert('Help', 'Contact CricFlow ground assistance anytime.')}>
-                <Text style={styles.footerHelpLink}>Help</Text>
-              </TouchableOpacity>
+                    <View style={styles.menuRight}>
+                      {item.badge && (
+                        <View style={styles.newBadge}>
+                          <Text style={styles.newBadgeText}>{item.badge}</Text>
+                        </View>
+                      )}
+                      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <View style={styles.helplineRow}>
-              <MaterialCommunityIcons name="phone-outline" size={16} color="#059669" />
-              <Text style={styles.helplineText}>CricFlow Helpline: +91 9983228208</Text>
+
+            {/* Footer Helpline / Help Section */}
+            <View style={styles.footerHelpCard}>
+              <View style={styles.footerHelpHeader}>
+                <Text style={styles.footerHelpTitle}>Tournament Support & Guidance</Text>
+                <TouchableOpacity onPress={() => Alert.alert('Help', 'Contact CricFlow ground assistance anytime.')}>
+                  <Text style={styles.footerHelpLink}>Help</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.helplineRow}>
+                <MaterialCommunityIcons name="phone-outline" size={16} color="#059669" />
+                <Text style={styles.helplineText}>CricFlow Helpline: +91 9983228208</Text>
+              </View>
             </View>
-          </View>
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: themeColors.surface
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: themeColors.appBackground
