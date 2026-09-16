@@ -67,13 +67,13 @@ export const publicType = {
 // ─── 3. DESIGN TOKENS (COLORS - 4-COLOR PREMIUM SYSTEM) ───────────────────────
 export const themeColors = {
   // ── 1. Clean Canvas Background & Surfaces ──
-  appBackground: '#FCFCFD',   // Pure & Airy Near-White Canvas
+  appBackground: '#F7F7F7',   // Clean Off-White Canvas (CREX standard RGB 247,247,247)
   surface: '#FFFFFF',         // Pure White Surface
-  surfaceOffWhite: '#F8F8FA', // Subtle Soft Contrast
-  cardBackground: '#FFFFFF',  // Card Surface
-  cardBorder: '#EEEEF0',      // Ultra-clean Subtle Border
-  border: '#EEEEF0',          // Divider Lines
-  borderDark: '#DCDCE0',      // Active / Emphasized Border
+  surfaceOffWhite: '#F4F4F5', // Subtle Soft Contrast
+  cardBackground: '#FFFFFF',  // Pure White Card Surface
+  cardBorder: '#E2E2E2',      // Clean Light Grey Border (CREX standard)
+  border: '#E2E2E2',          // Clean Divider Lines
+  borderDark: '#CBD5E1',      // Active / Emphasized Border
 
   // ── 2. Primary Font & Neutral Palette ──
   textPrimary: '#333333',     // Charcoal Dark Font on Light Canvas

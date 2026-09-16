@@ -221,6 +221,37 @@ export function MatchesScreen(props = {}) {
   const homePagerScrollX = useRef(new Animated.Value(activeTabIndex * screenWidth)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  // CREX Category / Series Filter Chips State
+  const [selectedSeriesFilter, setSelectedSeriesFilter] = useState('all');
+
+  const seriesFilterChips = React.useMemo(() => {
+    const defaultChips = [
+      { id: 'all', label: 'All Fixtures', iconName: 'cricket' },
+      { id: 'rpl', label: 'RPL 2026', iconName: 'trophy' },
+      { id: 'spl', label: 'Sadokan League', iconName: 'shield-star' },
+      { id: 't20', label: 'T20 Cup', iconName: 'lightning-bolt' }
+    ];
+
+    const dynamicFromTournaments = (upcomingMatches || []).concat(finishedArchive || [])
+      .map(m => m.tournamentName || m.seriesName)
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .slice(0, 5)
+      .map(tName => ({
+        id: tName.toLowerCase().replace(/\s+/g, '-'),
+        label: tName,
+        iconName: 'trophy-outline'
+      }));
+
+    const combined = [...defaultChips];
+    dynamicFromTournaments.forEach(dt => {
+      if (!combined.some(c => c.label.toLowerCase() === dt.label.toLowerCase())) {
+        combined.push(dt);
+      }
+    });
+    return combined;
+  }, [upcomingMatches, finishedArchive]);
+
   const [tabLayouts, setTabLayouts] = useState({});
   const onTabLayout = (id, e) => {
     const { x, width } = e.nativeEvent.layout;
@@ -348,6 +379,57 @@ export function MatchesScreen(props = {}) {
               backgroundColor: themeColors.primary,
               transform: [{ translateX: animatedUnderlineX }]
             }} />
+          </ScrollView>
+        </View>
+      )}
+
+      {/* CREX STYLE TOP CATEGORY / SERIES PILLS ROW */}
+      {(bottomNavTab === 'matches' || bottomNavTab === 'home' || !bottomNavTab) && !searchQuery && (
+        <View style={{
+          backgroundColor: '#F7F7F7',
+          paddingVertical: 10,
+          borderBottomWidth: 1,
+          borderBottomColor: '#E2E2E2'
+        }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 14, flexDirection: 'row', gap: 8 }}
+          >
+            {seriesFilterChips.map((chip) => {
+              const isSelected = selectedSeriesFilter === chip.id;
+              return (
+                <TouchableOpacity
+                  key={chip.id}
+                  onPress={() => setSelectedSeriesFilter(chip.id === selectedSeriesFilter ? 'all' : chip.id)}
+                  activeOpacity={0.7}
+                  style={{
+                    backgroundColor: isSelected ? '#18181B' : '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: isSelected ? '#18181B' : '#E2E2E2',
+                    borderRadius: 20,
+                    paddingHorizontal: 13,
+                    paddingVertical: 6.5,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    name={chip.iconName || 'trophy-outline'}
+                    size={14}
+                    color={isSelected ? '#FFFFFF' : '#0284C7'}
+                  />
+                  <Text style={{
+                    fontSize: 12.5,
+                    fontFamily: systemFontMedium,
+                    color: isSelected ? '#FFFFFF' : '#0F172A'
+                  }}>
+                    {chip.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       )}
@@ -582,7 +664,7 @@ export function MatchesScreen(props = {}) {
 
                   return Object.keys(groups).map(dKey => (
                     <View key={`foryou-grp-${dKey}`} style={{ marginTop: 10, marginBottom: 2 }}>
-                      <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
+                      <Text style={{ fontSize: 14.5, fontFamily: systemFontBold, color: '#0F172A', marginTop: 12, marginBottom: 8, paddingHorizontal: 2 }}>
                         {dKey}
                       </Text>
                       {groups[dKey].map((m, idx) => (renderFinishedMatchListCard || renderFinishedCard)(m, idx))}
@@ -646,7 +728,7 @@ export function MatchesScreen(props = {}) {
 
                   return Object.keys(groups).map(dKey => (
                     <View key={`live-grp-${dKey}`} style={{ marginTop: 10, marginBottom: 2 }}>
-                      <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
+                      <Text style={{ fontSize: 14.5, fontFamily: systemFontBold, color: '#0F172A', marginTop: 12, marginBottom: 8, paddingHorizontal: 2 }}>
                         {dKey}
                       </Text>
                       {groups[dKey].map((m, idx) => (renderFinishedMatchListCard || renderFinishedCard)(m, idx))}
@@ -697,7 +779,7 @@ export function MatchesScreen(props = {}) {
 
                   return Object.keys(groups).map(dateKey => (
                     <View key={`up-grp-${dateKey}`} style={{ marginTop: 10, marginBottom: 2 }}>
-                      <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
+                      <Text style={{ fontSize: 14.5, fontFamily: systemFontBold, color: '#0F172A', marginTop: 12, marginBottom: 8, paddingHorizontal: 2 }}>
                         {dateKey}
                       </Text>
                       {groups[dateKey].map((m, idx) => (
@@ -755,7 +837,7 @@ export function MatchesScreen(props = {}) {
 
                 return Object.keys(groups).map(dateKey => (
                   <View key={`fin-grp-${dateKey}`} style={{ marginTop: 10, marginBottom: 2 }}>
-                    <Text style={{ fontSize: 13.5, fontFamily: systemFontMedium, color: '#1E293B', marginBottom: 8, paddingHorizontal: 2 }}>
+                    <Text style={{ fontSize: 14.5, fontFamily: systemFontBold, color: '#0F172A', marginTop: 12, marginBottom: 8, paddingHorizontal: 2 }}>
                       {dateKey}
                     </Text>
                     {groups[dateKey].map((f, idx) => (renderFinishedMatchListCard || renderFinishedCard)(f, idx))}

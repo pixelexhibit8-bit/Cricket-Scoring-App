@@ -106,7 +106,7 @@ export const MatchListScoreCard = ({
           borderRadius: 16,
           padding: 16,
           borderWidth: 1,
-          borderColor: '#E2E8F0',
+          borderColor: '#E2E2E2',
           gap: 12
         }}
       >

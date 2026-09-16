@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderColor: '#E2E2E2',
     paddingHorizontal: 16,
     paddingVertical: 14
   },
@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderColor: '#E2E2E2',
     paddingHorizontal: 16,
     paddingVertical: 14
   },
