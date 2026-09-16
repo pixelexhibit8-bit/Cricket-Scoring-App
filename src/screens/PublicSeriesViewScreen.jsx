@@ -302,11 +302,7 @@ export function PublicSeriesViewScreen(props = {}) {
       const liveCandidate = liveSources.find(ls => {
         if (ls.tournamentMatchId && (ls.tournamentMatchId === matchId || ls.id === matchId)) return true;
         if (ls.id === matchId) return true;
-        const mT1 = String(m.team1?.name || m.team1 || '').trim().toLowerCase();
-        const mT2 = String(m.team2?.name || m.team2 || '').trim().toLowerCase();
-        const lsT1 = String(ls.team1?.name || ls.teams?.[0]?.name || ls.team1 || '').trim().toLowerCase();
-        const lsT2 = String(ls.team2?.name || ls.teams?.[1]?.name || ls.team2 || '').trim().toLowerCase();
-        return (mT1 && mT2 && ((mT1 === lsT1 && mT2 === lsT2) || (mT1 === lsT2 && mT2 === lsT1)));
+        return false;
       });
 
       if (liveCandidate) {
@@ -763,9 +759,38 @@ export function PublicSeriesViewScreen(props = {}) {
   // Auto Fixtures Save
   const handleSaveAutoFixtures = async (generatedFixtures) => {
     if (!tournament?.id || !Array.isArray(generatedFixtures)) return;
+
+    // Clear any dangling unfinished live match for this tournament so new schedule starts fresh
+    if (matchCtx) {
+      if (
+        matchCtx.activeMatch &&
+        String(matchCtx.activeMatch.tournamentId) === String(tournament.id) &&
+        matchCtx.activeMatch.phase !== 'finished' &&
+        matchCtx.activeMatch.phase !== 'result'
+      ) {
+        if (matchCtx.setActiveMatch) matchCtx.setActiveMatch(null);
+      }
+      if (matchCtx.setLiveMatches) {
+        matchCtx.setLiveMatches(prev => {
+          if (!Array.isArray(prev)) return [];
+          return prev.filter(lm => {
+            const isThisTourn = String(lm.tournamentId) === String(tournament.id);
+            const isFinished = lm.status === 'FINISHED' || lm.phase === 'finished' || Boolean(lm.result);
+            if (isThisTourn && !isFinished) return false;
+            return true;
+          });
+        });
+      }
+    }
+
     const updated = await saveTournamentFixtures(tournament.id, generatedFixtures);
     if (updated) {
       setTournament(updated);
+    } else {
+      setTournament(prev => ({
+        ...prev,
+        matches: generatedFixtures
+      }));
     }
   };
 
@@ -834,14 +859,56 @@ export function PublicSeriesViewScreen(props = {}) {
   const handleDeleteSchedule = async () => {
     if (!tournament?.id) return;
     const currentMatches = Array.isArray(tournament.matches) ? tournament.matches : [];
-    const keptMatches = currentMatches.filter(m => m.status === 'FINISHED' || m.status === 'LIVE' || Boolean(m.result));
+    // CRITICAL: Preserve ONLY genuinely finished matches
+    const keptMatches = currentMatches.filter(m => m.status === 'FINISHED' || Boolean(m.result) || m.phase === 'finished');
     const updated = await saveTournamentFixtures(tournament.id, keptMatches);
     if (updated) {
       setTournament(updated);
     } else {
       setTournament(prev => ({ ...(prev || {}), matches: keptMatches }));
     }
-    showToast('Upcoming scheduled fixtures cleared', 'info');
+
+    // ── CLEAR LIVE & ACTIVE MATCH IN CONTEXT & STORAGE ──
+    if (matchCtx) {
+      // 1. If activeMatch belongs to this tournament and is not finished, clear it
+      if (
+        matchCtx.activeMatch &&
+        (String(matchCtx.activeMatch.tournamentId) === String(tournament.id) ||
+         currentMatches.some(m => m.id === matchCtx.activeMatch.id || m.id === matchCtx.activeMatch.tournamentMatchId)) &&
+        matchCtx.activeMatch.phase !== 'finished' &&
+        matchCtx.activeMatch.phase !== 'result'
+      ) {
+        if (matchCtx.setActiveMatch) {
+          matchCtx.setActiveMatch(null);
+        }
+      }
+
+      // 2. Filter out any live matches for this tournament from liveMatches
+      if (matchCtx.setLiveMatches) {
+        matchCtx.setLiveMatches(prev => {
+          if (!Array.isArray(prev)) return [];
+          return prev.filter(lm => {
+            const isThisTourn = String(lm.tournamentId) === String(tournament.id);
+            const isMatchOfTourn = currentMatches.some(m => m.id === lm.id || m.id === lm.tournamentMatchId);
+            const isFinished = lm.status === 'FINISHED' || lm.phase === 'finished' || Boolean(lm.result);
+            if ((isThisTourn || isMatchOfTourn) && !isFinished) {
+              return false; // Remove!
+            }
+            return true;
+          });
+        });
+      }
+
+      // 3. Filter out upcoming matches for this tournament
+      if (matchCtx.setUpcomingMatches) {
+        matchCtx.setUpcomingMatches(prev => {
+          if (!Array.isArray(prev)) return [];
+          return prev.filter(up => String(up.tournamentId) !== String(tournament.id));
+        });
+      }
+    }
+
+    showToast('Tournament schedule & live match cleared completely', 'info');
   };
 
   const handleOpenStartMatch = () => {

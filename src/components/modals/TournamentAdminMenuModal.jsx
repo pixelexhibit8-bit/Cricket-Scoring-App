@@ -108,7 +108,7 @@ export function TournamentAdminMenuModal({
       onPress: () => {
         Alert.alert(
           'Delete Schedule?',
-          'Are you sure you want to clear all unplayed scheduled matches for this tournament?',
+          'Are you sure you want to clear all unplayed and in-progress live matches for this tournament? Completed matches will be kept.',
           [
             { text: 'Cancel', style: 'cancel' },
             {

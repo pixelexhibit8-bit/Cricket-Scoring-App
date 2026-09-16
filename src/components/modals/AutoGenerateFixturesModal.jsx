@@ -95,9 +95,9 @@ export function AutoGenerateFixturesModal({
         tournamentName: tournament.name || tournament.title || 'Tournament'
       });
 
-      // ── CRITICAL SAFEGUARD: PRESERVE ALL FINISHED & LIVE MATCHES ──
+      // ── CRITICAL SAFEGUARD: PRESERVE ONLY GENUINELY FINISHED MATCHES ──
       const lockedMatches = currentMatches.filter(
-        m => m.status === 'FINISHED' || m.status === 'LIVE' || Boolean(m.result)
+        m => m.status === 'FINISHED' || Boolean(m.result) || m.phase === 'finished'
       );
 
       let finalFixturesList = [];
