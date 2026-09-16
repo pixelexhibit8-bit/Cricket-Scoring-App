@@ -22,7 +22,6 @@ import {
 } from '../../theme.js';
 import { showToast } from '../../services/toastService.js';
 import { fetchGlobalTeams, saveGlobalTeam, searchGlobalTeams } from '../../services/teamService.js';
-import { BulkSquadPasteModal } from './BulkSquadPasteModal.jsx';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 
 const DEFAULT_COLOR_SWATCHES = [
@@ -51,7 +50,7 @@ export function AddTeamHubModal({
   // Global Teams Pool
   const [globalTeams, setGlobalTeams] = useState([]);
 
-  // Manual Form State
+  // Form State (Mode 1: Create)
   const [teamName, setTeamName] = useState('');
   const [city, setCity] = useState(tournament?.city || tournament?.host || '');
   const [captainName, setCaptainName] = useState('');
@@ -59,7 +58,6 @@ export function AddTeamHubModal({
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLOR_SWATCHES[0]);
   const [logoUri, setLogoUri] = useState(null);
   const [squadPlayers, setSquadPlayers] = useState([]);
-  const [bulkPasteModalVisible, setBulkPasteModalVisible] = useState(false);
 
   // Load global teams directory on open
   useEffect(() => {
@@ -142,18 +140,6 @@ export function AddTeamHubModal({
       });
     } catch (err) {
       console.log('Share invite error:', err);
-    }
-  };
-
-  // Handle WhatsApp squad paste result
-  const handleImportSquad = (parsedPlayers) => {
-    setSquadPlayers(parsedPlayers);
-    const capt = parsedPlayers.find(p => p.isCaptain);
-    if (capt && !captainName.trim()) {
-      setCaptainName(capt.name);
-    }
-    if (capt && capt.phone && !captainPhone.trim()) {
-      setCaptainPhone(capt.phone);
     }
   };
 
@@ -449,46 +435,6 @@ export function AddTeamHubModal({
                   />
                 </View>
 
-                {/* ── SQUAD ROSTER / WHATSAPP BULK IMPORT BOX ── */}
-                <View style={styles.squadBoxSection}>
-                  <View style={styles.squadBoxHeader}>
-                    <View>
-                      <Text style={styles.inputLabel}>TEAM SQUAD PLAYERS</Text>
-                      <Text style={styles.squadCountSub}>
-                        {squadPlayers.length > 0 ? `${squadPlayers.length} Players in Roster` : 'Paste squad from WhatsApp in 1 click'}
-                      </Text>
-                    </View>
-
-                    <TouchableOpacity
-                      style={styles.pasteSquadBtn}
-                      onPress={() => setBulkPasteModalVisible(true)}
-                      activeOpacity={0.85}
-                    >
-                      <Ionicons name="logo-whatsapp" size={15} color="#16A34A" />
-                      <Text style={styles.pasteSquadBtnText}>
-                        {squadPlayers.length > 0 ? 'Edit / Paste Squad' : 'Paste WhatsApp Squad'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {squadPlayers.length > 0 && (
-                    <View style={styles.squadPreviewChipsList}>
-                      {squadPlayers.slice(0, 11).map((p, idx) => (
-                        <View key={p.id || idx} style={styles.playerChip}>
-                          <Text style={styles.playerChipName}>{p.name}</Text>
-                          {p.isCaptain && <Text style={styles.captainBadge}>C</Text>}
-                          {p.isWicketKeeper && <Text style={styles.wkBadge}>WK</Text>}
-                        </View>
-                      ))}
-                      {squadPlayers.length > 11 && (
-                        <View style={styles.morePlayersChip}>
-                          <Text style={styles.morePlayersText}>+{squadPlayers.length - 11} more</Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </View>
-
                 {/* Color Swatches */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>TEAM COLOR BADGE</Text>
@@ -629,14 +575,6 @@ export function AddTeamHubModal({
               </View>
             )}
           </ScrollView>
-
-          {/* WhatsApp Bulk Squad Paste Sub-Modal */}
-          <BulkSquadPasteModal
-            visible={bulkPasteModalVisible}
-            onClose={() => setBulkPasteModalVisible(false)}
-            onImportPlayers={handleImportSquad}
-            teamName={teamName || 'Your Team'}
-          />
         </Pressable>
       </Pressable>
     </Modal>

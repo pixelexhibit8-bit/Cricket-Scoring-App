@@ -48,7 +48,6 @@ import { fetchGlobalTeams, saveGlobalTeam } from '../services/teamService.js';
 import { showToast } from '../services/toastService.js';
 import { navigate } from '../navigation/navigationService.js';
 import { AddTeamHubModal } from '../components/modals/AddTeamHubModal.jsx';
-import { BulkSquadPasteModal } from '../components/modals/BulkSquadPasteModal.jsx';
 import { CaptainTeamRegistrationModal } from '../components/modals/CaptainTeamRegistrationModal.jsx';
 import { AutoGenerateFixturesModal } from '../components/modals/AutoGenerateFixturesModal.jsx';
 import { TournamentAdminMenuModal } from '../components/modals/TournamentAdminMenuModal.jsx';
@@ -125,7 +124,6 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Selected Team for Squad Drawer
   const [selectedTeamDrawer, setSelectedTeamDrawer] = useState(null);
-  const [bulkPasteDrawerTarget, setBulkPasteDrawerTarget] = useState(null);
   const [captainRegModalVisible, setCaptainRegModalVisible] = useState(false);
   const [addPlayerInlineVisible, setAddPlayerInlineVisible] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -589,26 +587,6 @@ export function PublicSeriesViewScreen(props = {}) {
       setTournament(updatedTourn);
     }
     showToast(`Removed ${targetPlayer.name} from squad`, 'info');
-  };
-
-  // Bulk WhatsApp squad import for selected team in drawer
-  const handleImportSquadToDrawerTeam = async (parsedPlayers) => {
-    if (!selectedTeamDrawer || !tournament?.id || !Array.isArray(parsedPlayers)) return;
-
-    const capt = parsedPlayers.find(p => p.isCaptain);
-    const updatedTeamObj = {
-      ...selectedTeamDrawer,
-      captainName: capt ? capt.name : (selectedTeamDrawer.captainName || 'Captain'),
-      captainPhone: capt?.phone || selectedTeamDrawer.captainPhone || '',
-      players: parsedPlayers
-    };
-
-    setSelectedTeamDrawer(updatedTeamObj);
-    const updatedTourn = await updateTournamentTeam(tournament.id, selectedTeamDrawer.id, updatedTeamObj);
-    if (updatedTourn) {
-      setTournament(updatedTourn);
-    }
-    showToast(`Imported ${parsedPlayers.length} players into ${selectedTeamDrawer.name}!`, 'success');
   };
 
   // Remove entire team from tournament
@@ -1153,17 +1131,6 @@ export function PublicSeriesViewScreen(props = {}) {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.drawerActionPillWhatsapp}
-                    onPress={() => setBulkPasteDrawerTarget(selectedTeamDrawer)}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="logo-whatsapp" size={14} color="#16A34A" />
-                    <Text style={styles.drawerActionPillWhatsappText}>
-                      Paste WhatsApp Squad
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
                     style={styles.drawerActionPillDelete}
                     onPress={() => handleDeleteTeamFromTournament(selectedTeamDrawer.id)}
                     activeOpacity={0.8}
@@ -1301,11 +1268,11 @@ export function PublicSeriesViewScreen(props = {}) {
                     {isUserOrganiser && (
                       <TouchableOpacity
                         style={styles.emptyAddPlayersBtn}
-                        onPress={() => setBulkPasteDrawerTarget(selectedTeamDrawer)}
+                        onPress={() => setAddPlayerInlineVisible(true)}
                         activeOpacity={0.85}
                       >
-                        <Ionicons name="logo-whatsapp" size={16} color="#16A34A" />
-                        <Text style={styles.emptyAddPlayersBtnText}>Paste WhatsApp Squad Now</Text>
+                        <Ionicons name="person-add" size={16} color="#0284C7" />
+                        <Text style={styles.emptyAddPlayersBtnText}>+ Add Players to Squad</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1314,14 +1281,6 @@ export function PublicSeriesViewScreen(props = {}) {
             </Pressable>
           </Pressable>
         </Modal>
-
-        {/* ── MODAL 4B: BULK SQUAD PASTE MODAL (For Drawer Team) ── */}
-        <BulkSquadPasteModal
-          visible={Boolean(bulkPasteDrawerTarget)}
-          onClose={() => setBulkPasteDrawerTarget(null)}
-          onImportPlayers={handleImportSquadToDrawerTeam}
-          teamName={bulkPasteDrawerTarget?.name || selectedTeamDrawer?.name || 'Selected Team'}
-        />
 
         {/* ── MODAL 4C: CAPTAIN TEAM REGISTRATION MODAL ── */}
         <CaptainTeamRegistrationModal
@@ -2128,24 +2087,6 @@ const styles = StyleSheet.create({
   },
   drawerActionPillTextActive: {
     color: '#FFFFFF'
-  },
-  drawerActionPillWhatsapp: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8
-  },
-  drawerActionPillWhatsappText: {
-    fontSize: 11.5,
-    fontFamily: systemFontBold,
-    color: '#16A34A'
   },
   drawerActionPillDelete: {
     backgroundColor: '#FEF2F2',

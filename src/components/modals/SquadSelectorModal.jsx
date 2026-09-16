@@ -15,7 +15,6 @@ import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
 import { getPlayerMatchStatus } from '../../utils/cricketUtils.js';
 import { showToast } from '../../services/toastService.js';
-import { BulkSquadPasteModal } from './BulkSquadPasteModal.jsx';
 
 export function SquadSelectorModal({
   visible,
@@ -37,7 +36,6 @@ export function SquadSelectorModal({
 }) {
   const [activeTab, setActiveTab] = useState('team1'); // 'team1' | 'team2'
   const [searchQuery, setSearchQuery] = useState('');
-  const [bulkPasteModalOpen, setBulkPasteModalOpen] = useState(false);
 
   const moveHandler = onMoveToTeam || onMovePlayer;
 
@@ -68,14 +66,6 @@ export function SquadSelectorModal({
 
     return matchName || matchPhoneRaw || matchPhoneClean;
   });
-
-  const handleBulkImport = (parsedPlayers) => {
-    if (!Array.isArray(parsedPlayers) || !moveHandler) return;
-    parsedPlayers.forEach(p => {
-      moveHandler(p.name, activeTab);
-    });
-    showToast(`Added ${parsedPlayers.length} players to ${activeTeamName} squad!`, 'success');
-  };
 
   return (
     <Modal
@@ -190,7 +180,7 @@ export function SquadSelectorModal({
           </TouchableOpacity>
         </View>
 
-        {/* Search & Add Player Row */}
+        {/* Search Bar */}
         <View style={styles.searchSection}>
           <View style={styles.searchBox}>
             <Ionicons name="search" size={17} color="#64748B" />
@@ -207,30 +197,6 @@ export function SquadSelectorModal({
                 <Ionicons name="close-circle" size={17} color="#94A3B8" />
               </TouchableOpacity>
             ) : null}
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <TouchableOpacity
-              onPress={() => setBulkPasteModalOpen(true)}
-              activeOpacity={0.8}
-              style={[styles.addPlayerBtn, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}
-            >
-              <Ionicons name="logo-whatsapp" size={15} color="#16A34A" />
-              <Text style={[styles.addPlayerBtnText, { color: '#16A34A' }]}>
-                Paste WhatsApp Squad
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={onOpenAddPlayerModal}
-              activeOpacity={0.8}
-              style={styles.addPlayerBtn}
-            >
-              <Ionicons name="person-add" size={15} color="#0284C7" />
-              <Text style={styles.addPlayerBtnText}>
-                + Add Player
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -358,6 +324,18 @@ export function SquadSelectorModal({
 
         {/* Bottom Fixed Action Bar */}
         <View style={styles.bottomBar}>
+          {/* Prominent Large Add New Player Button */}
+          <TouchableOpacity
+            onPress={onOpenAddPlayerModal}
+            activeOpacity={0.8}
+            style={styles.bottomAddPlayerBtn}
+          >
+            <Ionicons name="person-add-outline" size={16} color="#0284C7" />
+            <Text style={styles.bottomAddPlayerBtnText}>
+              + Add New Player to {activeTeamName}
+            </Text>
+          </TouchableOpacity>
+
           <View style={styles.bottomSummaryRow}>
             <Text style={styles.bottomSummaryText}>
               {team1Name}: <Text style={{ color: team1Roster.length > 0 ? '#15803D' : '#B45309', fontFamily: systemFontBold }}>{team1Roster.length} Players</Text>
@@ -412,14 +390,6 @@ export function SquadSelectorModal({
             );
           })()}
         </View>
-
-        {/* WhatsApp Bulk Squad Paste Sub-Modal */}
-        <BulkSquadPasteModal
-          visible={bulkPasteModalOpen}
-          onClose={() => setBulkPasteModalOpen(false)}
-          onImportPlayers={handleBulkImport}
-          teamName={activeTeamName}
-        />
       </SafeAreaView>
     </Modal>
   );
@@ -535,11 +505,11 @@ const styles = StyleSheet.create({
     marginTop: 1
   },
   searchSection: {
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    gap: 8
+    borderBottomColor: '#E2E8F0'
   },
   searchBox: {
     flexDirection: 'row',
@@ -558,21 +528,22 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontFamily: systemFont
   },
-  addPlayerBtn: {
+  bottomAddPlayerBtn: {
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1.5,
+    borderColor: '#BAE6FD',
+    borderRadius: 10,
+    height: 42,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#F0F9FF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    paddingVertical: 7
+    gap: 8,
+    marginBottom: 4
   },
-  addPlayerBtnText: {
+  bottomAddPlayerBtnText: {
     color: '#0284C7',
-    fontSize: 12,
-    fontFamily: systemFontMedium
+    fontSize: 13,
+    fontFamily: systemFontBold
   },
   listHeader: {
     flexDirection: 'row',

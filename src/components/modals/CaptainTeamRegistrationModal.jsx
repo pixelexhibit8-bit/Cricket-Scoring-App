@@ -20,8 +20,6 @@ import {
   systemFont,
   systemFontMedium,
   systemFontBold
-} from '../../theme.js';
-import { BulkSquadPasteModal } from './BulkSquadPasteModal.jsx';
 import { getTournamentByJoinCode, registerTeamViaJoinCode } from '../../services/teamService.js';
 import { showToast } from '../../services/toastService.js';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
@@ -53,7 +51,6 @@ export function CaptainTeamRegistrationModal({
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLOR_SWATCHES[0]);
   const [logoUri, setLogoUri] = useState(null);
   const [squadList, setSquadList] = useState([]);
-  const [bulkPasteVisible, setBulkPasteVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -104,18 +101,6 @@ export function CaptainTeamRegistrationModal({
       }
     } catch (err) {
       console.log('Logo picker error:', err);
-    }
-  };
-
-  const handleImportSquad = (parsedPlayers) => {
-    setSquadList(parsedPlayers);
-    // If captain name was empty, try to fill from parsed captain
-    const captPlayer = parsedPlayers.find(p => p.isCaptain);
-    if (captPlayer && !captainName.trim()) {
-      setCaptainName(captPlayer.name);
-    }
-    if (captPlayer && captPlayer.phone && !captainPhone.trim()) {
-      setCaptainPhone(captPlayer.phone);
     }
   };
 
@@ -347,46 +332,6 @@ export function CaptainTeamRegistrationModal({
                 </View>
               </View>
 
-              {/* ── STEP 3: SQUAD PLAYERS IMPORT ── */}
-              <View style={styles.squadBoxSection}>
-                <View style={styles.squadBoxHeader}>
-                  <View>
-                    <Text style={styles.inputLabel}>TEAM SQUAD PLAYERS</Text>
-                    <Text style={styles.squadCountSub}>
-                      {squadList.length > 0 ? `${squadList.length} Players in Roster` : 'Paste WhatsApp squad or add players'}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.pasteSquadBtn}
-                    onPress={() => setBulkPasteVisible(true)}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons name="logo-whatsapp" size={15} color="#16A34A" />
-                    <Text style={styles.pasteSquadBtnText}>
-                      {squadList.length > 0 ? 'Edit / Paste Squad' : 'Paste WhatsApp Squad'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {squadList.length > 0 && (
-                  <View style={styles.squadPreviewChipsList}>
-                    {squadList.slice(0, 11).map((p, idx) => (
-                      <View key={p.id || idx} style={styles.playerChip}>
-                        <Text style={styles.playerChipName}>{p.name}</Text>
-                        {p.isCaptain && <Text style={styles.captainBadge}>C</Text>}
-                        {p.isWicketKeeper && <Text style={styles.wkBadge}>WK</Text>}
-                      </View>
-                    ))}
-                    {squadList.length > 11 && (
-                      <View style={styles.morePlayersChip}>
-                        <Text style={styles.morePlayersText}>+{squadList.length - 11} more</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-
               {/* Submit Button */}
               <TouchableOpacity
                 style={[styles.submitRegisterBtn, isSubmitting && { opacity: 0.6 }]}
@@ -401,14 +346,6 @@ export function CaptainTeamRegistrationModal({
               </TouchableOpacity>
             </View>
           </ScrollView>
-
-          {/* Bulk Paste Sub-Modal */}
-          <BulkSquadPasteModal
-            visible={bulkPasteVisible}
-            onClose={() => setBulkPasteVisible(false)}
-            onImportPlayers={handleImportSquad}
-            teamName={teamName || 'Your Team'}
-          />
         </View>
       </KeyboardAvoidingView>
     </Modal>

@@ -126,7 +126,7 @@ export function AddPlayerModal({
           {/* MOBILE NUMBER INPUT */}
           <View style={styles.phoneRow}>
             <View style={styles.countryCodeBadge}>
-              <Text style={styles.countryCodeText}>🇮🇳 +91</Text>
+              <Text style={styles.countryCodeText}>+91</Text>
             </View>
             <TextInput
               style={styles.phoneInput}
