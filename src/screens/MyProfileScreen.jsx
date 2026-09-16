@@ -836,7 +836,7 @@ export function MyProfileScreen(props = {}) {
 
   // ─── 2. MAIN PROFILE SCREEN ───
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.surface }} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.appBackground }} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" translucent={true} backgroundColor="transparent" />
       {/* SCREEN HEADER BAR */}
       <View style={styles.headerBar}>
@@ -1043,8 +1043,8 @@ const styles = StyleSheet.create({
   headerBar: {
     height: 52,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 0,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEF0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1294,9 +1294,9 @@ const styles = StyleSheet.create({
 
   // Tabs Bar & Pager Styles
   tabsBarWrapper: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 0,
-    borderBottomColor: '#E2E8F0',
+    backgroundColor: themeColors.appBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEF0',
     position: 'relative'
   },
   tabsScrollContent: {
@@ -1312,7 +1312,7 @@ const styles = StyleSheet.create({
   },
   tabButtonText: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#94A3B8',
     fontFamily: systemFontMedium,
     letterSpacing: -0.1
   },
