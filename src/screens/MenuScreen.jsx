@@ -232,12 +232,12 @@ export function MenuScreen(props = {}) {
                 </Text>
               )}
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
-          {/* ── 3. FEATURE NAVIGATION ITEMS ── */}
+          {/* ── 3. FEATURE NAVIGATION ITEMS (ORIGINAL) ── */}
           <View style={styles.menuGroup}>
             <TouchableOpacity
               style={styles.menuItem}
@@ -251,10 +251,18 @@ export function MenuScreen(props = {}) {
               }}
             >
               <View style={styles.itemIconWrap}>
-                <Ionicons name="stats-chart" size={20} color="#18181B" />
+                <Ionicons name="stats-chart" size={20} color="#2563EB" />
               </View>
               <Text style={styles.itemLabel}>Rankings</Text>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <View style={styles.itemIconWrap}>
+                <Ionicons name="calendar" size={20} color="#2563EB" />
+              </View>
+              <Text style={styles.itemLabel}>Fixtures</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -263,10 +271,10 @@ export function MenuScreen(props = {}) {
               onPress={handleHostTournamentClick}
             >
               <View style={styles.itemIconWrap}>
-                <MaterialCommunityIcons name="trophy-award" size={20} color="#18181B" />
+                <MaterialCommunityIcons name="trophy" size={20} color="#D97706" />
               </View>
               <Text style={styles.itemLabel}>Host a Tournament / Series</Text>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -279,52 +287,104 @@ export function MenuScreen(props = {}) {
               }}
             >
               <View style={styles.itemIconWrap}>
-                <MaterialCommunityIcons name="tournament" size={20} color="#18181B" />
+                <MaterialCommunityIcons name="trophy-outline" size={20} color="#2563EB" />
               </View>
-              <Text style={styles.itemLabel}>All Series / Tournaments</Text>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+              <Text style={styles.itemLabel}>All Series</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <View style={styles.itemIconWrap}>
+                <MaterialCommunityIcons name="account-group" size={20} color="#2563EB" />
+              </View>
+              <Text style={styles.itemLabel}>Following</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <View style={styles.itemIconWrap}>
+                <Ionicons name="radio-outline" size={20} color="#DC2626" />
+              </View>
+              <Text style={styles.itemLabel}>Go Live</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
           </View>
 
           {/* ── 4. APP SETTINGS SECTION HEADER ── */}
           <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionHeaderText}>SETTINGS & ACCOUNT</Text>
+            <Text style={styles.sectionHeaderText}>APP SETTINGS</Text>
           </View>
 
-          {/* ── 5. APP SETTINGS ITEMS ── */}
+          {/* ── 5. APP SETTINGS ITEMS (ORIGINAL) ── */}
           <View style={styles.menuGroup}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.7}
-              onPress={handleProfileClick}
-            >
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
               <View style={styles.itemIconWrap}>
-                <Ionicons name="person-outline" size={20} color="#64748B" />
+                <Ionicons name="settings-outline" size={20} color="#475569" />
               </View>
-              <Text style={styles.itemLabel}>My Profile & Career Stats</Text>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+              <Text style={styles.itemLabel}>Match Settings</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
               <View style={styles.itemIconWrap}>
-                <Ionicons name="shield-checkmark-outline" size={20} color="#64748B" />
+                <Ionicons name="contrast-outline" size={20} color="#475569" />
+              </View>
+              <Text style={styles.itemLabel}>App Theme</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <View style={styles.itemIconWrap}>
+                <Ionicons name="notifications-outline" size={20} color="#475569" />
+              </View>
+              <Text style={styles.itemLabel}>Notification Settings</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <View style={styles.itemIconWrap}>
+                <Ionicons name="language-outline" size={20} color="#475569" />
+              </View>
+              <Text style={styles.itemLabel}>Languages</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <View style={styles.itemIconWrap}>
+                <Ionicons name="alert-circle-outline" size={20} color="#475569" />
+              </View>
+              <Text style={styles.itemLabel}>Report a Problem</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <View style={styles.itemIconWrap}>
+                <Ionicons name="shield-checkmark-outline" size={20} color="#475569" />
               </View>
               <Text style={styles.itemLabel}>Terms & Privacy Policy</Text>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <View style={styles.itemIconWrap}>
+                <Ionicons name="ellipsis-horizontal-circle-outline" size={20} color="#475569" />
+              </View>
+              <Text style={styles.itemLabel}>More</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={handleLogoutClick}>
               <View style={styles.itemIconWrap}>
-                <Ionicons name={currentUser ? "log-out-outline" : "log-in-outline"} size={20} color="#64748B" />
+                <Ionicons name={currentUser ? "log-out-outline" : "log-in-outline"} size={20} color="#475569" />
               </View>
               <Text style={styles.itemLabel}>{currentUser ? "Logout" : "Sign In with Mobile OTP"}</Text>
-              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
           </View>
 
           {/* ── 6. FOOTER VERSION ── */}
           <View style={styles.footerWrap}>
-            <Text style={styles.versionText}>CricFlow v 26.09.16</Text>
+            <Text style={styles.versionText}>v 26.08.04 (645)</Text>
           </View>
         </ScrollView>
 
@@ -352,8 +412,7 @@ const styles = StyleSheet.create({
   headerBar: {
     height: 52,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEF0',
+    borderBottomWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -380,9 +439,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: themeColors.surface,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEF0'
+    paddingVertical: 14
   },
   avatarWrap: {
     marginRight: 14
@@ -403,14 +460,14 @@ const styles = StyleSheet.create({
     marginBottom: 2
   },
   profileRole: {
-    fontSize: 12.5,
-    fontFamily: systemFontMedium,
-    color: '#64748B'
+    fontSize: 12,
+    fontFamily: systemFont,
+    color: themeColors.textMuted
   },
   profileSignInHint: {
     fontSize: 12,
     fontFamily: systemFontMedium,
-    color: '#18181B'
+    color: '#2563EB'
   },
   divider: {
     height: 1,
@@ -426,8 +483,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8F8FA'
+    borderBottomWidth: 0
   },
   itemIconWrap: {
     width: 32,
@@ -443,9 +499,9 @@ const styles = StyleSheet.create({
   },
   sectionHeaderWrap: {
     paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingTop: 20,
     paddingBottom: 8,
-    backgroundColor: themeColors.appBackground
+    backgroundColor: '#F8F8FA'
   },
   sectionHeaderText: {
     fontSize: 11,
