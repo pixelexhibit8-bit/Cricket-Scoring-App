@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F8F8FA'
   },
   infoKeyLabel: {

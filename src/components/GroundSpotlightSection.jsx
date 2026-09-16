@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 6,
-    borderWidth: 1,
+    borderWidth: 0,
     alignItems: 'center',
     gap: 5
   },
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 5,
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: '#FFFFFF'
   },
   rankBadgeText: {
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1.5,
     borderRadius: 5,
-    borderWidth: 1
+    borderWidth: 0
   },
   roleChipText: {
     fontSize: 9,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   statBottom: {
     width: '100%',
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     paddingTop: 5,
     alignItems: 'center'
   },

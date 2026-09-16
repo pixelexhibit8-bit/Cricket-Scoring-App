@@ -52,7 +52,7 @@ export function OpeningPlayersSelector({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderBottomWidth: 1,
+        borderBottomWidth: 0,
         borderBottomColor: '#F1F5F9'
       }}
     >
@@ -93,13 +93,13 @@ export function OpeningPlayersSelector({
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 14, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
         {/* SUMMARY CARD (STRIKER | NON-STRIKER | BOWLER 3 COLUMNS) */}
         <View style={styles.cardBox}>
-          <View style={{ minHeight: 46, paddingHorizontal: 14, backgroundColor: '#F0F9FF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ minHeight: 46, paddingHorizontal: 14, backgroundColor: '#F0F9FF', borderBottomWidth: 0, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ color: '#0369A1', fontSize: 12, fontFamily: systemFontBold }}>{headerTitle}</Text>
             <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }} numberOfLines={1}>{battingTeamName} batting</Text>
           </View>
 
           {bannerNotice ? (
-            <View style={{ paddingHorizontal: 14, paddingVertical: 9, backgroundColor: '#FFFBEB', borderBottomWidth: 1, borderBottomColor: '#FDE68A', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ paddingHorizontal: 14, paddingVertical: 9, backgroundColor: '#FFFBEB', borderBottomWidth: 0, borderBottomColor: '#FDE68A', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="flag-outline" size={15} color="#B45309" />
               <Text style={{ flex: 1, color: '#92400E', fontSize: 12, fontFamily: systemFontMedium }} numberOfLines={1}>
                 {bannerNotice}
@@ -120,8 +120,8 @@ export function OpeningPlayersSelector({
         </View>
 
         {/* OPENING BATTERS SELECTION */}
-        <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
-          <View style={{ minHeight: 42, paddingHorizontal: 12, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderWidth: 0, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
+          <View style={{ minHeight: 42, paddingHorizontal: 12, backgroundColor: '#F8FAFC', borderBottomWidth: 0, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
               <MaterialCommunityIcons name="cricket" size={16} color="#0284C7" />
               <Text style={{ color: '#0F172A', fontSize: 12, fontFamily: systemFontMedium }} numberOfLines={1}>
@@ -157,8 +157,8 @@ export function OpeningPlayersSelector({
         </View>
 
         {/* OPENING BOWLER SELECTION */}
-        <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
-          <View style={{ minHeight: 42, paddingHorizontal: 12, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderWidth: 0, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
+          <View style={{ minHeight: 42, paddingHorizontal: 12, backgroundColor: '#F8FAFC', borderBottomWidth: 0, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
               <MaterialCommunityIcons name="baseball" size={16} color="#E11D48" />
               <Text style={{ color: '#0F172A', fontSize: 12, fontFamily: systemFontMedium }} numberOfLines={1}>
@@ -208,8 +208,8 @@ export function OpeningPlayersSelector({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  cardBox: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#CBD5E1', overflow: 'hidden' },
-  footerBar: { padding: 14, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#CBD5E1' },
+  cardBox: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, borderColor: '#CBD5E1', overflow: 'hidden' },
+  footerBar: { padding: 14, backgroundColor: '#FFFFFF', borderTopWidth: 0, borderTopColor: '#CBD5E1' },
   primaryBtn: { height: 48, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnText: { fontSize: 13, color: '#FFFFFF', fontFamily: systemFontBold }
 });

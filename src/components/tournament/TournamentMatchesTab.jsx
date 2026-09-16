@@ -525,8 +525,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEF0'
+    borderBottomWidth: 0
   },
   filterBarLabel: {
     fontSize: 13.5,
@@ -720,8 +719,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 10,
     paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F8F8FA'
+    borderTopWidth: 0
   },
   liveStatusText: {
     flex: 1,
@@ -823,8 +821,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 12,
     paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9'
+    borderTopWidth: 0
   },
   rescheduleBtn: {
     flex: 1,
@@ -903,8 +900,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomWidth: 0,
     marginBottom: 6
   },
   dropdownModalTitle: {

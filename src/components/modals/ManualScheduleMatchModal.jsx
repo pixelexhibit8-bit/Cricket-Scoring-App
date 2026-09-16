@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     paddingTop: 16,
     paddingBottom: 24,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#EEEEF0'
   },
   headerRow: {
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9'
   },
   headerTitle: {
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 8,
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   chipPillActive: {
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   teamCardChipActive: {
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
     borderRadius: 6,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   quickBtnActive: {
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: '#FAFAFC',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     borderRadius: 10,
     paddingHorizontal: 14,
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     gap: 12,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#F1F5F9'
   },
   cancelBtn: {

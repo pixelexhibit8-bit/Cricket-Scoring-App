@@ -117,7 +117,7 @@ export function TeamPickerModal({
         </View>
 
         {/* Top 3 Shared MatchTabBar Primitive */}
-        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingHorizontal: 12 }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 0, borderBottomColor: '#E2E8F0', paddingHorizontal: 12 }}>
           <MatchTabBar
             tabs={[
               { id: 'yourTeams', label: 'Your teams' },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justify: 'space-between',
     backgroundColor: '#071B2C',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#123A56'
   },
   backBtn: {
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     flexDirection: 'row',
     alignItems: 'center',
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
     alignItems: 'center',
     justify: 'center',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BAE6FD'
   },
   teamAvatarOpponent: {
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF1F2',
     alignItems: 'center',
     justify: 'center',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#FECDD3'
   },
   teamCardName: {
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold
   },
   outlineBtn: {
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: '#0284C7',
     paddingHorizontal: 18,
     paddingVertical: 9,
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 16,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     gap: 16
   },
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: '#BAE6FD',
     alignItems: 'center',
     justify: 'center',
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
     backgroundColor: '#0284C7',
-    borderWidth: 2,
+    borderWidth: 0,
     borderColor: '#FFFFFF',
     alignItems: 'center',
     justify: 'center',
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
   },
   lineInput: {
     height: 42,
-    borderBottomWidth: 1.5,
+    borderBottomWidth: 0,
     borderBottomColor: '#CBD5E1',
     fontSize: 14,
     color: '#0F172A',
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   bottomBar: {
     padding: 16,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#E2E8F0'
   },
   addTeamSubmitBtn: {
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justify: 'space-between',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#E2E8F0',
     paddingBottom: 10
   },
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
     width: '28%',
     padding: 10,
     borderRadius: 12,
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     alignItems: 'center',
     gap: 6

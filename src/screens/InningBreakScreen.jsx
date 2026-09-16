@@ -38,13 +38,13 @@ export function InningBreakScreen(props = {}) {
       <StatusBar barStyle="dark-content" translucent={true} backgroundColor="transparent" />
       {/* TOP INNINGS BREAK BANNER */}
       <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: themeColors.surface }}>
-        <View style={{ backgroundColor: themeColors.surface, borderBottomWidth: 1, borderBottomColor: themeColors.border }}>
-          <View style={{ minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: themeColors.surfaceOffWhite, borderBottomWidth: 1, borderBottomColor: themeColors.border }}>
+        <View style={{ backgroundColor: themeColors.surface, borderBottomWidth: 0, borderBottomColor: themeColors.border }}>
+          <View style={{ minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: themeColors.surfaceOffWhite, borderBottomWidth: 0, borderBottomColor: themeColors.border }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="pause-circle" size={18} color="#18181B" />
               <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }}>INNINGS BREAK</Text>
             </View>
-            <View style={{ backgroundColor: '#F8F8FA', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#EEEEF0' }}>
+            <View style={{ backgroundColor: '#F8F8FA', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 0, borderColor: '#EEEEF0' }}>
               <Text style={{ color: '#18181B', fontSize: 11, fontFamily: systemFontMedium }}>1ST INNINGS COMPLETED</Text>
             </View>
           </View>
@@ -67,7 +67,7 @@ export function InningBreakScreen(props = {}) {
             </View>
 
             {/* TARGET CALLOUT BADGE */}
-            <View style={{ alignItems: 'flex-end', backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
+            <View style={{ alignItems: 'flex-end', backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 0, borderColor: '#FDE68A' }}>
               <Text style={{ color: '#92400E', fontSize: 9.5, fontFamily: systemFontMedium }}>TARGET</Text>
               <Text selectable style={{ color: '#B45309', fontSize: 18, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>
                 {target}

@@ -122,16 +122,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     gap: 10
   },
   activeMatchBox: {
     backgroundColor: '#F8F8FA',
     borderRadius: 12,
     padding: 12,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     gap: 8
   },
   activeHeaderRow: {
@@ -212,8 +210,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#EEEEF0'
+    borderWidth: 0
   },
   verifiedBadgeText: {
     fontSize: 10,
@@ -247,8 +244,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 6,
-    borderWidth: 1,
-    borderColor: '#EEEEF0'
+    borderWidth: 0
   },
   splitActionText: {
     color: '#333333',
@@ -263,8 +259,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 6,
-    borderWidth: 1,
-    borderColor: '#EEEEF0'
+    borderWidth: 0
   },
   joinMatchCodeText: {
     color: '#333333',

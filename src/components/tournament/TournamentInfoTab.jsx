@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F8F8FA'
   },
   infoKeyText: {

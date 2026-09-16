@@ -89,8 +89,7 @@ const styles = StyleSheet.create({
   },
   headerRoot: {
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 0,
     zIndex: 10
   },
   brandRow: {
@@ -144,8 +143,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 46,
-    borderWidth: 1,
-    borderColor: themeColors.border
+    borderWidth: 0
   },
   searchIcon: {
     marginRight: 10

@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     gap: 14
   },
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    borderWidth: 2,
+    borderWidth: 0,
     borderColor: '#0284C7'
   },
   subText: {
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
     height: 42,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BAE6FD'
   },
   pickerBtnText: {
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   phoneInput: {
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     paddingHorizontal: 12,
     height: 42,

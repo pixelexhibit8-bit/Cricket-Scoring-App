@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   headerBar: {
     height: 54,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   treeSectionCard: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     padding: 16
   },
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   },
   roundRootNode: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 8,
     paddingHorizontal: 10,
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   },
   groupNodeBox: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 8,
     paddingHorizontal: 10,
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
   },
   teamNodeBox: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 6,
     paddingHorizontal: 8,
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   emptyGroupsCard: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     padding: 32,
     alignItems: 'center',
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   groupCard: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     padding: 16,
     gap: 10
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
   },
   bottomBarContainer: {
     backgroundColor: themeColors.surface,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: themeColors.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
   doneBottomBtn: {
     flex: 1,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingVertical: 14,
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 8,
     paddingHorizontal: 12,
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
   },
   roundPill: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     paddingHorizontal: 12,
     paddingVertical: 6,

@@ -137,8 +137,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 20,
     gap: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0'
+    borderWidth: 0
   },
   headerRow: {
     flexDirection: 'row',
@@ -165,8 +164,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F8F8FA',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     paddingHorizontal: 14,
     height: 48,
     gap: 10

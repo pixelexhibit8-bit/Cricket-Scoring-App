@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F8F8FA'
   },
   venueIconWrapper: {

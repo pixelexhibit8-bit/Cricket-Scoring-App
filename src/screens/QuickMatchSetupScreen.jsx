@@ -427,7 +427,7 @@ export function QuickMatchSetupScreen(props = {}) {
         justifyContent: 'space-between',
         gap: 10,
         backgroundColor: active ? (accent === '#0284C7' ? '#F0F9FF' : '#FFF1F2') : '#FFFFFF',
-        borderBottomWidth: 1,
+        borderBottomWidth: 0,
         borderBottomColor: '#F1F5F9'
       }}
     >
@@ -556,7 +556,7 @@ export function QuickMatchSetupScreen(props = {}) {
 
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: '#FFFFFF' }}>
-        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 0 }}>
           {/* Main Header Bar */}
           <View style={{
             height: 50,
@@ -586,7 +586,7 @@ export function QuickMatchSetupScreen(props = {}) {
               {stepTitles[stepNum] || 'Quick Match'}
             </Text>
 
-            <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 0.5, borderColor: '#BAE6FD', minWidth: 60, alignItems: 'center' }}>
+            <View style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 0, minWidth: 60, alignItems: 'center' }}>
               <Text style={{ color: '#0284C7', fontSize: 11, fontFamily: systemFontBold }}>
                 Step {stepNum}/3
               </Text>
@@ -601,8 +601,7 @@ export function QuickMatchSetupScreen(props = {}) {
             paddingVertical: 7,
             paddingHorizontal: 20,
             backgroundColor: '#F8FAFC',
-            borderTopWidth: 1,
-            borderTopColor: '#F1F5F9',
+            borderTopWidth: 0,
             gap: 8
           }}>
             {[
@@ -618,11 +617,10 @@ export function QuickMatchSetupScreen(props = {}) {
                     width: 20,
                     height: 20,
                     borderRadius: 10,
-                    backgroundColor: isCompleted ? '#0284C7' : isCurrent ? '#0284C7' : '#FFFFFF',
+                    backgroundColor: isCompleted ? '#0284C7' : isCurrent ? '#0284C7' : '#E2E8F0',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderWidth: 1,
-                    borderColor: isCompleted || isCurrent ? '#0284C7' : '#CBD5E1'
+                    borderWidth: 0
                   }}>
                     {isCompleted ? (
                       <Ionicons name="checkmark" size={12} color="#FFFFFF" />
@@ -655,18 +653,18 @@ export function QuickMatchSetupScreen(props = {}) {
   if (wizardStep === 1) {
     return (
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+        style={{ flex: 1, backgroundColor: '#F7F7F7' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.container}>
           {/* Persistent Step 1 Header */}
           {renderWizardHeader(1)}
 
-          <ScrollView ref={step1ScrollRef} style={{ flex: 1, backgroundColor: '#F8FAFC' }} contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
+          <ScrollView ref={step1ScrollRef} style={{ flex: 1, backgroundColor: '#F7F7F7' }} contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
             {/* CARD 1: ULTRA-CLEAN PLAYING TEAMS & LOGOS MATCHUP */}
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 14 }}>
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 0, gap: 14 }}>
               {tournamentId ? (
-                <View style={{ backgroundColor: '#F0F9FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#BAE6FD', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ backgroundColor: '#F0F9FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 0, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <MaterialCommunityIcons name="trophy" size={14} color="#0284C7" />
                   <Text style={{ color: '#0369A1', fontSize: 11.5, fontFamily: systemFontBold }}>
                     {tournamentName || 'Tournament Match'} • {totalOvers} Overs
@@ -701,7 +699,7 @@ export function QuickMatchSetupScreen(props = {}) {
                         team={{ name: team1Name, logoKey: team1LogoKey, logoUri: team1LogoUri }}
                         size={60}
                       />
-                      <View style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' }}>
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center', borderWidth: 0 }}>
                         <Ionicons name="camera" size={11} color="#FFFFFF" />
                       </View>
                     </TouchableOpacity>
@@ -713,8 +711,7 @@ export function QuickMatchSetupScreen(props = {}) {
                       alignItems: 'center',
                       backgroundColor: '#F8FAFC',
                       borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: '#E2E8F0',
+                      borderWidth: 0,
                       paddingHorizontal: 8,
                       paddingVertical: 7
                     }}>
@@ -734,8 +731,7 @@ export function QuickMatchSetupScreen(props = {}) {
                       alignItems: 'center',
                       backgroundColor: '#F8FAFC',
                       borderRadius: 10,
-                      borderWidth: 1.5,
-                      borderColor: '#CBD5E1',
+                      borderWidth: 0,
                       paddingHorizontal: 8,
                       paddingVertical: 4
                     }}>
@@ -762,7 +758,7 @@ export function QuickMatchSetupScreen(props = {}) {
 
                 {/* CENTER SIDE: LITTLE VS BADGE */}
                 <View style={{ paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#071B2C', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#38BDF8' }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#071B2C', alignItems: 'center', justifyContent: 'center', borderWidth: 0 }}>
                     <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#FFFFFF', fontFamily: systemFontBold }}>VS</Text>
                   </View>
                 </View>
@@ -789,7 +785,7 @@ export function QuickMatchSetupScreen(props = {}) {
                         team={{ name: team2Name, logoKey: team2LogoKey, logoUri: team2LogoUri }}
                         size={60}
                       />
-                      <View style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' }}>
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center', borderWidth: 0 }}>
                         <Ionicons name="camera" size={11} color="#FFFFFF" />
                       </View>
                     </TouchableOpacity>
@@ -801,8 +797,7 @@ export function QuickMatchSetupScreen(props = {}) {
                       alignItems: 'center',
                       backgroundColor: '#F8FAFC',
                       borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: '#E2E8F0',
+                      borderWidth: 0,
                       paddingHorizontal: 8,
                       paddingVertical: 7
                     }}>
@@ -822,8 +817,7 @@ export function QuickMatchSetupScreen(props = {}) {
                       alignItems: 'center',
                       backgroundColor: '#F8FAFC',
                       borderRadius: 10,
-                      borderWidth: 1.5,
-                      borderColor: '#CBD5E1',
+                      borderWidth: 0,
                       paddingHorizontal: 8,
                       paddingVertical: 4
                     }}>
@@ -856,8 +850,7 @@ export function QuickMatchSetupScreen(props = {}) {
                 style={{
                   backgroundColor: '#F0F9FF',
                   borderRadius: 12,
-                  borderWidth: 1.5,
-                  borderColor: '#BAE6FD',
+                  borderWidth: 0,
                   paddingHorizontal: 12,
                   paddingVertical: 10,
                   flexDirection: 'row',
@@ -886,8 +879,7 @@ export function QuickMatchSetupScreen(props = {}) {
                   style={{
                     backgroundColor: '#F0F9FF',
                     borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderColor: '#BAE6FD',
+                    borderWidth: 0,
                     paddingHorizontal: 14,
                     paddingVertical: 10,
                     flexDirection: 'row',
@@ -916,7 +908,7 @@ export function QuickMatchSetupScreen(props = {}) {
             </View>
 
             {/* CARD 2: MATCH CONFIGURATION (OVERS, BALL, VENUE & UMPIRE) */}
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 14 }}>
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 0, gap: 14 }}>
               <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFont }}>
                 MATCH SETTINGS
               </Text>
@@ -927,8 +919,7 @@ export function QuickMatchSetupScreen(props = {}) {
                   <View style={{
                     backgroundColor: '#F8FAFC',
                     borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: '#E2E8F0',
+                    borderWidth: 0,
                     padding: 12,
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -975,8 +966,7 @@ export function QuickMatchSetupScreen(props = {}) {
                   <View style={{
                     backgroundColor: '#F8FAFC',
                     borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: '#E2E8F0',
+                    borderWidth: 0,
                     paddingHorizontal: 12,
                     paddingVertical: 9,
                     flexDirection: 'row',
@@ -1010,8 +1000,7 @@ export function QuickMatchSetupScreen(props = {}) {
                                 paddingVertical: 6,
                                 borderRadius: 8,
                                 backgroundColor: isSelected ? '#0284C7' : '#F1F5F9',
-                                borderWidth: 1,
-                                borderColor: isSelected ? '#0284C7' : '#CBD5E1',
+                                borderWidth: 0,
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 4
@@ -1034,10 +1023,10 @@ export function QuickMatchSetupScreen(props = {}) {
                   {/* INTERACTIVE OVERS STEPPER & PRESETS */}
                   <View style={{ gap: 8 }}>
                     <Text style={styles.labelHeader}>TOTAL MATCH OVERS</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 0 }}>
                       <TouchableOpacity
                         onPress={() => setTotalOvers(prev => String(Math.max(1, (parseInt(prev, 10) || 5) - 1)))}
-                        style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 0, alignItems: 'center', justifyContent: 'center' }}
                       >
                         <Ionicons name="remove" size={22} color="#0F172A" />
                       </TouchableOpacity>
@@ -1070,8 +1059,7 @@ export function QuickMatchSetupScreen(props = {}) {
                               paddingVertical: 6,
                               borderRadius: 8,
                               backgroundColor: active ? '#0284C7' : '#F8FAFC',
-                              borderWidth: 1,
-                              borderColor: active ? '#0284C7' : '#CBD5E1',
+                              borderWidth: 0,
                               alignItems: 'center'
                             }}
                           >
@@ -1103,8 +1091,7 @@ export function QuickMatchSetupScreen(props = {}) {
                               paddingVertical: 9,
                               borderRadius: 10,
                               backgroundColor: active ? '#0284C7' : '#F8FAFC',
-                              borderWidth: 1,
-                              borderColor: active ? '#0284C7' : '#CBD5E1',
+                              borderWidth: 0,
                               flexDirection: 'row',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -1117,8 +1104,7 @@ export function QuickMatchSetupScreen(props = {}) {
                                 height: 17,
                                 borderRadius: 8.5,
                                 backgroundColor: '#EF4444',
-                                borderWidth: 1,
-                                borderColor: '#DC2626',
+                                borderWidth: 0,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 overflow: 'hidden',
@@ -1128,7 +1114,7 @@ export function QuickMatchSetupScreen(props = {}) {
                                   width: 13,
                                   height: 13,
                                   borderRadius: 6.5,
-                                  borderWidth: 1,
+                                  borderWidth: 0,
                                   borderColor: '#FFFFFF',
                                   borderStyle: 'dashed'
                                 }} />
@@ -1139,8 +1125,7 @@ export function QuickMatchSetupScreen(props = {}) {
                                 height: 17,
                                 borderRadius: 8.5,
                                 backgroundColor: '#991B1B',
-                                borderWidth: 1,
-                                borderColor: '#7F1D1D',
+                                borderWidth: 0,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 position: 'relative'
@@ -1158,8 +1143,7 @@ export function QuickMatchSetupScreen(props = {}) {
                                 height: 17,
                                 borderRadius: 8.5,
                                 backgroundColor: '#FACC15',
-                                borderWidth: 1,
-                                borderColor: '#EAB308',
+                                borderWidth: 0,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 position: 'relative'
@@ -1368,12 +1352,12 @@ export function QuickMatchSetupScreen(props = {}) {
     const isTossReady = !!(tossWinner && tossDecision);
 
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: '#F7F7F7' }]}>
         {/* Persistent Step 2 Header */}
         {renderWizardHeader(2)}
 
-        <ScrollView style={{ flex: 1, backgroundColor: '#F8FAFC' }} contentContainerStyle={{ padding: 16, gap: 16, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#E2E8F0', gap: 14 }}>
+        <ScrollView style={{ flex: 1, backgroundColor: '#F7F7F7' }} contentContainerStyle={{ padding: 16, gap: 16, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, borderWidth: 0, gap: 14 }}>
             <Text style={{ fontSize: 11, fontFamily: systemFontMedium, color: '#64748B', letterSpacing: 0.5, textTransform: 'uppercase' }}>
               WHO WON THE TOSS?
             </Text>
@@ -1390,9 +1374,8 @@ export function QuickMatchSetupScreen(props = {}) {
                     activeOpacity={0.8}
                     style={{
                       flex: 1,
-                      backgroundColor: active ? '#F0FDF4' : '#FFFFFF',
-                      borderColor: active ? '#16A34A' : '#E2E8F0',
-                      borderWidth: 2,
+                      backgroundColor: active ? '#F0FDF4' : '#F8FAFC',
+                      borderWidth: 0,
                       borderRadius: 14,
                       padding: 16,
                       alignItems: 'center',
@@ -1408,7 +1391,7 @@ export function QuickMatchSetupScreen(props = {}) {
                         <Ionicons name="checkmark" size={13} color="#FFFFFF" />
                       </View>
                     ) : (
-                      <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: '#CBD5E1' }} />
+                      <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#E2E8F0' }} />
                     )}
                   </TouchableOpacity>
                 );
@@ -1437,9 +1420,8 @@ export function QuickMatchSetupScreen(props = {}) {
                       gap: 8,
                       paddingVertical: 14,
                       borderRadius: 12,
-                      backgroundColor: active ? '#16A34A' : '#FFFFFF',
-                      borderColor: active ? '#16A34A' : '#E2E8F0',
-                      borderWidth: 2
+                      backgroundColor: active ? '#16A34A' : '#F8FAFC',
+                      borderWidth: 0
                     }}
                   >
                     <MaterialCommunityIcons name={choice.icon} size={20} color={active ? '#FFFFFF' : '#64748B'} />
@@ -1453,7 +1435,7 @@ export function QuickMatchSetupScreen(props = {}) {
 
             {/* ONLY SHOW SUMMARY BANNER ONCE BOTH TOSS WINNER AND DECISION ARE SELECTED */}
             {isTossReady ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F0FDF4', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BBF7D0', marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F0FDF4', padding: 12, borderRadius: 12, borderWidth: 0, marginTop: 4 }}>
                 <Ionicons name="megaphone-outline" size={18} color="#16A34A" />
                 <Text style={{ fontSize: 12.5, color: '#15803D', flex: 1, fontFamily: systemFontMedium }}>
                   {tossWinner} won the toss and elected to {tossDecision.toLowerCase()} first.
@@ -1488,7 +1470,7 @@ export function QuickMatchSetupScreen(props = {}) {
 
   // STEP 3: SELECT OPENERS
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: '#F7F7F7' }]}>
       {/* Persistent Step 3 Header */}
       {renderWizardHeader(3)}
 
@@ -1513,26 +1495,25 @@ export function QuickMatchSetupScreen(props = {}) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  headerBar: { backgroundColor: '#FFFFFF', height: 50, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  container: { flex: 1, backgroundColor: '#F7F7F7' },
+  headerBar: { backgroundColor: '#FFFFFF', height: 50, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 0 },
   footerBar: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    elevation: 4,
+    borderTopWidth: 0,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3
   },
   primaryBtn: { height: 48, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnText: { fontSize: 13, color: '#FFFFFF', fontFamily: systemFontBold },
-  cardBox: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#CBD5E1', gap: 10 },
+  cardBox: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 0, gap: 10 },
   cardTitle: { fontSize: 12, fontWeight: fontWeights.bold, color: '#0F172A', fontFamily: systemFont },
-  input: { height: 44, borderRadius: 8, borderWidth: 1.5, borderColor: '#CBD5E1', paddingHorizontal: 12, fontSize: 13, fontWeight: fontWeights.semibold, color: '#0F172A', fontFamily: systemFont },
-  managePlayersBtn: { minHeight: 44, borderRadius: 8, borderWidth: 1, borderColor: '#BAE6FD', backgroundColor: '#F0F9FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  input: { height: 44, borderRadius: 8, borderWidth: 0, backgroundColor: '#F8FAFC', paddingHorizontal: 12, fontSize: 13, fontWeight: fontWeights.semibold, color: '#0F172A', fontFamily: systemFont },
+  managePlayersBtn: { minHeight: 44, borderRadius: 8, borderWidth: 0, backgroundColor: '#F0F9FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   labelHeader: { fontSize: 11, fontWeight: fontWeights.bold, color: '#475569', fontFamily: systemFont },
-  tossOptionBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 1, alignItems: 'center' }
+  tossOptionBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 0, alignItems: 'center' }
 });

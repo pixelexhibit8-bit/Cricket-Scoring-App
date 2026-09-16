@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   headerBar: {
     height: 54,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     padding: 16,
     gap: 12
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     alignItems: 'center',
     justifyContent: 'center'
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   numberInput: {
     width: 60,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 8,
     textAlign: 'center',
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   resetBtn: {
     flex: 1,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 12,
     paddingVertical: 13,

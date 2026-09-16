@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     gap: 14
   },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     paddingHorizontal: 12,
     height: 46,
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     height: 46,
     justifyContent: 'center',
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1'
   },
   countryCodeText: {
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     paddingHorizontal: 12,
     height: 46,

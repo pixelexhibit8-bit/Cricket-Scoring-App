@@ -124,10 +124,10 @@ export function ScorerConsoleScreen(props = {}) {
   const containerGap = isSmallScreen ? 6 : 10;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#EBF0F5' }}>
+    <View style={{ flex: 1, backgroundColor: '#F7F7F7' }}>
       <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
       {/* SPACIOUS DARK CREX SCORE HERO */}
-      <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 16, paddingTop: scoreHeroPaddingTop, paddingBottom: scoreHeroPaddingBottom, borderBottomWidth: 1, borderBottomColor: '#123A56', gap: isSmallScreen ? 6 : 10, alignItems: 'center' }}>
+      <View style={{ backgroundColor: '#071B2C', paddingHorizontal: 16, paddingTop: scoreHeroPaddingTop, paddingBottom: scoreHeroPaddingBottom, borderBottomWidth: 0, gap: isSmallScreen ? 6 : 10, alignItems: 'center' }}>
         {/* Big Score Center Row (No Brackets, Thin | Line Separator) */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           <Text style={{ fontSize: scoreFontSize, lineHeight: scoreFontSize + 4, color: '#FFFFFF', fontFamily: systemFontBold }}>{inn.battingTeam.runs}-{inn.battingTeam.wickets}</Text>
@@ -141,11 +141,11 @@ export function ScorerConsoleScreen(props = {}) {
         </Text>
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: '#EBF0F5' }} contentContainerStyle={{ padding: containerPadding, gap: containerGap, paddingBottom: isSmallScreen ? 8 : 14 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1, backgroundColor: '#F7F7F7' }} contentContainerStyle={{ padding: containerPadding, gap: containerGap, paddingBottom: isSmallScreen ? 8 : 14 }} showsVerticalScrollIndicator={false}>
 
         {/* ELEGANT OFF-WHITE DELIVERY TIMELINE CARD */}
-        <View style={{ backgroundColor: '#F4F7FA', borderRadius: 12, paddingHorizontal: 12, paddingVertical: isSmallScreen ? 7 : 10, borderWidth: 1, borderColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <View style={{ backgroundColor: '#E2E8F0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#CBD5E1' }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 12, paddingVertical: isSmallScreen ? 7 : 10, borderWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 0 }}>
             <Text style={{ color: '#0F172A', fontSize: 11, fontFamily: systemFontBold }}>
               OVER {scorerCurrentOverNum}
             </Text>
@@ -161,7 +161,7 @@ export function ScorerConsoleScreen(props = {}) {
         </View>
 
         {inn2 && activeMatch.target ? (
-          <View style={{ flexDirection: 'row', backgroundColor: '#F4F7FA', borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', overflow: 'hidden' }}>
+          <View style={{ flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 0, overflow: 'hidden' }}>
             {[
               ['TARGET', activeMatch.target],
               ['NEED', Math.max(0, reqRuns)],
@@ -169,7 +169,7 @@ export function ScorerConsoleScreen(props = {}) {
             ].map(([label, value], index) => (
               <View
                 key={label}
-                style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderLeftWidth: index > 0 ? 1 : 0, borderLeftColor: '#CBD5E1' }}
+                style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderLeftWidth: index > 0 ? 1 : 0, borderLeftColor: '#F1F5F9' }}
               >
                 <Text style={{ color: '#94A3B8', fontSize: 9, fontFamily: systemFontBold }}>{label}</Text>
                 <Text style={{ color: label === 'NEED' ? '#0284C7' : '#0F172A', fontSize: 14, marginTop: 1, fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>
@@ -195,9 +195,9 @@ export function ScorerConsoleScreen(props = {}) {
             && (inn.overHistory || []).length === 0;
 
           return (
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' }}>
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, overflow: 'hidden', borderWidth: 0 }}>
               {/* Header Row */}
-              <View style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 5 : 7, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 5 : 7, borderBottomWidth: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 10.5, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFontBold }}>
                   BATTING • {inn.battingTeam.name.toUpperCase()}
                 </Text>
@@ -206,7 +206,7 @@ export function ScorerConsoleScreen(props = {}) {
 
               {/* Row 1 Batter */}
               {row1Batter && (
-                <View style={{ minHeight: isSmallScreen ? 46 : 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 6 : 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: isRow1Striker ? '#F0F9FF' : '#FFFFFF' }}>
+                <View style={{ minHeight: isSmallScreen ? 46 : 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 6 : 8, borderBottomWidth: 0, backgroundColor: isRow1Striker ? '#F0F9FF' : '#FFFFFF' }}>
                   <TouchableOpacity
                     onPress={() => handleOpenPlayerProfile && handleOpenPlayerProfile(row1Batter.name)}
                     activeOpacity={0.7}
@@ -222,7 +222,7 @@ export function ScorerConsoleScreen(props = {}) {
                         {isRow1Striker ? (
                           <TouchableOpacity
                             onPress={handleRetireBatsman}
-                            style={{ backgroundColor: '#FFFBEB', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FDE68A' }}
+                            style={{ backgroundColor: '#FFFBEB', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 0 }}
                           >
                             <Text style={{ color: '#B45309', fontSize: 9, fontFamily: systemFontBold }}>Retire</Text>
                           </TouchableOpacity>
@@ -240,7 +240,7 @@ export function ScorerConsoleScreen(props = {}) {
               )}
 
               {row1Batter?.name && row2Batter?.name && canSwapOpeningStrike ? (
-                <View style={{ height: 32, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
+                <View style={{ height: 32, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 0, backgroundColor: '#F8FAFC' }}>
                   <TouchableOpacity onPress={handleSwapStrike} style={{ minHeight: 32, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <Ionicons name="swap-vertical" size={14} color="#0284C7" />
                     <Text style={{ color: '#0284C7', fontSize: 9.5, fontFamily: systemFontBold }}>SWAP STRIKE</Text>
@@ -266,7 +266,7 @@ export function ScorerConsoleScreen(props = {}) {
                         {isRow2Striker ? (
                           <TouchableOpacity
                             onPress={handleRetireBatsman}
-                            style={{ backgroundColor: '#FFFBEB', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FDE68A' }}
+                            style={{ backgroundColor: '#FFFBEB', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 0 }}
                           >
                             <Text style={{ color: '#B45309', fontSize: 9, fontFamily: systemFontBold }}>Retire</Text>
                           </TouchableOpacity>
@@ -288,7 +288,7 @@ export function ScorerConsoleScreen(props = {}) {
 
         {/* CARD 2: SEPARATE CURRENT BOWLER CARD (SYMMETRICAL TO BATSMAN ROW) */}
         {displayBowler && (
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, overflow: 'hidden', borderWidth: 0 }}>
             <View style={{ minHeight: isSmallScreen ? 46 : 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: isSmallScreen ? 6 : 8, backgroundColor: '#FFFFFF' }}>
               <TouchableOpacity
                 onPress={() => handleOpenPlayerProfile && handleOpenPlayerProfile(displayBowler.name)}
@@ -304,7 +304,7 @@ export function ScorerConsoleScreen(props = {}) {
                     <MaterialCommunityIcons name="baseball" size={14} color="#0284C7" />
                     <TouchableOpacity
                       onPress={() => { setNextBowlerName(displayBowler.name); setBowlerChangePending(true); }}
-                      style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#BAE6FD' }}
+                      style={{ backgroundColor: '#F0F9FF', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 0 }}
                     >
                       <Text style={{ color: '#0284C7', fontSize: 9, fontFamily: systemFontBold }}>Change</Text>
                     </TouchableOpacity>
@@ -324,16 +324,16 @@ export function ScorerConsoleScreen(props = {}) {
         )}
 
         {/* DEDICATED PROPER CALCULATOR TOUCHPAD (RESPONSIVE HEIGHTS, ZERO GAP, ZERO SCROLL) */}
-        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0', marginTop: 2 }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 0, marginTop: 2 }}>
 
           {/* ROW 0: TOP ACTIONS (UNDO | VIBRANT COLORFUL EDIT SQUAD | REDO) */}
-          <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
+          <View style={{ flexDirection: 'row', borderBottomWidth: 0, borderBottomColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
             <TouchableOpacity
               onPress={handleUndo}
               activeOpacity={0.7}
               style={{
                 flex: 1, height: topActionsHeight, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-                borderRightWidth: 1.5, borderRightColor: '#E2E8F0'
+                borderRightWidth: 0, borderRightColor: '#E2E8F0'
               }}
             >
               <Ionicons name="arrow-undo" size={isSmallScreen ? 15 : 17} color="#0F172A" />
@@ -345,7 +345,7 @@ export function ScorerConsoleScreen(props = {}) {
               activeOpacity={0.8}
               style={{
                 flex: 1.35, height: topActionsHeight, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-                backgroundColor: '#0284C7', borderRightWidth: 1.5, borderRightColor: '#E2E8F0'
+                backgroundColor: '#0284C7', borderRightWidth: 0, borderRightColor: '#E2E8F0'
               }}
             >
               <Ionicons name="people" size={isSmallScreen ? 16 : 18} color="#FFFFFF" />
@@ -365,7 +365,7 @@ export function ScorerConsoleScreen(props = {}) {
           </View>
 
           {/* ROW 1: 0, 1, 2, 3 CHUNKY KEYS */}
-          <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: '#E2E8F0' }}>
+          <View style={{ flexDirection: 'row', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
             {[0, 1, 2, 3].map((n, idx) => (
               <TouchableOpacity
                 key={n}
@@ -383,10 +383,10 @@ export function ScorerConsoleScreen(props = {}) {
           </View>
 
           {/* ROW 2: 4 FOUR, 6 SIX */}
-          <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: '#E2E8F0' }}>
+          <View style={{ flexDirection: 'row', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
             <TouchableOpacity
               activeOpacity={0.7}
-              style={{ flex: 1, height: keypadBoundariesHeight, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1.5, borderRightColor: '#E2E8F0', backgroundColor: '#F0F9FF' }}
+              style={{ flex: 1, height: keypadBoundariesHeight, alignItems: 'center', justifyContent: 'center', borderRightWidth: 0, borderRightColor: '#E2E8F0', backgroundColor: '#F0F9FF' }}
               onPress={() => handleRecordBall(4)}
             >
               <Text style={{ color: '#0284C7', fontSize: keypadBoundariesFontSize, fontFamily: systemFontBold, letterSpacing: 0.5 }}>4 FOUR</Text>
@@ -402,10 +402,10 @@ export function ScorerConsoleScreen(props = {}) {
           </View>
 
           {/* ROW 3: WIDE, NO BALL, WICKET */}
-          <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: '#E2E8F0' }}>
+          <View style={{ flexDirection: 'row', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
             <TouchableOpacity
               activeOpacity={0.7}
-              style={{ flex: 1, height: keypadWicketHeight, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1.5, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
+              style={{ flex: 1, height: keypadWicketHeight, alignItems: 'center', justifyContent: 'center', borderRightWidth: 0, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
               onPress={() => handleRecordBall(0, 'wd')}
             >
               <Text style={{ color: '#B45309', fontSize: keypadActionFontSize, fontFamily: systemFontBold }}>WIDE</Text>
@@ -413,7 +413,7 @@ export function ScorerConsoleScreen(props = {}) {
 
             <TouchableOpacity
               activeOpacity={0.7}
-              style={{ flex: 1, height: keypadWicketHeight, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1.5, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
+              style={{ flex: 1, height: keypadWicketHeight, alignItems: 'center', justifyContent: 'center', borderRightWidth: 0, borderRightColor: '#E2E8F0', backgroundColor: '#FFFBEB' }}
               onPress={() => handleRecordBall(0, 'nb')}
             >
               <Text style={{ color: '#B45309', fontSize: keypadActionFontSize, fontFamily: systemFontBold }}>NO BALL</Text>

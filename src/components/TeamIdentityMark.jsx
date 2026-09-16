@@ -29,7 +29,7 @@ export const TeamIdentityMark = ({
             backgroundColor: '#0F172A',
             alignItems: 'center',
             justifyContent: 'center',
-            borderWidth: 1,
+            borderWidth: 0,
             borderColor: '#334155',
             opacity: isMuted ? 0.6 : opacity
           },

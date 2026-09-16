@@ -151,7 +151,7 @@ export const WormGraph = ({ match, team1Inning, team2Inning }) => {
               height: 9,
               borderRadius: 4.5,
               backgroundColor: color,
-              borderWidth: 1,
+              borderWidth: 0,
               borderColor: '#FFFFFF',
               zIndex: 10
             }}
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF', // Clean Scorecard White
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   headerRow: {
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: 12,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9'
   },
   titleText: {
@@ -349,8 +349,8 @@ const styles = StyleSheet.create({
   canvasContainer: {
     width: 270,
     height: 150,
-    borderLeftWidth: 1,
-    borderBottomWidth: 1,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
     borderColor: '#E2E8F0',
     position: 'relative',
     overflow: 'visible'
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     gap: 16,
     marginTop: 14,
     paddingTop: 10,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#F1F5F9'
   },
   legendItem: {

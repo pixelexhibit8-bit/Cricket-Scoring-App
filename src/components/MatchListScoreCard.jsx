@@ -194,9 +194,7 @@ export const MatchListScoreCard = ({
               fontSize: 12,
               color: footerColor,
               fontFamily: systemFontMedium,
-              paddingTop: 4,
-              borderTopWidth: 1,
-              borderTopColor: '#F8FAFC'
+              paddingTop: 4
             }}
             numberOfLines={2}
           >

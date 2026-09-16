@@ -179,7 +179,7 @@ export function ScorerPinModal({ visible, activeMatch, onClose, onSuccessContinu
                       paddingHorizontal: 12,
                       paddingVertical: 10,
                       borderRadius: 10,
-                      borderWidth: 1,
+                      borderWidth: 0,
                       borderColor: '#E2E8F0'
                     }}
                     onPress={() => handleSelectRemoteMatch(mObj)}
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     ...shadows.medium,
     elevation: 8
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   subtitle: {
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BAE6FD',
     marginBottom: 16,
     alignSelf: 'flex-start'
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 48,
     borderRadius: 10,
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   boxActive: {
     borderColor: '#0284C7',
-    borderWidth: 2,
+    borderWidth: 0,
     backgroundColor: '#F0F9FF'
   },
   boxText: {
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   actionsRow: {
     marginTop: 20,
     paddingTop: 14,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#E2E8F0',
     alignItems: 'center'
   },
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: '#F0F9FF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BAE6FD',
     width: '100%'
   },

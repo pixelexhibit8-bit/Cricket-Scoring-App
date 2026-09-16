@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F8F8FA'
   },
   avatarWrap: {

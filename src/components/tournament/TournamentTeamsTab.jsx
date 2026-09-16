@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F8F8FA'
   },
   teamLogoWrapper: {

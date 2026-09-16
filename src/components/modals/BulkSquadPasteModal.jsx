@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   headerTitle: {
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#F0F9FF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BAE6FD',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#FEF2F2',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#FECACA',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     padding: 8
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     maxHeight: 180,
     backgroundColor: themeColors.surfaceOffWhite,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     paddingHorizontal: 10
   },
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   playerNumBadge: {

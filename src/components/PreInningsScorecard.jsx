@@ -16,7 +16,7 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
           paddingHorizontal: 16,
           alignItems: 'center',
           justify: 'center',
-          borderWidth: 1,
+          borderWidth: 0,
           borderColor: '#E2E8F0',
           gap: 10
         }}
@@ -44,7 +44,7 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
                       borderRadius: 4,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      borderWidth: 1,
+                      borderWidth: 0,
                       borderColor: '#CBD5E1'
                     }
               }
@@ -80,7 +80,7 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
         style={{
           backgroundColor: '#F4F7FA',
           borderRadius: 14,
-          borderWidth: 1,
+          borderWidth: 0,
           borderColor: '#E2E8F0',
           overflow: 'hidden'
         }}
@@ -92,7 +92,7 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
             flexDirection: 'row',
             alignItems: 'center',
             backgroundColor: '#F8FAFC',
-            borderBottomWidth: 1,
+            borderBottomWidth: 0,
             borderBottomColor: '#E2E8F0'
           }}
         >

@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
   headerBar: {
     height: 52,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1102,7 +1102,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 22,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     alignItems: 'center',
     shadowColor: '#000000',
@@ -1133,7 +1133,7 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 10,
     marginBottom: 16,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#F1F5F9'
   },
   benefitItem: {
@@ -1157,7 +1157,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEF2F2',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#FCA5A5',
     borderRadius: 8,
     paddingHorizontal: 12,
@@ -1201,7 +1201,7 @@ const styles = StyleSheet.create({
   authPhoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
@@ -1213,7 +1213,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     backgroundColor: '#F1F5F9',
-    borderRightWidth: 1,
+    borderRightWidth: 0,
     borderRightColor: '#E2E8F0'
   },
   authCountryCodeText: {
@@ -1252,7 +1252,7 @@ const styles = StyleSheet.create({
     color: '#0369A1'
   },
   authOtpInput: {
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
@@ -1295,7 +1295,7 @@ const styles = StyleSheet.create({
   // Tabs Bar & Pager Styles
   tabsBarWrapper: {
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#E2E8F0',
     position: 'relative'
   },

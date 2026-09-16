@@ -48,7 +48,7 @@ export function BowlerChangeModal({
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom', 'left', 'right']}>
         {/* Top Header Bar */}
-        <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 0, borderBottomColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <MaterialCommunityIcons name="baseball" size={20} color="#E11D48" />
@@ -69,8 +69,8 @@ export function BowlerChangeModal({
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Card: Available Bowlers */}
-          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
-            <View style={{ minHeight: 42, paddingHorizontal: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 0, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
+            <View style={{ minHeight: 42, paddingHorizontal: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 0, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>
                 AVAILABLE BOWLERS ({availableBowlers.length})
               </Text>
@@ -110,7 +110,7 @@ export function BowlerChangeModal({
                         <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, marginTop: 1 }}>{figuresText}</Text>
                       </View>
                     </View>
-                    <View style={{ backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECDD3', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <View style={{ backgroundColor: '#FFF1F2', borderWidth: 0, borderColor: '#FECDD3', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <MaterialCommunityIcons name="baseball" size={14} color="#E11D48" />
                       <Text style={{ color: '#E11D48', fontSize: 11, fontFamily: systemFontMedium }}>Select</Text>
                     </View>
@@ -121,7 +121,7 @@ export function BowlerChangeModal({
           </View>
 
           {/* Add New Bowler On-The-Fly */}
-          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, padding: 14, gap: 10 }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 0, borderColor: '#CBD5E1', borderRadius: 12, padding: 14, gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="person-add-outline" size={16} color="#E11D48" />
               <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>ADD NEW BOWLER MID-MATCH</Text>
@@ -132,7 +132,7 @@ export function BowlerChangeModal({
                   flex: 1,
                   height: 46,
                   borderRadius: 8,
-                  borderWidth: 1,
+                  borderWidth: 0,
                   borderColor: '#CBD5E1',
                   paddingHorizontal: 12,
                   backgroundColor: '#F8FAFC',

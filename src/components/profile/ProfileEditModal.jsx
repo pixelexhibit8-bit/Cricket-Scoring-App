@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#E2E8F0',
     paddingBottom: 10
   },
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 0,
     borderColor: '#FFFFFF'
   },
   changePhotoText: {
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   roleSelectPillActive: {

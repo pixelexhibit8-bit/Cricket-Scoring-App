@@ -115,8 +115,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
     overflow: 'hidden',
     position: 'relative'
   },
@@ -142,8 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     gap: 6
   },
   highlightHeader: {

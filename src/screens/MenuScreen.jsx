@@ -379,13 +379,12 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8F8FA'
+    backgroundColor: themeColors.appBackground
   },
   headerBar: {
     height: 52,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -433,21 +432,19 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: themeColors.border
+    backgroundColor: themeColors.surfaceOffWhite
   },
   menuGroup: {
     backgroundColor: themeColors.surface,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: themeColors.border
+    borderTopWidth: 0,
+    borderBottomWidth: 0
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9'
+    borderBottomWidth: 0
   },
   itemIconWrap: {
     width: 32,

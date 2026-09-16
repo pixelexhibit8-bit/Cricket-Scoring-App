@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#1E4D6B'
   },
   iconCircle: {
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginBottom: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#1E4D6B'
   },
   errorText: {

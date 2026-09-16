@@ -62,8 +62,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
     marginHorizontal: 14,
     marginTop: 12,
     marginBottom: 8
@@ -113,12 +112,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#BAE6FD'
+    borderWidth: 0
   },
   bowlingBadgeItem: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0'
+    backgroundColor: '#F8FAFC'
   },
   styleBadgeText: {
     fontSize: 11,

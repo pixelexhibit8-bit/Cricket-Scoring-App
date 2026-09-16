@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     gap: 14,
     shadowColor: '#000',
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 14,
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   monthPillActive: {
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   dayCellActive: {
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   yearCellActive: {

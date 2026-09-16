@@ -237,8 +237,7 @@ const styles = StyleSheet.create({
   searchPlayerListCard: {
     backgroundColor: themeColors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     overflow: 'hidden'
   },
   searchPlayerRow: {
@@ -247,7 +246,7 @@ const styles = StyleSheet.create({
     padding: 12
   },
   searchPlayerBorder: {
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   searchPlayerName: {

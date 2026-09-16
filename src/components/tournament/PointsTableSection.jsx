@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
     paddingVertical: 10,
     paddingHorizontal: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9'
   },
   tableColHeader: {
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9',
     backgroundColor: '#FFFFFF'
   },

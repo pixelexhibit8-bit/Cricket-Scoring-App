@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   topHeaderBar: {
     height: 52,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   },
   tabsBarWrapper: {
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     position: 'relative'
   },
@@ -430,8 +430,7 @@ const styles = StyleSheet.create({
   tableCard: {
     backgroundColor: themeColors.surface,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     overflow: 'hidden'
   },
   tableHeader: {
@@ -440,7 +439,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   tableColRank: {
@@ -470,7 +469,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 11,
     paddingHorizontal: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9',
     gap: 10
   },
@@ -534,8 +533,7 @@ const styles = StyleSheet.create({
     padding: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
     marginTop: 20,
     gap: 10
   },

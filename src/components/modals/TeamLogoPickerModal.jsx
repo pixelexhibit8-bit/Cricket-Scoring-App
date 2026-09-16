@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     gap: 16
   },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     overflow: 'hidden',
-    borderWidth: 2,
+    borderWidth: 0,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',

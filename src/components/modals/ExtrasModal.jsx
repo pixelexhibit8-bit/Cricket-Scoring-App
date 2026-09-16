@@ -52,8 +52,8 @@ export function ExtrasModal({ visible, onClose, onRecordBall, handleRecordBall }
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.42)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, borderColor: '#CBD5E1', maxHeight: '82%' }}>
-          <View style={{ minHeight: 58, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 0, borderColor: '#CBD5E1', maxHeight: '82%' }}>
+          <View style={{ minHeight: 58, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="add-circle-outline" size={20} color="#0284C7" />
               <View>
@@ -81,7 +81,7 @@ export function ExtrasModal({ visible, onClose, onRecordBall, handleRecordBall }
                         onClose();
                         item.action();
                       }}
-                      style={{ width: '48%', minHeight: 46, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: section.bg, alignItems: 'center', justifyContent: 'center' }}
+                      style={{ width: '48%', minHeight: 46, borderRadius: 10, borderWidth: 0, borderColor: '#E2E8F0', backgroundColor: section.bg, alignItems: 'center', justifyContent: 'center' }}
                     >
                       <Text style={{ color: section.color, fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{item.label}</Text>
                     </TouchableOpacity>
@@ -100,7 +100,7 @@ export function ExtrasModal({ visible, onClose, onRecordBall, handleRecordBall }
                   onClose();
                   recordBall(0, null, false, 'penalty');
                 }}
-                style={{ minHeight: 46, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' }}
+                style={{ minHeight: 46, borderRadius: 10, borderWidth: 0, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Text style={{ color: '#475569', fontSize: 13, fontWeight: fontWeights.bold, fontFamily: systemFont }}>+5 PENALTY</Text>
               </TouchableOpacity>

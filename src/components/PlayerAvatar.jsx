@@ -81,7 +81,7 @@ export const PlayerAvatar = ({ name, photoUrl, size = 36, style }) => {
   if (isValidUrl && !loadError) {
     const optimizedUri = optimizeCloudinaryUrl(targetUri, size);
     return (
-      <View style={[{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', backgroundColor: '#E2E8F0', borderWidth: 1, borderColor: '#CBD5E1' }, style]}>
+      <View style={[{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', backgroundColor: '#E2E8F0', borderWidth: 0, borderColor: '#CBD5E1' }, style]}>
         <Image
           source={{ uri: optimizedUri }}
           style={{ width: '100%', height: '100%', borderRadius: size / 2 }}
@@ -105,7 +105,7 @@ export const PlayerAvatar = ({ name, photoUrl, size = 36, style }) => {
           height: size,
           borderRadius: size / 2,
           backgroundColor: palette.bg,
-          borderWidth: 1,
+          borderWidth: 0,
           borderColor: palette.border,
           alignItems: 'center',
           justifyContent: 'center',

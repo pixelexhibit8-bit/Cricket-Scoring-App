@@ -123,7 +123,7 @@ export const PlayingXiModal = ({
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         {/* Modal Header */}
-        <View style={{ minHeight: 60, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
+        <View style={{ minHeight: 60, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 0, borderBottomColor: '#CBD5E1' }}>
           <TouchableOpacity
             onPress={onClose}
             style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
@@ -139,7 +139,7 @@ export const PlayingXiModal = ({
         </View>
 
         {/* Tab Strip */}
-        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
           <View style={{ position: 'relative', minHeight: 48, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-evenly' }}>
             {tabs.map(team => {
               const active = playingXiTeamTab === team.id;
@@ -199,7 +199,7 @@ export const PlayingXiModal = ({
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled
               >
-                <View style={{ minHeight: 42, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                <View style={{ minHeight: 42, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
                   <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>SQUAD</Text>
                   <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{team.roster?.length || 0} PLAYERS</Text>
                 </View>
@@ -214,7 +214,7 @@ export const PlayingXiModal = ({
                       alignItems: 'center',
                       gap: 12,
                       backgroundColor: '#FFFFFF',
-                      borderBottomWidth: 1,
+                      borderBottomWidth: 0,
                       borderBottomColor: '#E8ECEF'
                     }}
                   >

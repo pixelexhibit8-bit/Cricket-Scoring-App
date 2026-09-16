@@ -52,7 +52,7 @@ export const FinishedMatchSummary = ({ match, onRematch, onPressPlayer }) => {
   return (
     <View style={{ marginHorizontal: -14 }}>
       {match.lastOver?.balls?.length ? (
-        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 0, borderBottomColor: '#CBD5E1' }}>
           <View style={{ minHeight: 48, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ minWidth: 58 }}>
               <Text style={{ color: '#7C8793', fontSize: 9, fontWeight: fontWeights.bold, fontFamily: systemFont }}>FINAL OVER</Text>
@@ -102,7 +102,7 @@ export const FinishedMatchSummary = ({ match, onRematch, onPressPlayer }) => {
           <TouchableOpacity
             onPress={() => onPressPlayer && onPressPlayer(potm.name)}
             activeOpacity={0.7}
-            style={{ marginHorizontal: 16, marginVertical: 14, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#F7F3EE', borderRadius: 16, borderWidth: 1, borderColor: '#F0EAE1' }}
+            style={{ marginHorizontal: 16, marginVertical: 14, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#F7F3EE', borderRadius: 16, borderWidth: 0, borderColor: '#F0EAE1' }}
           >
             <PlayerAvatar name={potm.name} size={54} />
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -122,11 +122,11 @@ export const FinishedMatchSummary = ({ match, onRematch, onPressPlayer }) => {
         );
       })()}
 
-      <View style={{ paddingHorizontal: 16, paddingVertical: 15, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 15, backgroundColor: '#F8FAFC', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
         <Text style={{ color: '#0F172A', fontSize: 15, fontWeight: fontWeights.bold, fontFamily: systemFont }}>TOP PERFORMERS</Text>
       </View>
       {teamSections.map(({ team, performers }) => (
-        <View key={team.name} style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
+        <View key={team.name} style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 0, borderBottomColor: '#CBD5E1' }}>
           <View style={{ minHeight: 42, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, backgroundColor: '#F8FAFC' }}>
             <Text selectable style={{ flex: 1, color: '#64748B', fontSize: 11, fontWeight: fontWeights.semibold, fontFamily: systemFont }} numberOfLines={1}>{team.name}</Text>
             <Text selectable style={{ color: '#64748B', fontSize: 11, fontWeight: fontWeights.semibold, fontVariant: ['tabular-nums'], fontFamily: systemFont }}>{team.score}</Text>

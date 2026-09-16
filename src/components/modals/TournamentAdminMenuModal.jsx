@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   headerBar: {
     height: 58,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     overflow: 'hidden'
   },
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   menuLeft: {
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   footerHelpCard: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     padding: 16,
     gap: 8

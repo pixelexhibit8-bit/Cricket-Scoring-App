@@ -390,7 +390,7 @@ export function EditTournamentModal({
                     paddingVertical: 3,
                     backgroundColor: '#F0F9FF',
                     borderRadius: 6,
-                    borderWidth: 1,
+                    borderWidth: 0,
                     borderColor: '#BAE6FD'
                   }}
                 >
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   modalHeader: {
     height: 54,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
   brandingContainer: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     overflow: 'hidden',
     paddingBottom: 10,
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 125,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     overflow: 'hidden',
     alignItems: 'center',
@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
     height: 76,
     borderRadius: 38,
     backgroundColor: '#FFFFFF',
-    borderWidth: 3,
+    borderWidth: 0,
     borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -880,7 +880,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     backgroundColor: '#18181B',
-    borderWidth: 2,
+    borderWidth: 0,
     borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center'
@@ -888,8 +888,7 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     padding: 16,
     gap: 12
   },
@@ -914,8 +913,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -950,8 +948,7 @@ const styles = StyleSheet.create({
   },
   suggestionsContainer: {
     backgroundColor: themeColors.surface,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 10,
     marginTop: 4,
     overflow: 'hidden',
@@ -962,8 +959,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border
+    borderBottomWidth: 0
   },
   suggestionText: {
     fontSize: 13,
@@ -976,8 +972,7 @@ const styles = StyleSheet.create({
   },
   datePickerInputBtn: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1021,8 +1016,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1044,14 +1038,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1.5,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 10,
     padding: 12,
     gap: 10
   },
   structureCardActive: {
-    borderColor: '#18181B',
     backgroundColor: '#FAFAFA'
   },
   structureContent: {
@@ -1080,15 +1072,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20
   },
   chipPillActive: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B'
+    backgroundColor: '#18181B'
   },
   chipText: {
     fontSize: 12,
@@ -1123,8 +1113,7 @@ const styles = StyleSheet.create({
   },
   deleteBtn: {
     backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderWidth: 0,
     borderRadius: 12,
     paddingVertical: 13,
     flexDirection: 'row',

@@ -246,8 +246,7 @@ export const commonStyles = {
     backgroundColor: themeColors.surface,
     paddingHorizontal: spacing.lg,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between'
@@ -260,15 +259,13 @@ export const commonStyles = {
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: themeColors.border
+    borderWidth: 0
   },
   card: {
     backgroundColor: themeColors.cardBackground,
     borderRadius: radius.lg,
     padding: 14,
-    borderWidth: 1,
-    borderColor: themeColors.cardBorder,
+    borderWidth: 0,
     ...shadows.small
   },
   badgePill: {
@@ -287,9 +284,8 @@ export const commonStyles = {
     justifyContent: 'center'
   },
   outlineButton: {
-    backgroundColor: themeColors.surface,
-    borderWidth: 1,
-    borderColor: themeColors.primary,
+    backgroundColor: '#F4F4F5',
+    borderWidth: 0,
     paddingVertical: spacing.md,
     paddingHorizontal: 18,
     borderRadius: 10,
@@ -304,8 +300,7 @@ export const commonStyles = {
   },
   inputField: {
     backgroundColor: themeColors.surface,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,

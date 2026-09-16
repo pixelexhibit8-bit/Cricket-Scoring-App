@@ -515,8 +515,7 @@ export function CreateTournamentScreen(props = {}) {
                         paddingVertical: 3,
                         backgroundColor: '#F0F9FF',
                         borderRadius: 6,
-                        borderWidth: 1,
-                        borderColor: '#BAE6FD'
+                        borderWidth: 0
                       }}
                     >
                       {gpsLoading ? (
@@ -1270,8 +1269,7 @@ const styles = StyleSheet.create({
   headerBar: {
     height: 52,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1302,8 +1300,7 @@ const styles = StyleSheet.create({
   },
   stepCounterBadge: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -1317,8 +1314,7 @@ const styles = StyleSheet.create({
   stepperWrap: {
     flexDirection: 'row',
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 0,
     paddingHorizontal: 12,
     paddingVertical: 6,
     gap: 8
@@ -1356,8 +1352,7 @@ const styles = StyleSheet.create({
   brandingContainer: {
     backgroundColor: themeColors.surface,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     overflow: 'hidden',
     paddingBottom: 12,
     alignItems: 'center'
@@ -1366,8 +1361,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 140,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 0,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1420,7 +1414,7 @@ const styles = StyleSheet.create({
     height: 84,
     borderRadius: 42,
     backgroundColor: '#FFFFFF',
-    borderWidth: 3,
+    borderWidth: 0,
     borderColor: '#FFFFFF',
     overflow: 'visible',
     alignItems: 'center',
@@ -1460,7 +1454,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     backgroundColor: '#18181B',
-    borderWidth: 2,
+    borderWidth: 0,
     borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center'
@@ -1474,8 +1468,7 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     padding: 16,
     gap: 12
   },
@@ -1506,8 +1499,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -1542,8 +1534,7 @@ const styles = StyleSheet.create({
   },
   suggestionsContainer: {
     backgroundColor: themeColors.surface,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 10,
     marginTop: 4,
     overflow: 'hidden',
@@ -1558,8 +1549,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border
+    borderBottomWidth: 0
   },
   suggestionText: {
     fontSize: 13,
@@ -1596,8 +1586,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1630,8 +1619,7 @@ const styles = StyleSheet.create({
   },
   datePickerInputBtn: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1653,14 +1641,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1.5,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 12,
     padding: 12,
     gap: 12
   },
   structureCardActive: {
-    borderColor: '#18181B',
     backgroundColor: '#FAFAFA'
   },
   structureIconWrap: {
@@ -1690,8 +1676,7 @@ const styles = StyleSheet.create({
   },
   recommendedBadge: {
     backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#F59E0B',
+    borderWidth: 0,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4
@@ -1719,15 +1704,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20
   },
   chipPillActive: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B'
+    backgroundColor: '#18181B'
   },
   chipText: {
     fontSize: 12,
@@ -1771,10 +1754,8 @@ const styles = StyleSheet.create({
     paddingTop: 10
   },
   summaryReviewCard: {
-    backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderWidth: 0,
     backgroundColor: '#F0FDF4',
     padding: 14,
     gap: 8

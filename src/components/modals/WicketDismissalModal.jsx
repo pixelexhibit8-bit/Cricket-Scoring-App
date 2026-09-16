@@ -49,7 +49,7 @@ export const WicketDismissalModal = ({
     >
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom', 'left', 'right']}>
         {/* Header */}
-        <View style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
+        <View style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 0, borderBottomColor: '#CBD5E1' }}>
           <TouchableOpacity
             onPress={() => pendingFielderDismissal ? setPendingFielderDismissal('') : cancelWicketEntry && cancelWicketEntry()}
             style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
@@ -74,7 +74,7 @@ export const WicketDismissalModal = ({
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
           {pendingFielderDismissal ? (
-            <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
+            <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 0, borderBottomWidth: 0, borderColor: '#CBD5E1' }}>
               <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
                 <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }}>
                   {pendingFielderDismissal === 'caught' ? 'SELECT FIELDER' : 'SELECT WICKETKEEPER / FIELDER'}
@@ -85,7 +85,7 @@ export const WicketDismissalModal = ({
                   key={name}
                   onPress={() => handleSelectDismissalFielder && handleSelectDismissalFielder(name)}
                   activeOpacity={0.7}
-                  style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}
+                  style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 0, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}
                 >
                   <Text style={{ width: 22, color: '#94A3B8', fontSize: 11, fontFamily: systemFontMedium, fontVariant: ['tabular-nums'] }}>{index + 1}</Text>
                   <PlayerAvatar name={name} size={36} />
@@ -98,7 +98,7 @@ export const WicketDismissalModal = ({
               ))}
             </View>
           ) : (
-            <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
+            <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 0, borderBottomWidth: 0, borderColor: '#CBD5E1' }}>
               <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
                 <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }}>SELECT DISMISSAL TYPE</Text>
               </View>
@@ -107,7 +107,7 @@ export const WicketDismissalModal = ({
                   key={type.id}
                   onPress={() => handleSelectWicketType && handleSelectWicketType(type.id)}
                   activeOpacity={0.7}
-                  style={{ minHeight: 54, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}
+                  style={{ minHeight: 54, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 0, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}
                 >
                   <Ionicons name={type.icon} size={19} color={type.id === 'runOut' ? '#E11D48' : '#475569'} />
                   <Text style={{ flex: 1, color: '#0F172A', fontSize: 13.5, fontFamily: systemFontMedium }}>{type.label}</Text>

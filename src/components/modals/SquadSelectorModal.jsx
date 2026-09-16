@@ -295,7 +295,7 @@ export function SquadSelectorModal({
                         {role}{playerPhone ? ` • ${playerPhone.slice(-4)}` : ''}
                       </Text>
                       {matchStatus.statusLabel ? (
-                        <View style={{ backgroundColor: matchStatus.badgeBg, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: matchStatus.badgeBorder, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                        <View style={{ backgroundColor: matchStatus.badgeBg, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 0, borderColor: matchStatus.badgeBorder, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                           <Ionicons name="lock-closed" size={9} color={matchStatus.badgeText} />
                           <Text style={{ fontSize: 9.5, color: matchStatus.badgeText, fontFamily: systemFontMedium }}>
                             {matchStatus.statusLabel}
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: 14,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 8,
     backgroundColor: '#F0F9FF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BAE6FD'
   },
   previewBtnText: {
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -540,13 +540,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   tabItemActive: {
     backgroundColor: '#F0F9FF',
     borderColor: '#0284C7',
-    borderWidth: 1.5
+    borderWidth: 0
   },
   tabTitleText: {
     fontSize: 13,
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#E2E8F0'
   },
   searchBox: {
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     paddingHorizontal: 10,
     height: 40,
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   },
   bottomAddPlayerBtn: {
     backgroundColor: '#F0F9FF',
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: '#BAE6FD',
     borderRadius: 10,
     height: 42,
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   playerCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     maxWidth: 90
   },
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#0284C7',
     flexDirection: 'row',
     alignItems: 'center',
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
   },
   emptyAddBtn: {
     backgroundColor: '#F0F9FF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BAE6FD',
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#E2E8F0',
     gap: 6
   },

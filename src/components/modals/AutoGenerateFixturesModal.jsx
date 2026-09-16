@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#F0FDFA',
     borderRadius: 6,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CCFBF1'
   },
   safeRescheduleNoticeText: {
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   },
   dialogFooterRow: {
     flexDirection: 'row',
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#F1F5F9'
   },
   dialogCancelBtn: {
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     paddingTop: 16,
     paddingBottom: 24,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#EEEEF0'
   },
   headerRow: {
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9'
   },
   headerTitle: {
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: '#F0FDFA',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#99F6E4',
     padding: 12,
     borderRadius: 10,
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
     padding: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     marginBottom: 14
   },
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     borderRadius: 6,
     paddingHorizontal: 8,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 6,
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   venueSelectChipActive: {
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: '#FAFAFC',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     borderRadius: 10,
     paddingHorizontal: 14,
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
     padding: 12,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     marginTop: 4
   },
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     gap: 12,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#F1F5F9'
   },
   cancelBtn: {

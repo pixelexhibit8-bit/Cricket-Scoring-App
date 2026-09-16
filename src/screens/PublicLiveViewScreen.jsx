@@ -263,7 +263,7 @@ export function PublicLiveViewScreen(props = {}) {
     <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
       <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
       {/* ─── TOP DARK NAVY HEADER (MATCH TITLE + TABS + INTEGRATED LIVE HERO) ─── */}
-      <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
+      <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 0, borderBottomColor: '#123A56' }}>
         {/* Top Title & Back */}
         <View style={{ paddingHorizontal: 14, paddingTop: insets.top + 8, paddingBottom: 6, flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => setCurrentScreen && setCurrentScreen(liveViewReturnScreen)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
@@ -288,7 +288,7 @@ export function PublicLiveViewScreen(props = {}) {
         />
 
         {/* INTEGRATED MATCH SCORE HERO (MATCHING SCREENSHOT 2) */}
-        <View style={{ borderTopWidth: 1, borderTopColor: '#123A56' }}>
+        <View style={{ borderTopWidth: 0, borderTopColor: '#123A56' }}>
           <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             {/* Team 1 Block (Left) */}
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -316,7 +316,7 @@ export function PublicLiveViewScreen(props = {}) {
             {/* Center Live Event or Lightning Bolt */}
             <View style={{ minWidth: 42, alignItems: 'center', justifyContent: 'center' }}>
               {latestDelivery?.label ? (
-                <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: '#0B2A42', borderWidth: 1, borderColor: '#2B5C78' }}>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: '#0B2A42', borderWidth: 0, borderColor: '#2B5C78' }}>
                   <Text numberOfLines={1} style={{ color: latestDeliveryColor, fontSize: 13, fontFamily: systemFontBold }}>
                     {latestDelivery.label}
                   </Text>
@@ -399,7 +399,7 @@ export function PublicLiveViewScreen(props = {}) {
               {pageTabId === 'live' && (
                 <View style={{ gap: 12 }}>
                   {/* CURRENT OVER TIMELINE */}
-                  <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 0 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontBold, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                         CURRENT OVER ({currentOverNum})
@@ -423,8 +423,8 @@ export function PublicLiveViewScreen(props = {}) {
                   <RealtimeWinBar match={activeMatch} inning={curInn} />
 
                   {/* ON PITCH BATTERS */}
-                  <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
-                    <View style={{ minHeight: 42, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                  <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, overflow: 'hidden' }}>
+                    <View style={{ minHeight: 42, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                         <Text style={{ color: '#1477A8', fontSize: 11.5, fontFamily: systemFontBold }}>BATTER</Text>
                         <MaterialCommunityIcons name="cricket" size={13} color="#1477A8" />
@@ -473,8 +473,8 @@ export function PublicLiveViewScreen(props = {}) {
 
                   {/* CURRENT BOWLER */}
                   {curInn.bowler?.name ? (
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
-                      <View style={{ minHeight: 42, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, overflow: 'hidden' }}>
+                      <View style={{ minHeight: 42, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 0, borderBottomColor: '#F1F5F9' }}>
                         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                           <Text style={{ color: '#1477A8', fontSize: 11.5, fontFamily: systemFontBold }}>BOWLER</Text>
                           <MaterialCommunityIcons name="baseball" size={13} color="#1477A8" />
@@ -508,7 +508,7 @@ export function PublicLiveViewScreen(props = {}) {
               {pageTabId === 'scorecard' && (
                 <View style={{ gap: 14 }}>
                   {/* INNINGS SWITCHER PILLS (MATCHING FINISHED VIEW) */}
-                  <View style={{ flexDirection: 'row', gap: 8, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <View style={{ flexDirection: 'row', gap: 8, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 14, borderWidth: 0 }}>
                     {[
                       {
                         name: team1Name,
@@ -533,8 +533,7 @@ export function PublicLiveViewScreen(props = {}) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             backgroundColor: active ? '#18181B' : '#FFFFFF',
-                            borderWidth: 1,
-                            borderColor: active ? '#18181B' : '#EEEEF0'
+                            borderWidth: 0
                           }}
                         >
                           <Text style={{ fontSize: 13, fontFamily: systemFontMedium, color: active ? '#FFFFFF' : '#0F172A', textAlign: 'center' }} numberOfLines={1}>
@@ -553,8 +552,8 @@ export function PublicLiveViewScreen(props = {}) {
                   ) : (
                     <>
                       {/* BATTING TABLE */}
-                      <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
-                        <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                      <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, overflow: 'hidden' }}>
+                        <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
                           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                             <Text style={{ color: '#1477A8', fontSize: 12, fontFamily: systemFontBold }}>BATTER</Text>
                             <Ionicons name="arrow-down" size={12} color="#1477A8" />
@@ -569,7 +568,7 @@ export function PublicLiveViewScreen(props = {}) {
                         {scorecardKnownBatters.map((b, bi) => {
                           const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
                           return (
-                            <View key={`${scorecardInningIndex}-${b.name}-${bi}`} style={{ borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                            <View key={`${scorecardInningIndex}-${b.name}-${bi}`} style={{ borderBottomWidth: 0, borderBottomColor: '#F1F5F9' }}>
                               <TouchableOpacity
                                 activeOpacity={0.7}
                                 onPress={() => handleOpenPlayerProfile && handleOpenPlayerProfile(b.name)}
@@ -601,8 +600,8 @@ export function PublicLiveViewScreen(props = {}) {
                       </View>
 
                       {/* BOWLING TABLE */}
-                      <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
-                        <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                      <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, overflow: 'hidden' }}>
+                        <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 0, borderBottomColor: '#F1F5F9' }}>
                           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                             <Text style={{ color: '#1477A8', fontSize: 12, fontFamily: systemFontBold }}>BOWLER</Text>
                             <Ionicons name="arrow-down" size={12} color="#1477A8" />
@@ -629,7 +628,7 @@ export function PublicLiveViewScreen(props = {}) {
 
                       {/* PENDING / YET TO BAT BATTERS */}
                       {scorecardPendingBatters && scorecardPendingBatters.length > 0 ? (
-                        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', padding: 14 }}>
+                        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, padding: 14 }}>
                           <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontBold, letterSpacing: 0.5, marginBottom: 12, textTransform: 'uppercase' }}>
                             YET TO BAT ({scorecardPendingBatters.length})
                           </Text>
@@ -664,7 +663,7 @@ export function PublicLiveViewScreen(props = {}) {
               {pageTabId === 'overs' && (
                 <View style={{ gap: 12 }}>
                   {/* Overs Inning Switcher (So Inning 1 overs are always accessible) */}
-                  <View style={{ flexDirection: 'row', gap: 8, padding: 10, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <View style={{ flexDirection: 'row', gap: 8, padding: 10, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 0 }}>
                     {[
                       { name: `${team1Name} (Inn 1)`, count: inn1?.overHistory?.length || 0 },
                       { name: `${team2Name} (Inn 2)`, count: inn2?.overHistory?.length || 0 }
@@ -682,8 +681,7 @@ export function PublicLiveViewScreen(props = {}) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             backgroundColor: active ? '#0284C7' : '#FFFFFF',
-                            borderWidth: 1,
-                            borderColor: active ? '#0284C7' : '#D9DEE3'
+                            borderWidth: 0
                           }}
                         >
                           <Text style={{ fontSize: 12, fontFamily: systemFontMedium, color: active ? '#FFFFFF' : '#0F172A' }} numberOfLines={1}>
@@ -695,7 +693,7 @@ export function PublicLiveViewScreen(props = {}) {
                   </View>
 
                   {oversHistoryList.length === 0 ? (
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 24, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center' }}>
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 24, borderWidth: 0, alignItems: 'center' }}>
                       <MaterialCommunityIcons name="clock-outline" size={32} color="#CBD5E1" />
                       <Text style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', marginTop: 8, fontFamily: systemFontMedium }}>
                         No overs completed in this inning yet.
@@ -703,7 +701,7 @@ export function PublicLiveViewScreen(props = {}) {
                     </View>
                   ) : (
                     oversHistoryList.map((o, idx) => (
-                      <View key={idx} style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                      <View key={idx} style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 0 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                           <Text style={{ color: '#0284C7', fontSize: 13, fontFamily: systemFontBold }}>Over {o.overNum} • {o.bowlerName}</Text>
                           <Text style={{ color: '#B45309', fontSize: 13, fontFamily: systemFontMedium }}>{o.runs} Runs {o.wickets > 0 ? `• ${o.wickets} Wkt` : ''}</Text>

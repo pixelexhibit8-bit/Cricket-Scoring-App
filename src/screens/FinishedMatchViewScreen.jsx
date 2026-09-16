@@ -124,7 +124,7 @@ const ResultTeamBlock = ({ team, isWinner, align = 'left' }) => {
 };
 
 const MatchResultHero = ({ teamOne, teamTwo, winnerTeamName, resultText }) => (
-  <View style={{ borderTopWidth: 1, borderTopColor: '#123A56' }}>
+  <View style={{ borderTopWidth: 0, borderTopColor: '#123A56' }}>
     <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <ResultTeamBlock team={teamOne} isWinner={winnerTeamName === teamOne?.name || (resultText && resultText.toLowerCase().includes(teamOne?.name?.toLowerCase()))} align="left" />
       <View style={{ minWidth: 42, alignItems: 'center', justifyContent: 'center' }}>
@@ -304,7 +304,7 @@ export function FinishedMatchViewScreen(props = {}) {
     <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
       <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
       {/* ─── TOP DARK NAVY HEADER (TITLE + TABS + INTEGRATED HERO) ─── */}
-      <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 1, borderBottomColor: '#123A56' }}>
+      <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 0, borderBottomColor: '#123A56' }}>
         {/* Top Title & Back */}
         <View style={{ paddingHorizontal: 14, paddingTop: insets.top + 8, paddingBottom: 6, flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => setCurrentScreen && setCurrentScreen('home')} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
@@ -405,7 +405,7 @@ export function FinishedMatchViewScreen(props = {}) {
               {pageTabId === 'scorecard' && (
                 <View style={{ gap: 14 }}>
                   {/* Inning Switcher Pills */}
-                  <View style={{ flexDirection: 'row', gap: 8, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <View style={{ flexDirection: 'row', gap: 8, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 14, borderWidth: 0 }}>
                     {[f.team1, f.team2].map((tObj, idx) => {
                       const active = finishedInningIndex === idx;
                       return (
@@ -421,8 +421,7 @@ export function FinishedMatchViewScreen(props = {}) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             backgroundColor: active ? '#18181B' : '#FFFFFF',
-                            borderWidth: 1,
-                            borderColor: active ? '#18181B' : '#EEEEF0'
+                            borderWidth: 0
                           }}
                         >
                           <Text style={{ fontSize: 13, fontFamily: systemFontMedium, color: active ? '#FFFFFF' : '#0F172A', textAlign: 'center' }} numberOfLines={1}>
@@ -437,8 +436,8 @@ export function FinishedMatchViewScreen(props = {}) {
                   </View>
 
                   {/* BATTING TABLE */}
-                  <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
-                    <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                  <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, overflow: 'hidden' }}>
+                    <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 0 }}>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                         <Text style={{ color: '#1477A8', fontSize: 12, fontFamily: systemFontBold }}>BATTER</Text>
                         <Ionicons name="arrow-down" size={12} color="#1477A8" />
@@ -455,7 +454,7 @@ export function FinishedMatchViewScreen(props = {}) {
                       const bl = Number(b.balls) || 0;
                       const sr = bl > 0 ? ((r / bl) * 100).toFixed(1) : (b.sr || '0.0');
                       return (
-                        <View key={`${b.name}-${bi}`} style={{ borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                        <View key={`${b.name}-${bi}`} style={{ borderBottomWidth: 0 }}>
                           <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => handleOpenPlayerProfile && handleOpenPlayerProfile(b.name)}
@@ -482,8 +481,8 @@ export function FinishedMatchViewScreen(props = {}) {
 
                   {/* BOWLING TABLE */}
                   {finishedBowlingRows.length > 0 ? (
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
-                      <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, overflow: 'hidden' }}>
+                      <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 0 }}>
                         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                           <Text style={{ color: '#1477A8', fontSize: 12, fontFamily: systemFontBold }}>BOWLER</Text>
                           <Ionicons name="arrow-down" size={12} color="#1477A8" />
@@ -494,7 +493,7 @@ export function FinishedMatchViewScreen(props = {}) {
                         <Text style={{ color: '#7C8793', fontSize: 11.5, width: 50, textAlign: 'right', fontFamily: systemFontBold }}>ECO</Text>
                       </View>
                       {finishedBowlingRows.map((bw, bwi) => (
-                        <View key={`${bw.name}-${bwi}`} style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderTopWidth: bwi > 0 ? 1 : 0, borderTopColor: '#F1F5F9' }}>
+                        <View key={`${bw.name}-${bwi}`} style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderTopWidth: 0 }}>
                           <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
                             <Text selectable style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>{bw.name}</Text>
                           </View>
@@ -509,7 +508,7 @@ export function FinishedMatchViewScreen(props = {}) {
 
                   {/* DID NOT BAT */}
                   {finishedPendingBatters.length > 0 ? (
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', padding: 14 }}>
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, padding: 14 }}>
                       <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontBold, letterSpacing: 0.5, marginBottom: 12, textTransform: 'uppercase' }}>
                         DID NOT BAT ({finishedPendingBatters.length})
                       </Text>
@@ -541,7 +540,7 @@ export function FinishedMatchViewScreen(props = {}) {
               {/* TAB 4: OVERS */}
               {pageTabId === 'overs' && (
                 <View style={{ gap: 12 }}>
-                  <View style={{ flexDirection: 'row', gap: 8, padding: 10, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <View style={{ flexDirection: 'row', gap: 8, padding: 10, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 0 }}>
                     {[
                       { name: `${team1Name} (Inn 1)`, count: finishedTeam1Inning?.overHistory?.length || 0 },
                       { name: `${team2Name} (Inn 2)`, count: finishedTeam2Inning?.overHistory?.length || 0 }
@@ -559,8 +558,7 @@ export function FinishedMatchViewScreen(props = {}) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             backgroundColor: active ? '#0284C7' : '#FFFFFF',
-                            borderWidth: 1,
-                            borderColor: active ? '#0284C7' : '#D9DEE3'
+                            borderWidth: 0
                           }}
                         >
                           <Text style={{ fontSize: 12, fontFamily: systemFontMedium, color: active ? '#FFFFFF' : '#0F172A' }} numberOfLines={1}>
@@ -572,7 +570,7 @@ export function FinishedMatchViewScreen(props = {}) {
                   </View>
 
                   {(finishedInningIndex === 0 ? finishedTeam1Inning : finishedTeam2Inning)?.overHistory?.length === 0 ? (
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 24, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center' }}>
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 24, borderWidth: 0, alignItems: 'center' }}>
                       <MaterialCommunityIcons name="clock-outline" size={32} color="#CBD5E1" />
                       <Text style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', marginTop: 8, fontFamily: systemFontMedium }}>
                         No overs recorded for this inning.
@@ -580,7 +578,7 @@ export function FinishedMatchViewScreen(props = {}) {
                     </View>
                   ) : (
                     (finishedInningIndex === 0 ? finishedTeam1Inning : finishedTeam2Inning)?.overHistory?.map((o, idx) => (
-                      <View key={idx} style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                      <View key={idx} style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 0 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                           <Text style={{ color: '#0284C7', fontSize: 13, fontFamily: systemFontBold }}>Over {o.overNum} • {o.bowlerName}</Text>
                           <Text style={{ color: '#B45309', fontSize: 13, fontFamily: systemFontMedium }}>{o.runs} Runs {o.wickets > 0 ? `• ${o.wickets} Wkt` : ''}</Text>

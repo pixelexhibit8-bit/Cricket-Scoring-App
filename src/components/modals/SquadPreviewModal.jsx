@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: 14,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -318,13 +318,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   tabItemActive: {
     backgroundColor: '#F0F9FF',
     borderColor: '#0284C7',
-    borderWidth: 1.5
+    borderWidth: 0
   },
   tabTitleText: {
     fontSize: 13,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 12,
-    borderWidth: 1.5,
+    borderWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 5,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     alignItems: 'center',
     gap: 4

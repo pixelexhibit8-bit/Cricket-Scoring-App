@@ -59,8 +59,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#18181B',
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#27272A',
+    borderWidth: 0,
     gap: 14
   },
   heroTextContainer: {
@@ -86,8 +85,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(22, 163, 74, 0.35)'
+    borderWidth: 0
   },
   liveDot: {
     width: 6,
@@ -110,8 +108,7 @@ export const styles = StyleSheet.create({
   primaryActionButton: {
     flex: 1,
     backgroundColor: '#27272A',
-    borderWidth: 1,
-    borderColor: '#3F3F46',
+    borderWidth: 0,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderRadius: 10,
@@ -128,8 +125,7 @@ export const styles = StyleSheet.create({
   secondaryActionButton: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 0,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderRadius: 10,
@@ -151,8 +147,7 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#EEEEF0'
+    borderWidth: 0
   },
   joinCodeInput: {
     flex: 1,
@@ -279,7 +274,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingTop: 10,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: '#F1F5F9'
   },
   liveFooterBtn: {
@@ -291,8 +286,7 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     backgroundColor: theme.light.primarySurface,
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: '#BAE6FD'
+    borderWidth: 0
   },
   liveFooterBtnText: {
     color: theme.light.primary,
@@ -359,8 +353,7 @@ export const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.md,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.light.cardBorder,
+    borderWidth: 0,
     gap: 6
   },
   performerBadge: {
@@ -371,8 +364,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radius.xs,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderWidth: 0,
     marginBottom: 2
   },
   performerBadgeText: {
@@ -415,8 +407,7 @@ export const styles = StyleSheet.create({
   searchPlayerListCard: {
     backgroundColor: themeColors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     overflow: 'hidden'
   },
   searchPlayerRow: {
@@ -425,7 +416,7 @@ export const styles = StyleSheet.create({
     padding: 12
   },
   searchPlayerBorder: {
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   searchPlayerName: {

@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     ...shadows.medium,
     elevation: 10
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   resultBanner: {
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BAE6FD',
     marginBottom: 14
   },
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   scoresCard: {
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     padding: 12,
     marginBottom: 16
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1'
   },
   scorecardBtnText: {

@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   modalTitle: {
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   },
   searchResultsBox: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     padding: 10,
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   teamMiniIcon: {
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 10,
     paddingBottom: 8,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   modeTabPill: {
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border
   },
   modeTabPillActive: {
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    borderWidth: 2,
+    borderWidth: 0,
     overflow: 'visible',
     position: 'relative',
     alignItems: 'center',
@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: '#FFFFFF'
   },
   logoPickerHint: {
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
   },
   modalTextInput: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -818,7 +818,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
   },
   squadBoxSection: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     borderRadius: 12,
     padding: 12
@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#F0FDF4',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BBF7D0',
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -876,7 +876,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   colorSwatchActive: {
-    borderWidth: 2,
+    borderWidth: 0,
     borderColor: '#0284C7'
   },
   dualActionRow: {
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     height: 44,
     borderRadius: 10
@@ -975,7 +975,7 @@ const styles = StyleSheet.create({
   shareHeroBadge: {
     alignItems: 'center',
     backgroundColor: '#F0FDF4',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BBF7D0',
     borderRadius: 14,
     padding: 16,
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
   codeBoxContainer: {
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 12,
     padding: 14,
@@ -1035,7 +1035,7 @@ const styles = StyleSheet.create({
   },
   copyLinkOutlineBtn: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     borderRadius: 12,
     padding: 10
@@ -1108,7 +1108,7 @@ const styles = StyleSheet.create({
   qrBoxWrapper: {
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     borderRadius: 16,
     padding: 24,

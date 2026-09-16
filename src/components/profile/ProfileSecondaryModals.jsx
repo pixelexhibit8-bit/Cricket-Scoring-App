@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 110,
     overflow: 'hidden',
-    borderWidth: 3,
+    borderWidth: 0,
     borderColor: '#18181B',
     backgroundColor: '#0F2942',
     alignItems: 'center',
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9',
     marginBottom: 6
   },
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     paddingVertical: 12,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F8FAFC'
   },
   actionMenuIconWrap: {
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 20,
     gap: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#EEEEF0'
   },
   dialogHeaderRow: {
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F8F8FA',
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#EEEEF0',
     paddingHorizontal: 14,
     height: 48,
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#EEEEF0'
   },
   codeDisplayText: {

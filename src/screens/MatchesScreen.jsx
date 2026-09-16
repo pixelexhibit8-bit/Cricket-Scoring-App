@@ -332,7 +332,7 @@ export function MatchesScreen(props = {}) {
       {(bottomNavTab === 'matches' || bottomNavTab === 'home' || !bottomNavTab) && (
         <View style={{
           backgroundColor: themeColors.surface,
-          borderBottomWidth: 1,
+          borderBottomWidth: 0,
           borderBottomColor: themeColors.border,
           position: 'relative'
         }}>
@@ -388,7 +388,7 @@ export function MatchesScreen(props = {}) {
         <View style={{
           backgroundColor: '#F7F7F7',
           paddingVertical: 10,
-          borderBottomWidth: 1,
+          borderBottomWidth: 0,
           borderBottomColor: '#E2E2E2'
         }}>
           <ScrollView
@@ -405,7 +405,7 @@ export function MatchesScreen(props = {}) {
                   activeOpacity={0.7}
                   style={{
                     backgroundColor: isSelected ? '#18181B' : '#FFFFFF',
-                    borderWidth: 1,
+                    borderWidth: 0,
                     borderColor: isSelected ? '#18181B' : '#E2E2E2',
                     borderRadius: 20,
                     paddingHorizontal: 13,
@@ -490,7 +490,7 @@ export function MatchesScreen(props = {}) {
 
             if (totalResults === 0) {
               return (
-                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 24, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 24, borderWidth: 0, borderColor: '#E2E8F0', alignItems: 'center', gap: 10, marginTop: 10 }}>
                   <Ionicons name="search-outline" size={32} color="#94A3B8" />
                   <Text style={{ fontSize: 15, fontFamily: systemFontMedium, color: '#0F172A' }}>
                     No results found
@@ -527,7 +527,7 @@ export function MatchesScreen(props = {}) {
                         PLAYERS ({matchedPlayers.length})
                       </Text>
                     </View>
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, borderColor: '#E2E8F0', overflow: 'hidden' }}>
                       {matchedPlayers.slice(0, 15).map((p, idx) => {
                         const isLast = idx === Math.min(matchedPlayers.length - 1, 14);
                         return (
@@ -879,8 +879,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xxl,
     padding: 22,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.light.cardBorder,
+    borderWidth: 0,
     gap: spacing.sm
   },
   idleIconBg: {
@@ -916,8 +915,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: 9,
     borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderWidth: 0,
     marginTop: spacing.xs
   },
   liteEmptyBtnText: {

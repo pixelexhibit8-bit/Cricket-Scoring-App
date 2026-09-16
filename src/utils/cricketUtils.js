@@ -244,12 +244,11 @@ export const getCurrentOverNumber = (inning) => {
 
 export const getBallTokenVisual = (token, variant = 'default') => {
   const normalized = String(token || '');
-  const isStrong = isWicketToken(normalized) || normalized === '4' || normalized === '6';
   if (isWicketToken(normalized)) return { backgroundColor: '#E11D48', textColor: '#FFFFFF', borderWidth: 0 };
   if (normalized === '4') return { backgroundColor: variant === 'liveStrip' ? '#0E8CAB' : '#0284C7', textColor: '#FFFFFF', borderWidth: 0 };
   if (normalized === '6') return { backgroundColor: variant === 'liveStrip' ? '#2F7D1B' : '#7C3AED', textColor: '#FFFFFF', borderWidth: 0 };
-  if (normalized === '0' && variant === 'liveStrip') return { backgroundColor: '#FFFFFF', textColor: '#0F172A', borderWidth: 1 };
-  return { backgroundColor: '#F1F5F9', textColor: '#334155', borderWidth: isStrong ? 0 : 1 };
+  if (normalized === '0' && variant === 'liveStrip') return { backgroundColor: '#F1F5F9', textColor: '#0F172A', borderWidth: 0 };
+  return { backgroundColor: '#F1F5F9', textColor: '#334155', borderWidth: 0 };
 };
 
 export const renderBallTokenChip = (token, index, size = 24, variant = 'default', keyPrefix = 'ball') => {
@@ -266,8 +265,7 @@ export const renderBallTokenChip = (token, index, size = 24, variant = 'default'
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: visual.backgroundColor,
-        borderWidth: visual.borderWidth,
-        borderColor: '#CBD5E1'
+        borderWidth: 0
       }}
     >
       <Text style={{ color: visual.textColor, fontSize: chipFontSize, fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>
@@ -284,9 +282,8 @@ export const renderEmptyBallSlot = (index, size = 28) => (
       width: size,
       height: size,
       borderRadius: size / 2,
-      borderWidth: 1,
-      borderColor: '#E5E7EB',
-      backgroundColor: '#FFFFFF'
+      borderWidth: 0,
+      backgroundColor: '#F1F5F9'
     }}
   />
 );

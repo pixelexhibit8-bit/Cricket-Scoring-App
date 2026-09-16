@@ -161,15 +161,13 @@ export function PublicSeriesViewScreen(props = {}) {
       setMyHostedIds(Array.isArray(hosted) ? hosted : []);
       setCurrentUser(loggedUser || null);
 
-      if (seriesData) {
-        setTournament(prev => ({
-          ...(prev || {}),
-          ...seriesData,
-          teams: (seriesData.teams && seriesData.teams.length > 0) ? seriesData.teams : (prev?.teams || []),
-          matches: (seriesData.matches && seriesData.matches.length > 0) ? seriesData.matches : (prev?.matches || [])
-        }));
-        if (seriesData.id) {
-          saveActiveTournamentId(seriesData.id);
+      if (targetId) {
+        const freshFromList = list.find(t => String(t.id) === String(targetId));
+        if (freshFromList) {
+          setTournament(freshFromList);
+          saveActiveTournamentId(freshFromList.id);
+        } else if (seriesData) {
+          setTournament(seriesData);
         }
       } else if (savedActiveId) {
         const found = list.find(t => t.id === savedActiveId);
@@ -190,7 +188,7 @@ export function PublicSeriesViewScreen(props = {}) {
     } catch (err) {
       console.warn('Failed to load tournament data:', err);
     }
-  }, [seriesData]);
+  }, [seriesData, tournament?.id]);
 
   useEffect(() => {
     loadTournamentsData();
@@ -246,12 +244,6 @@ export function PublicSeriesViewScreen(props = {}) {
     }
     setSelectSeriesModalVisible(false);
   };
-
-  useEffect(() => {
-    if (tournament && matchCtx?.setActiveTournament) {
-      matchCtx.setActiveTournament(tournament);
-    }
-  }, [tournament, matchCtx?.setActiveTournament]);
 
   // Filtered Tournaments in Drawer
   const filteredSheetTournaments = useMemo(() => {
@@ -460,39 +452,36 @@ export function PublicSeriesViewScreen(props = {}) {
       (match?.id && (activeTournMatch.id === match.id || activeTournMatch.tournamentMatchId === match.id)) ||
       (activeTournMatch.tournamentId && String(activeTournMatch.tournamentId) === String(tournament?.id) && (
         (String(activeTournMatch.team1?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase() &&
-         String(activeTournMatch.team2?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase()) ||
+          String(activeTournMatch.team2?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase()) ||
         (String(activeTournMatch.team1?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase() &&
-         String(activeTournMatch.team2?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase())
+          String(activeTournMatch.team2?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase())
       ))
     );
-
-    if (isThisMatchActive && activeTournMatch.phase && activeTournMatch.phase !== 'finished') {
-      if (matchCtx?.setIsScorerUnlocked) matchCtx.setIsScorerUnlocked(true);
-      if (matchCtx?.setCurrentScreen) matchCtx.setCurrentScreen('scorerWizard');
-      const nav = navigation || props.navigation;
-      if (nav?.navigate) {
-        nav.navigate('ScorerConsole', { matchId: activeTournMatch.id });
-      }
-      return;
-    }
 
     const liveMatchCandidate = matchCtx?.liveMatches?.find(lm =>
       (match?.id && (lm.id === match.id || lm.tournamentMatchId === match.id)) ||
       (lm.tournamentId && String(lm.tournamentId) === String(tournament?.id) && (
         (String(lm.team1?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase() &&
-         String(lm.team2?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase()) ||
+          String(lm.team2?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase()) ||
         (String(lm.team1?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase() &&
-         String(lm.team2?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase())
+          String(lm.team2?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase())
       ))
     );
 
-    if (liveMatchCandidate && liveMatchCandidate.phase && liveMatchCandidate.phase !== 'finished') {
-      if (matchCtx?.setActiveMatch) matchCtx.setActiveMatch(liveMatchCandidate);
+    const rawMatch = (match?.rawMatchData && match.rawMatchData.phase !== 'finished') ? match.rawMatchData : null;
+    const savedMatchCandidate = Array.isArray(matchCtx?.savedMatches)
+      ? matchCtx.savedMatches.find(sm => sm.id === match?.id || sm.tournamentMatchId === match?.id)
+      : null;
+
+    const resumeCandidate = (isThisMatchActive && activeTournMatch) || liveMatchCandidate || rawMatch || (savedMatchCandidate?.phase !== 'finished' ? savedMatchCandidate : null);
+
+    if (resumeCandidate && resumeCandidate.phase && resumeCandidate.phase !== 'finished') {
+      if (matchCtx?.setActiveMatch) matchCtx.setActiveMatch(resumeCandidate);
       if (matchCtx?.setIsScorerUnlocked) matchCtx.setIsScorerUnlocked(true);
       if (matchCtx?.setCurrentScreen) matchCtx.setCurrentScreen('scorerWizard');
       const nav = navigation || props.navigation;
       if (nav?.navigate) {
-        nav.navigate('ScorerConsole', { matchId: liveMatchCandidate.id });
+        nav.navigate('ScorerConsole', { matchId: resumeCandidate.id });
       }
       return;
     }
@@ -1677,7 +1666,7 @@ const styles = StyleSheet.create({
   topCarouselContainer: {
     backgroundColor: themeColors.surface,
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   topCarouselContent: {
@@ -1769,7 +1758,7 @@ const styles = StyleSheet.create({
   headerBar: {
     minHeight: 52,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1830,7 +1819,7 @@ const styles = StyleSheet.create({
   },
   tabStripContainer: {
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border,
     position: 'relative'
   },
@@ -1995,7 +1984,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   squadPlayerName: {

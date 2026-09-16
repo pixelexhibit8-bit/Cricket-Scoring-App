@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#64748B',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 4.5,
+    borderWidth: 0.5,
     borderColor: '#E2E8F0'
   },
   ribbedRing: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 0,
     borderColor: '#1E293B'
   },
   innerPlate: {
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#475569',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 0,
     borderColor: '#94A3B8'
   },
   letterText: {

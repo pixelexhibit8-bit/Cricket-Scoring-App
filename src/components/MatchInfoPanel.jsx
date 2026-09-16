@@ -5,8 +5,8 @@ import { systemFont, systemFontBold, systemFontMedium, fontWeights } from '../th
 
 export const MatchInfoPanel = ({ rows = [], teamOneName, teamTwoName, playerCount, onOpenPlayingXi }) => (
   <View style={{ gap: 14 }}>
-    <View style={{ backgroundColor: '#F4F7FA', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
-      <View style={{ minHeight: 46, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+    <View style={{ backgroundColor: '#F4F7FA', borderRadius: 14, borderWidth: 0, borderColor: '#E2E8F0', overflow: 'hidden' }}>
+      <View style={{ minHeight: 46, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F8FAFC', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
         <Ionicons name="information-circle-outline" size={18} color="#0284C7" />
         <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontBold }}>MATCH INFORMATION</Text>
       </View>
@@ -31,7 +31,7 @@ export const MatchInfoPanel = ({ rows = [], teamOneName, teamTwoName, playerCoun
       <TouchableOpacity
         activeOpacity={0.72}
         onPress={onOpenPlayingXi}
-        style={{ minHeight: 60, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F4F7FA', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0' }}
+        style={{ minHeight: 60, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F4F7FA', borderRadius: 14, borderWidth: 0, borderColor: '#E2E8F0' }}
       >
         <MaterialCommunityIcons name="account-group" size={21} color="#0284C7" />
         <View style={{ flex: 1 }}>

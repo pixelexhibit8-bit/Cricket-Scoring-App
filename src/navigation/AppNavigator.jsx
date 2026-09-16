@@ -33,7 +33,7 @@ export function AppNavigator() {
           screenOptions={{
             headerShown: false,
             animation: 'slide_from_right',
-            contentStyle: { backgroundColor: '#071B2C' }
+            contentStyle: { backgroundColor: '#F7F7F7' }
           }}
         >
           <Stack.Screen name="MainTabs" component={TabNavigator} />
@@ -57,7 +57,7 @@ export function AppNavigator() {
 const styles = StyleSheet.create({
   rootContainer: {
     flex: 1,
-    backgroundColor: '#071B2C'
+    backgroundColor: '#F7F7F7'
   }
 });
 

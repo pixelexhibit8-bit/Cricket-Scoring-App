@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     padding: 18,
     paddingBottom: 28,
     gap: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     maxHeight: '85%'
   },
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9',
     paddingBottom: 10
   },
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0',
     gap: 8
   },
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 11,
     paddingHorizontal: 6,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9',
     gap: 10
   },
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     backgroundColor: '#F1F5F9',
     borderRadius: 6,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#E2E8F0'
   },
   countryBadgeText: {
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#CBD5E1',
     paddingHorizontal: 12,
     paddingVertical: 9,

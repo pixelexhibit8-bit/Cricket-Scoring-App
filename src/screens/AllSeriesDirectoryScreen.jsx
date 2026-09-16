@@ -259,8 +259,7 @@ const styles = StyleSheet.create({
   headerBar: {
     height: 52,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -306,8 +305,7 @@ const styles = StyleSheet.create({
   },
   filterBarWrapper: {
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 0,
     paddingVertical: 8,
     paddingHorizontal: 12
   },
@@ -317,15 +315,13 @@ const styles = StyleSheet.create({
   },
   filterChipPill: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20
   },
   filterChipPillActive: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B'
+    backgroundColor: '#18181B'
   },
   filterChipText: {
     fontSize: 12,
@@ -356,8 +352,7 @@ const styles = StyleSheet.create({
   seriesRowsList: {
     backgroundColor: themeColors.surface,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     overflow: 'hidden'
   },
   seriesListRow: {
@@ -365,8 +360,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
+    borderBottomWidth: 0,
     gap: 12
   },
   seriesLogoSquare: {
@@ -394,8 +388,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     backgroundColor: themeColors.surface,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     marginTop: 20
   },
   emptyIconCircle: {
@@ -403,8 +396,7 @@ const styles = StyleSheet.create({
     height: 68,
     borderRadius: 34,
     backgroundColor: '#F8F8FA',
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16

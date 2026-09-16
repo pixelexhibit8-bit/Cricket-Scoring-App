@@ -312,8 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 24,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
@@ -359,8 +358,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderWidth: 0,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -387,8 +385,7 @@ const styles = StyleSheet.create({
   phoneInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
     overflow: 'hidden',
@@ -398,8 +395,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
     backgroundColor: '#F1F5F9',
-    borderRightWidth: 1,
-    borderRightColor: '#E2E8F0'
+    borderRightWidth: 0
   },
   countryCodeText: {
     fontFamily: systemFontMedium,
@@ -456,8 +452,7 @@ const styles = StyleSheet.create({
     color: '#0284C7'
   },
   otpInput: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderWidth: 0,
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
     paddingVertical: 14,

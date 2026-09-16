@@ -44,7 +44,7 @@ export function WicketPendingModal({
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom', 'left', 'right']}>
         {/* Top Header Bar */}
-        <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 0, borderBottomColor: '#CBD5E1', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <MaterialCommunityIcons name="cricket" size={20} color="#0284C7" />
@@ -65,8 +65,8 @@ export function WicketPendingModal({
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Card: Available Batters */}
-          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, overflow: 'hidden' }}>
-            <View style={{ minHeight: 42, paddingHorizontal: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 0, borderRadius: 12, overflow: 'hidden' }}>
+            <View style={{ minHeight: 42, paddingHorizontal: 14, backgroundColor: '#F8FAFC', borderBottomWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium }}>
                 AVAILABLE PLAYERS ({availableBatsmen.length})
               </Text>
@@ -89,8 +89,7 @@ export function WicketPendingModal({
                     paddingHorizontal: 14,
                     paddingVertical: 10,
                     minHeight: 56,
-                    borderBottomWidth: idx < arr.length - 1 ? 1 : 0,
-                    borderBottomColor: '#F1F5F9',
+                    borderBottomWidth: 0,
                     backgroundColor: '#FFFFFF'
                   }}
                   onPress={() => handleSelect(name)}
@@ -102,7 +101,7 @@ export function WicketPendingModal({
                       <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFontMedium, marginTop: 1 }}>Batter #{idx + 1}</Text>
                     </View>
                   </View>
-                  <View style={{ backgroundColor: '#F0F9FF', borderWidth: 1, borderColor: '#BAE6FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ backgroundColor: '#F0F9FF', borderWidth: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <MaterialCommunityIcons name="cricket" size={14} color="#0284C7" />
                     <Text style={{ color: '#0284C7', fontSize: 11, fontFamily: systemFontMedium }}>Select</Text>
                   </View>
@@ -112,7 +111,7 @@ export function WicketPendingModal({
           </View>
 
           {/* Add New Batter On-The-Fly */}
-          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, padding: 14, gap: 10 }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderWidth: 0, borderRadius: 12, padding: 14, gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="person-add-outline" size={16} color="#0284C7" />
               <Text style={{ fontSize: 12, color: '#0F172A', fontFamily: systemFontBold }}>ADD NEW BATTER MID-MATCH</Text>
@@ -123,8 +122,7 @@ export function WicketPendingModal({
                   flex: 1,
                   height: 46,
                   borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#CBD5E1',
+                  borderWidth: 0,
                   paddingHorizontal: 12,
                   backgroundColor: '#F8FAFC',
                   fontSize: 13,

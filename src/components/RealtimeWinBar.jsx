@@ -130,7 +130,7 @@ export const RealtimeWinBar = ({ match, inning, team1, team2 }) => {
         backgroundColor: '#FFFFFF',
         paddingHorizontal: 16,
         paddingVertical: 11,
-        borderBottomWidth: 1,
+        borderBottomWidth: 0,
         borderBottomColor: '#E2E8F0',
         gap: 8
       }}

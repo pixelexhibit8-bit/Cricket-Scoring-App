@@ -131,13 +131,12 @@ export function AppBottomNav(props) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    elevation: 8,
+    borderTopWidth: 0,
+    elevation: 2,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 3
   },
   navRow: {
     flexDirection: 'row',

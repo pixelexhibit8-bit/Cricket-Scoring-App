@@ -64,8 +64,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
     overflow: 'hidden',
     position: 'relative'
   },
@@ -81,7 +80,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 12,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#F1F5F9',
     paddingBottom: 8
   },

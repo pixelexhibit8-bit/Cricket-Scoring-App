@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   headerTitle: {
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   codeSection: {
     marginTop: 12,
     paddingBottom: 12,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: themeColors.border
   },
   inputLabel: {
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   codeInput: {
     flex: 1,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F0F9FF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BAE6FD',
     borderRadius: 10,
     padding: 10,
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    borderWidth: 2,
+    borderWidth: 0,
     overflow: 'visible',
     position: 'relative',
     alignItems: 'center',
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 0,
     borderColor: '#FFFFFF'
   },
   logoPickerHint: {
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
   },
   modalTextInput: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.borderDark,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -562,12 +562,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   colorSwatchActive: {
-    borderWidth: 2,
+    borderWidth: 0,
     borderColor: '#0284C7'
   },
   squadBoxSection: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     borderRadius: 12,
     padding: 12
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#F0FDF4',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#BBF7D0',
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: themeColors.border,
     paddingHorizontal: 8,
     paddingVertical: 4,

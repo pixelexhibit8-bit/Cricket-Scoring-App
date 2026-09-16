@@ -92,8 +92,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 20,
     gap: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0'
+    borderWidth: 0
   },
   headerRow: {
     flexDirection: 'row',
@@ -124,8 +123,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EEEEF0'
+    borderWidth: 0
   },
   codeText: {
     fontSize: 24,

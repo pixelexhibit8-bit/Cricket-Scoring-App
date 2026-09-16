@@ -29,7 +29,7 @@ export function RunOutModal({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom', 'left', 'right']}>
-        <View style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CBD5E1' }}>
+        <View style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 0, borderBottomColor: '#CBD5E1' }}>
           <TouchableOpacity onPress={onClose} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="close" size={22} color="#0F172A" />
           </TouchableOpacity>
@@ -40,7 +40,7 @@ export function RunOutModal({
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-          <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
+          <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 0, borderBottomWidth: 0, borderColor: '#CBD5E1' }}>
             <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
               <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontMedium }}>SELECT BATTER OUT</Text>
             </View>
@@ -54,7 +54,7 @@ export function RunOutModal({
                   key={item.id}
                   onPress={() => setRunOutDismissed(item.id)}
                   activeOpacity={0.7}
-                  style={{ minHeight: 56, paddingHorizontal: 16, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: selected ? '#FFF1F2' : '#FFFFFF' }}
+                  style={{ minHeight: 56, paddingHorizontal: 16, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 0, borderTopColor: '#E2E8F0', backgroundColor: selected ? '#FFF1F2' : '#FFFFFF' }}
                 >
                   <PlayerAvatar name={item.name} size={36} />
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -67,7 +67,7 @@ export function RunOutModal({
             })}
           </View>
 
-          <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
+          <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 0, borderBottomWidth: 0, borderColor: '#CBD5E1' }}>
             <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
               <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFontMedium, letterSpacing: 0.5 }}>WICKET BROKEN AT</Text>
             </View>
@@ -80,7 +80,7 @@ export function RunOutModal({
                 <TouchableOpacity
                   key={item.id}
                   onPress={() => setRunOutEnd(item.id)}
-                  style={{ minHeight: 54, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: selected ? '#F0F9FF' : '#FFFFFF' }}
+                  style={{ minHeight: 54, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 11, borderTopWidth: 0, borderTopColor: '#E2E8F0', backgroundColor: selected ? '#F0F9FF' : '#FFFFFF' }}
                 >
                   <Ionicons name="flag-outline" size={18} color={selected ? '#0284C7' : '#64748B'} />
                   <Text style={{ flex: 1, color: '#0F172A', fontSize: 14, fontFamily: selected ? systemFontBold : systemFontMedium }}>{item.label}</Text>
@@ -90,7 +90,7 @@ export function RunOutModal({
             })}
           </View>
 
-          <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#CBD5E1' }}>
+          <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderTopWidth: 0, borderBottomWidth: 0, borderColor: '#CBD5E1' }}>
             <View style={{ minHeight: 42, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
               <Text style={{ color: '#64748B', fontSize: 10.5, fontFamily: systemFontMedium, letterSpacing: 0.5 }}>COMPLETED RUNS</Text>
             </View>
@@ -102,7 +102,7 @@ export function RunOutModal({
               >
                 <Ionicons name="remove" size={22} color="#0F172A" />
               </TouchableOpacity>
-              <View style={{ flex: 1.4, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
+              <View style={{ flex: 1.4, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 0, borderRightWidth: 0, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC' }}>
                 <Text style={{ color: '#0F172A', fontSize: typeScale.keyAction, fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>{runOutRuns}</Text>
                 <Text style={{ color: '#64748B', fontSize: 9, marginTop: 2, fontFamily: systemFontMedium }}>RUNS</Text>
               </View>
@@ -113,7 +113,7 @@ export function RunOutModal({
           </View>
         </ScrollView>
 
-        <View style={{ paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+        <View style={{ paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderTopWidth: 0, borderTopColor: '#E2E8F0' }}>
           <TouchableOpacity
             disabled={!runOutDismissed || !runOutEnd}
             onPress={onConfirmRunOut}
