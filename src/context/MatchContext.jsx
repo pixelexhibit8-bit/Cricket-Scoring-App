@@ -133,6 +133,12 @@ export function MatchProvider({ children }) {
   const getAvailableBowlers = useCallback(() => {
     const roster = getBowlingRoster();
     if (!curInning) return roster;
+    const prevBowlerName = curInning.overHistory?.length
+      ? curInning.overHistory[curInning.overHistory.length - 1]?.bowlerName
+      : curInning.bowler?.name;
+    if (roster.length > 1 && prevBowlerName && curInning.isOverComplete) {
+      return roster.filter(name => name !== prevBowlerName);
+    }
     return roster.filter(name => name !== curInning.bowler?.name);
   }, [curInning, getBowlingRoster]);
 

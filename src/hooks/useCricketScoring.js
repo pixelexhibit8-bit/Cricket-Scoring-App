@@ -534,6 +534,13 @@ export function useCricketScoring({
       Alert.alert('Change Bowler', 'Normal bowler change is allowed only after the over is complete.');
       return;
     }
+    const prevBowlerName = innBeforeChange?.overHistory?.length
+      ? innBeforeChange.overHistory[innBeforeChange.overHistory.length - 1]?.bowlerName
+      : innBeforeChange?.bowler?.name;
+    if (innBeforeChange?.isOverComplete && prevBowlerName && name === prevBowlerName && bowlingRoster.length > 1) {
+      Alert.alert('Change Bowler', `${name} just bowled the previous over. A bowler cannot bowl consecutive overs.`);
+      return;
+    }
     setActiveMatch(prev => {
       if (!prev) return prev;
       const innings = prev.innings.map(x => ({ ...x }));

@@ -1537,39 +1537,102 @@ export function autoCalculatePointsTable(teams = [], matches = []) {
     tableMap[t1Resolved].form = tableMap[t1Resolved].form.slice(0, 5);
     tableMap[t2Resolved].form = tableMap[t2Resolved].form.slice(0, 5);
 
-    const parseScoreData = (inning, teamObj) => {
+    const maxOvers = Number(m.rawMatchData?.maxOvers || m.maxOvers || m.overs || 0) || 20;
+
+    const parseScoreData = (inning, teamFallback, allocatedOvers) => {
       let runs = 0;
-      let balls = 0;
+      let wickets = 0;
+      let legalBalls = 0;
+      let isAllOut = false;
+
       if (inning) {
         runs = Number(inning.battingTeam?.runs ?? inning.runs ?? 0);
-        balls = Number(inning.totalLegalBalls ?? inning.legalBalls ?? 0);
-      } else if (teamObj) {
-        runs = Number(teamObj.runs || 0);
-        balls = Number(teamObj.legalBalls || 0);
-        if (!runs && teamObj.score) {
-          const match = String(teamObj.score).match(/(\d+)\s*[-/]\s*(\d+)/);
-          if (match) runs = parseInt(match[1], 10);
+        wickets = Number(inning.battingTeam?.wickets ?? inning.wickets ?? (Array.isArray(inning.dismissedPlayers) ? inning.dismissedPlayers.length : 0));
+        legalBalls = Number(inning.totalLegalBalls ?? inning.legalBalls ?? 0);
+        if (!legalBalls && inning.overs) {
+          const parts = String(inning.overs).split('.');
+          legalBalls = (parseInt(parts[0], 10) || 0) * 6 + (parseInt(parts[1], 10) || 0);
         }
+        if (inning.isAllOut || wickets >= 10) {
+          isAllOut = true;
+        }
+      } else if (teamFallback) {
+        runs = Number(teamFallback.runs || 0);
+        wickets = Number(teamFallback.wickets || 0);
+        legalBalls = Number(teamFallback.legalBalls || 0);
+        if (teamFallback.score) {
+          const match = String(teamFallback.score).match(/(\d+)\s*[-/]\s*(\d+)/);
+          if (match) {
+            runs = parseInt(match[1], 10) || 0;
+            wickets = parseInt(match[2], 10) || 0;
+          }
+          const overMatch = String(teamFallback.score).match(/\((\d+(?:\.\d+)?)\)/);
+          if (overMatch && !legalBalls) {
+            const parts = overMatch[1].split('.');
+            legalBalls = (parseInt(parts[0], 10) || 0) * 6 + (parseInt(parts[1], 10) || 0);
+          }
+        }
+        if (wickets >= 10) isAllOut = true;
       }
-      return { runs, balls };
+
+      // Standard ICC Rule: If all out, balls counted is full allocated quota
+      const fullQuotaBalls = allocatedOvers * 6;
+      const effectiveBalls = (isAllOut && fullQuotaBalls > 0)
+        ? Math.max(legalBalls, fullQuotaBalls)
+        : (legalBalls || (fullQuotaBalls > 0 ? fullQuotaBalls : 30));
+
+      return { runs, wickets, legalBalls, effectiveBalls };
     };
 
     const inn1 = m.rawMatchData?.innings?.[0] || m.innings?.[0];
     const inn2 = m.rawMatchData?.innings?.[1] || m.innings?.[1];
 
-    const d1 = parseScoreData(inn1, m.team1);
-    const d2 = parseScoreData(inn2, m.team2);
+    // Determine which team batted in Innings 1 and which in Innings 2
+    let inn1BatTeam = null;
+    let inn2BatTeam = null;
 
-    if (d1.runs > 0 || d1.balls > 0 || d2.runs > 0 || d2.balls > 0) {
-      tableMap[t1Resolved].runsScored += d1.runs;
-      tableMap[t1Resolved].ballsFaced += (d1.balls || 30);
-      tableMap[t1Resolved].runsConceded += d2.runs;
-      tableMap[t1Resolved].ballsBowled += (d2.balls || 30);
+    if (inn1?.battingTeam) {
+      inn1BatTeam = resolveTeamName(inn1.battingTeam);
+    }
+    if (inn2?.battingTeam) {
+      inn2BatTeam = resolveTeamName(inn2.battingTeam);
+    }
 
-      tableMap[t2Resolved].runsScored += d2.runs;
-      tableMap[t2Resolved].ballsFaced += (d2.balls || 30);
-      tableMap[t2Resolved].runsConceded += d1.runs;
-      tableMap[t2Resolved].ballsBowled += (d1.balls || 30);
+    if (!inn1BatTeam && !inn2BatTeam) {
+      inn1BatTeam = t1Resolved;
+      inn2BatTeam = t2Resolved;
+    } else if (inn1BatTeam && !inn2BatTeam) {
+      inn2BatTeam = (inn1BatTeam === t1Resolved) ? t2Resolved : t1Resolved;
+    } else if (!inn1BatTeam && inn2BatTeam) {
+      inn1BatTeam = (inn2BatTeam === t1Resolved) ? t2Resolved : t1Resolved;
+    }
+
+    const inn1BowlTeam = (inn1BatTeam === t1Resolved) ? t2Resolved : t1Resolved;
+    const inn2BowlTeam = (inn2BatTeam === t1Resolved) ? t2Resolved : t1Resolved;
+
+    const d1 = parseScoreData(inn1, (inn1BatTeam === t1Resolved ? m.team1 : m.team2), maxOvers);
+    const d2 = parseScoreData(inn2, (inn2BatTeam === t1Resolved ? m.team1 : m.team2), maxOvers);
+
+    if (d1.runs > 0 || d1.effectiveBalls > 0) {
+      if (tableMap[inn1BatTeam]) {
+        tableMap[inn1BatTeam].runsScored += d1.runs;
+        tableMap[inn1BatTeam].ballsFaced += d1.effectiveBalls;
+      }
+      if (tableMap[inn1BowlTeam]) {
+        tableMap[inn1BowlTeam].runsConceded += d1.runs;
+        tableMap[inn1BowlTeam].ballsBowled += d1.effectiveBalls;
+      }
+    }
+
+    if (d2.runs > 0 || d2.effectiveBalls > 0) {
+      if (tableMap[inn2BatTeam]) {
+        tableMap[inn2BatTeam].runsScored += d2.runs;
+        tableMap[inn2BatTeam].ballsFaced += d2.effectiveBalls;
+      }
+      if (tableMap[inn2BowlTeam]) {
+        tableMap[inn2BowlTeam].runsConceded += d2.runs;
+        tableMap[inn2BowlTeam].ballsBowled += d2.effectiveBalls;
+      }
     }
   });
 
