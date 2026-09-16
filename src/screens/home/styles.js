@@ -204,11 +204,10 @@ export const styles = StyleSheet.create({
     backgroundColor: '#22C55E'
   },
   liveMatchCard: {
-    backgroundColor: theme.light.cardBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: radius.xxl,
     padding: spacing.lg,
-    borderWidth: 1.5,
-    borderColor: '#BAE6FD',
+    borderWidth: 0,
     gap: spacing.lg - 2
   },
   liveCardHeader: {
@@ -316,13 +315,12 @@ export const styles = StyleSheet.create({
     fontFamily: systemFontBold
   },
   emptyCard: {
-    backgroundColor: theme.light.cardBg,
+    backgroundColor: '#FFFFFF',
     borderRadius: radius.xxl,
     padding: spacing.xxl,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.light.cardBorder,
+    borderWidth: 0,
     gap: spacing.sm
   },
   emptyCardTitle: {
