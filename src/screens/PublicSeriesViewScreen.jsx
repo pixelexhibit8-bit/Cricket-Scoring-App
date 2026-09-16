@@ -387,12 +387,17 @@ export function PublicSeriesViewScreen(props = {}) {
       presetTeam2: t2Name,
       team1Name: t1Name,
       team2Name: t2Name,
+      team1LogoKey: t1Obj?.logoKey || match?.team1?.logoKey || 'csk',
+      team2LogoKey: t2Obj?.logoKey || match?.team2?.logoKey || 'rcb',
+      team1LogoUri: t1Obj?.logoUri || match?.team1?.logoUri || null,
+      team2LogoUri: t2Obj?.logoUri || match?.team2?.logoUri || null,
       team1Roster: t1Roster.length > 0 ? t1Roster : undefined,
       team2Roster: t2Roster.length > 0 ? t2Roster : undefined,
       totalOvers: match?.overs || tournament?.overs || 5,
       ballType: tournament?.ballType || 'tennis',
       pitchType: tournament?.pitchType || 'turf',
-      venueName: match?.venue || tournament?.venue || (Array.isArray(tournament?.venues) && tournament.venues[0]) || tournament?.city || 'Local Cricket Ground'
+      venueName: match?.venue || tournament?.venue || (Array.isArray(tournament?.venues) && tournament.venues[0]) || tournament?.city || 'Local Cricket Ground',
+      tournamentVenues: Array.isArray(tournament?.venues) ? tournament.venues : []
     };
 
     const nav = navigation || props.navigation;

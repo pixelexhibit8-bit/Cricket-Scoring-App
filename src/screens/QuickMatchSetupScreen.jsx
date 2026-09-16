@@ -78,6 +78,9 @@ export function QuickMatchSetupScreen(props = {}) {
   const [team2Name, setTeam2Name] = useState(effectiveSetup?.team2Name || effectiveSetup?.presetTeam2 || 'Team 2');
   const [team1LogoKey, setTeam1LogoKey] = useState(effectiveSetup?.team1LogoKey || 'default_1');
   const [team2LogoKey, setTeam2LogoKey] = useState(effectiveSetup?.team2LogoKey || 'default_2');
+  const [team1LogoUri, setTeam1LogoUri] = useState(effectiveSetup?.team1LogoUri || null);
+  const [team2LogoUri, setTeam2LogoUri] = useState(effectiveSetup?.team2LogoUri || null);
+  const [tournamentVenues, setTournamentVenues] = useState(effectiveSetup?.tournamentVenues || []);
   const [logoPickerModalVisible, setLogoPickerModalVisible] = useState(false);
   const [logoPickerTargetTeam, setLogoPickerTargetTeam] = useState('team1');
 
@@ -121,6 +124,9 @@ export function QuickMatchSetupScreen(props = {}) {
       if (initialSetup.team2Name || initialSetup.presetTeam2) setTeam2Name(initialSetup.team2Name || initialSetup.presetTeam2);
       if (initialSetup.team1LogoKey) setTeam1LogoKey(initialSetup.team1LogoKey);
       if (initialSetup.team2LogoKey) setTeam2LogoKey(initialSetup.team2LogoKey);
+      if (initialSetup.team1LogoUri !== undefined) setTeam1LogoUri(initialSetup.team1LogoUri);
+      if (initialSetup.team2LogoUri !== undefined) setTeam2LogoUri(initialSetup.team2LogoUri);
+      if (Array.isArray(initialSetup.tournamentVenues)) setTournamentVenues(initialSetup.tournamentVenues);
       if (Array.isArray(initialSetup.team1Roster) && initialSetup.team1Roster.length > 0) setTeam1Roster(initialSetup.team1Roster);
       if (Array.isArray(initialSetup.team2Roster) && initialSetup.team2Roster.length > 0) setTeam2Roster(initialSetup.team2Roster);
       if (initialSetup.totalOvers) setTotalOvers(String(initialSetup.totalOvers));
@@ -466,6 +472,8 @@ export function QuickMatchSetupScreen(props = {}) {
         team2Name: finalTeam2,
         team1LogoKey,
         team2LogoKey,
+        team1LogoUri,
+        team2LogoUri,
         team1Roster: team1Roster,
         team2Roster: team2Roster,
         ballType,
@@ -655,22 +663,31 @@ export function QuickMatchSetupScreen(props = {}) {
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 }}>
                 {/* LEFT SIDE: TEAM 1 LOGO (CIRCULAR) + NAME */}
                 <View style={{ flex: 1, alignItems: 'center', gap: 8 }}>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setLogoPickerTargetTeam('team1');
-                      setLogoPickerModalVisible(true);
-                    }}
-                    style={{ position: 'relative' }}
-                  >
-                    <TeamIdentityMark
-                      team={{ name: team1Name, logoKey: team1LogoKey }}
-                      size={60}
-                    />
-                    <View style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' }}>
-                      <Ionicons name="camera" size={11} color="#FFFFFF" />
+                  {tournamentId ? (
+                    <View style={{ padding: 2 }}>
+                      <TeamIdentityMark
+                        team={{ name: team1Name, logoKey: team1LogoKey, logoUri: team1LogoUri }}
+                        size={60}
+                      />
                     </View>
-                  </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setLogoPickerTargetTeam('team1');
+                        setLogoPickerModalVisible(true);
+                      }}
+                      style={{ position: 'relative' }}
+                    >
+                      <TeamIdentityMark
+                        team={{ name: team1Name, logoKey: team1LogoKey, logoUri: team1LogoUri }}
+                        size={60}
+                      />
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' }}>
+                        <Ionicons name="camera" size={11} color="#FFFFFF" />
+                      </View>
+                    </TouchableOpacity>
+                  )}
 
                   {tournamentId ? (
                     <View style={{
@@ -734,22 +751,31 @@ export function QuickMatchSetupScreen(props = {}) {
 
                 {/* RIGHT SIDE: TEAM 2 LOGO (CIRCULAR) + NAME */}
                 <View style={{ flex: 1, alignItems: 'center', gap: 8 }}>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setLogoPickerTargetTeam('team2');
-                      setLogoPickerModalVisible(true);
-                    }}
-                    style={{ position: 'relative' }}
-                  >
-                    <TeamIdentityMark
-                      team={{ name: team2Name, logoKey: team2LogoKey }}
-                      size={60}
-                    />
-                    <View style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' }}>
-                      <Ionicons name="camera" size={11} color="#FFFFFF" />
+                  {tournamentId ? (
+                    <View style={{ padding: 2 }}>
+                      <TeamIdentityMark
+                        team={{ name: team2Name, logoKey: team2LogoKey, logoUri: team2LogoUri }}
+                        size={60}
+                      />
                     </View>
-                  </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setLogoPickerTargetTeam('team2');
+                        setLogoPickerModalVisible(true);
+                      }}
+                      style={{ position: 'relative' }}
+                    >
+                      <TeamIdentityMark
+                        team={{ name: team2Name, logoKey: team2LogoKey, logoUri: team2LogoUri }}
+                        size={60}
+                      />
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' }}>
+                        <Ionicons name="camera" size={11} color="#FFFFFF" />
+                      </View>
+                    </TouchableOpacity>
+                  )}
 
                   {tournamentId ? (
                     <View style={{
@@ -877,169 +903,209 @@ export function QuickMatchSetupScreen(props = {}) {
                 MATCH SETTINGS
               </Text>
 
-              {/* INTERACTIVE OVERS STEPPER & PRESETS */}
-              <View style={{ gap: 8 }}>
-                <Text style={styles.labelHeader}>TOTAL MATCH OVERS</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                  <TouchableOpacity
-                    onPress={() => setTotalOvers(prev => String(Math.max(1, (parseInt(prev, 10) || 5) - 1)))}
-                    style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Ionicons name="remove" size={22} color="#0F172A" />
-                  </TouchableOpacity>
-
-                  <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
-                    <MaterialCommunityIcons name="cricket" size={20} color="#0284C7" />
-                    <Text style={{ fontSize: 20, color: '#0284C7', fontFamily: systemFontBold }}>
-                      {totalOvers} <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }}>OVERS</Text>
-                    </Text>
+              {tournamentId ? (
+                /* TOURNAMENT LOCKED SPECIFICATIONS SUMMARY */
+                <View style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0',
+                  padding: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-around'
+                }}>
+                  <View style={{ alignItems: 'center', gap: 4 }}>
+                    <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: '#64748B' }}>TOTAL OVERS</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <MaterialCommunityIcons name="cricket" size={16} color="#0284C7" />
+                      <Text style={{ fontSize: 14, fontFamily: systemFontBold, color: '#0F172A' }}>{totalOvers} Overs</Text>
+                    </View>
                   </View>
 
-                  <TouchableOpacity
-                    onPress={() => setTotalOvers(prev => String(Math.min(50, (parseInt(prev, 10) || 5) + 1)))}
-                    style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Ionicons name="add" size={22} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
+                  <View style={{ width: 1, height: 28, backgroundColor: '#E2E8F0' }} />
 
-                {/* Quick Overs Preset Chips */}
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {['5', '8', '10', '12', '20'].map(ov => {
-                    const active = totalOvers === ov;
-                    return (
+                  <View style={{ alignItems: 'center', gap: 4 }}>
+                    <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: '#64748B' }}>BALL TYPE</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {ballType === 'leather' ? (
+                        <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: '#991B1B' }} />
+                      ) : ballType === 'other' ? (
+                        <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: '#FACC15' }} />
+                      ) : (
+                        <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: '#EF4444' }} />
+                      )}
+                      <Text style={{ fontSize: 14, fontFamily: systemFontBold, color: '#0F172A', textTransform: 'capitalize' }}>
+                        {ballType} Ball
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ width: 1, height: 28, backgroundColor: '#E2E8F0' }} />
+
+                  <View style={{ alignItems: 'center', gap: 4 }}>
+                    <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: '#64748B' }}>RULES</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <MaterialCommunityIcons name="shield-check" size={16} color="#16A34A" />
+                      <Text style={{ fontSize: 13, fontFamily: systemFontBold, color: '#15803D' }}>Official</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                /* REGULAR QUICK MATCH: INTERACTIVE OVERS STEPPER & PRESETS + BALL SELECTOR */
+                <>
+                  {/* INTERACTIVE OVERS STEPPER & PRESETS */}
+                  <View style={{ gap: 8 }}>
+                    <Text style={styles.labelHeader}>TOTAL MATCH OVERS</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
                       <TouchableOpacity
-                        key={ov}
-                        onPress={() => setTotalOvers(ov)}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 6,
-                          borderRadius: 8,
-                          backgroundColor: active ? '#0284C7' : '#F8FAFC',
-                          borderWidth: 1,
-                          borderColor: active ? '#0284C7' : '#CBD5E1',
-                          alignItems: 'center'
-                        }}
+                        onPress={() => setTotalOvers(prev => String(Math.max(1, (parseInt(prev, 10) || 5) - 1)))}
+                        style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        <Text style={{ color: active ? '#FFFFFF' : '#475569', fontSize: 11, fontFamily: systemFontBold }}>
-                          {ov} Ov
-                        </Text>
+                        <Ionicons name="remove" size={22} color="#0F172A" />
                       </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
 
-              {/* BALL TYPE SELECTOR (RED TENNIS | CHERRY LEATHER | YELLOW OTHER) */}
-              <View style={{ gap: 8 }}>
-                <Text style={styles.labelHeader}>BALL TYPE</Text>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {[
-                    { id: 'tennis', label: 'Tennis' },
-                    { id: 'leather', label: 'Leather' },
-                    { id: 'other', label: 'Other' }
-                  ].map(item => {
-                    const active = ballType === item.id;
-                    return (
+                      <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+                        <MaterialCommunityIcons name="cricket" size={20} color="#0284C7" />
+                        <Text style={{ fontSize: 20, color: '#0284C7', fontFamily: systemFontBold }}>
+                          {totalOvers} <Text style={{ fontSize: 12, color: '#64748B', fontFamily: systemFontMedium }}>OVERS</Text>
+                        </Text>
+                      </View>
+
                       <TouchableOpacity
-                        key={item.id}
-                        onPress={() => setBallType(item.id)}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 9,
-                          borderRadius: 10,
-                          backgroundColor: active ? '#0284C7' : '#F8FAFC',
-                          borderWidth: 1,
-                          borderColor: active ? '#0284C7' : '#CBD5E1',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 7
-                        }}
+                        onPress={() => setTotalOvers(prev => String(Math.min(50, (parseInt(prev, 10) || 5) + 1)))}
+                        style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#0284C7', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        {/* AUTHENTIC VECTOR BALL BADGES */}
-                        {item.id === 'tennis' ? (
-                          // RED TENNIS / TAPE BALL
-                          <View style={{
-                            width: 17,
-                            height: 17,
-                            borderRadius: 8.5,
-                            backgroundColor: '#EF4444',
-                            borderWidth: 1,
-                            borderColor: '#DC2626',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden',
-                            position: 'relative'
-                          }}>
-                            <View style={{
-                              width: 13,
-                              height: 13,
-                              borderRadius: 6.5,
+                        <Ionicons name="add" size={22} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Quick Overs Preset Chips */}
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {['5', '8', '10', '12', '20'].map(ov => {
+                        const active = totalOvers === ov;
+                        return (
+                          <TouchableOpacity
+                            key={ov}
+                            onPress={() => setTotalOvers(ov)}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 6,
+                              borderRadius: 8,
+                              backgroundColor: active ? '#0284C7' : '#F8FAFC',
                               borderWidth: 1,
-                              borderColor: '#FFFFFF',
-                              borderStyle: 'dashed'
-                            }} />
-                          </View>
-                        ) : item.id === 'leather' ? (
-                          // CRIMSON RED LEATHER CRICKET BALL
-                          <View style={{
-                            width: 17,
-                            height: 17,
-                            borderRadius: 8.5,
-                            backgroundColor: '#991B1B',
-                            borderWidth: 1,
-                            borderColor: '#7F1D1D',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            position: 'relative'
-                          }}>
-                            <View style={{
-                              width: 1.5,
-                              height: '100%',
-                              backgroundColor: '#FFFFFF',
-                              borderRadius: 1
-                            }} />
-                            <View style={{
-                              position: 'absolute',
-                              top: 2,
-                              left: 2.5,
-                              width: 3.5,
-                              height: 3.5,
-                              borderRadius: 2,
-                              backgroundColor: 'rgba(255, 255, 255, 0.45)'
-                            }} />
-                          </View>
-                        ) : (
-                          // BRIGHT YELLOW TURF BALL
-                          <View style={{
-                            width: 17,
-                            height: 17,
-                            borderRadius: 8.5,
-                            backgroundColor: '#FACC15',
-                            borderWidth: 1,
-                            borderColor: '#EAB308',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            position: 'relative'
-                          }}>
-                            <View style={{
-                              width: 1.5,
-                              height: '100%',
-                              backgroundColor: '#854D0E',
-                              borderRadius: 1
-                            }} />
-                          </View>
-                        )}
+                              borderColor: active ? '#0284C7' : '#CBD5E1',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <Text style={{ color: active ? '#FFFFFF' : '#475569', fontSize: 11, fontFamily: systemFontBold }}>
+                              {ov} Ov
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
 
-                        <Text style={{ color: active ? '#FFFFFF' : '#334155', fontSize: 12.5, fontFamily: systemFontBold }}>
-                          {item.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+                  {/* BALL TYPE SELECTOR */}
+                  <View style={{ gap: 8 }}>
+                    <Text style={styles.labelHeader}>BALL TYPE</Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {[
+                        { id: 'tennis', label: 'Tennis' },
+                        { id: 'leather', label: 'Leather' },
+                        { id: 'other', label: 'Other' }
+                      ].map(item => {
+                        const active = ballType === item.id;
+                        return (
+                          <TouchableOpacity
+                            key={item.id}
+                            onPress={() => setBallType(item.id)}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 9,
+                              borderRadius: 10,
+                              backgroundColor: active ? '#0284C7' : '#F8FAFC',
+                              borderWidth: 1,
+                              borderColor: active ? '#0284C7' : '#CBD5E1',
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 7
+                            }}
+                          >
+                            {item.id === 'tennis' ? (
+                              <View style={{
+                                width: 17,
+                                height: 17,
+                                borderRadius: 8.5,
+                                backgroundColor: '#EF4444',
+                                borderWidth: 1,
+                                borderColor: '#DC2626',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                position: 'relative'
+                              }}>
+                                <View style={{
+                                  width: 13,
+                                  height: 13,
+                                  borderRadius: 6.5,
+                                  borderWidth: 1,
+                                  borderColor: '#FFFFFF',
+                                  borderStyle: 'dashed'
+                                }} />
+                              </View>
+                            ) : item.id === 'leather' ? (
+                              <View style={{
+                                width: 17,
+                                height: 17,
+                                borderRadius: 8.5,
+                                backgroundColor: '#991B1B',
+                                borderWidth: 1,
+                                borderColor: '#7F1D1D',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                position: 'relative'
+                              }}>
+                                <View style={{
+                                  width: 1.5,
+                                  height: '100%',
+                                  backgroundColor: '#FFFFFF',
+                                  borderRadius: 1
+                                }} />
+                              </View>
+                            ) : (
+                              <View style={{
+                                width: 17,
+                                height: 17,
+                                borderRadius: 8.5,
+                                backgroundColor: '#FACC15',
+                                borderWidth: 1,
+                                borderColor: '#EAB308',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                position: 'relative'
+                              }}>
+                                <View style={{
+                                  width: 1.5,
+                                  height: '100%',
+                                  backgroundColor: '#854D0E',
+                                  borderRadius: 1
+                                }} />
+                              </View>
+                            )}
+
+                            <Text style={{ color: active ? '#FFFFFF' : '#334155', fontSize: 12.5, fontFamily: systemFontBold }}>
+                              {item.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </>
+              )}
 
               {/* VENUE & UMPIRE COMPACT INPUTS */}
               <View style={{ gap: 10 }}>
@@ -1053,6 +1119,28 @@ export function QuickMatchSetupScreen(props = {}) {
                     placeholderTextColor="#94A3B8"
                     autoCapitalize="words"
                   />
+                  {tournamentVenues && tournamentVenues.length > 1 ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingTop: 4 }}>
+                      {tournamentVenues.map((v, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => setVenueName(v)}
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 6,
+                            backgroundColor: venueName === v ? '#0284C7' : '#F1F5F9',
+                            borderWidth: 1,
+                            borderColor: venueName === v ? '#0284C7' : '#CBD5E1'
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, color: venueName === v ? '#FFFFFF' : '#475569', fontFamily: systemFontMedium }}>
+                            {v}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : null}
                 </View>
 
                 <View style={{ gap: 4 }}>
@@ -1223,8 +1311,8 @@ export function QuickMatchSetupScreen(props = {}) {
             </Text>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {[
-                { name: activeT1, logoKey: team1LogoKey },
-                { name: activeT2, logoKey: team2LogoKey }
+                { name: activeT1, logoKey: team1LogoKey, logoUri: team1LogoUri },
+                { name: activeT2, logoKey: team2LogoKey, logoUri: team2LogoUri }
               ].map((teamObj) => {
                 const active = tossWinner === teamObj.name;
                 return (
@@ -1243,7 +1331,7 @@ export function QuickMatchSetupScreen(props = {}) {
                       gap: 8
                     }}
                   >
-                    <TeamIdentityMark team={{ name: teamObj.name, logoKey: teamObj.logoKey }} size={48} />
+                    <TeamIdentityMark team={teamObj} size={48} />
                     <Text style={{ color: active ? '#16A34A' : '#0F172A', fontSize: 14, fontFamily: systemFontBold }} numberOfLines={1}>
                       {teamObj.name}
                     </Text>
