@@ -940,7 +940,7 @@ export function MyProfileScreen(props = {}) {
       >
         {/* 1. OVERVIEW PAGE (MEMOIZED) */}
         <View key="overview" style={{ flex: 1 }}>
-          <ProfileOverviewTab stats={stats} />
+          <ProfileOverviewTab stats={stats} profile={profile} />
         </View>
 
         {/* 2. BATTING PAGE (MEMOIZED) */}

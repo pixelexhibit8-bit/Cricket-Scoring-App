@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { systemFont, systemFontBold } from '../../theme.js';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { systemFont, systemFontBold, systemFontMedium, themeColors } from '../../theme.js';
 
 const MatchHistoryItem = React.memo(function MatchHistoryItem({ match, onSelect }) {
   const matchTitle = useMemo(() => {
@@ -34,12 +34,15 @@ const MatchHistoryItem = React.memo(function MatchHistoryItem({ match, onSelect 
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      <View style={{ flex: 1 }}>
-        <Text style={styles.matchTitle}>{matchTitle}</Text>
+      <View style={styles.matchIconBox}>
+        <MaterialCommunityIcons name="cricket" size={18} color="#18181B" />
+      </View>
+      <View style={{ flex: 1, paddingHorizontal: 10 }}>
+        <Text style={styles.matchTitle} numberOfLines={1}>{matchTitle}</Text>
         <Text style={styles.matchDate}>{matchDate}</Text>
         <Text style={styles.matchResultText} numberOfLines={1}>{matchResult}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+      <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
     </TouchableOpacity>
   );
 });
@@ -61,7 +64,7 @@ export const ProfileMatchesTab = React.memo(function ProfileMatchesTab({
       <Ionicons name="trophy-outline" size={28} color="#94A3B8" />
       <Text style={styles.emptyTitle}>No Matches Recorded Yet</Text>
       <Text style={styles.emptySub}>
-        When you play in a match on CricFlow, your individual batting and bowling cards will appear here.
+        When you play in a match on CricFlow, your individual batting and bowling scorecards will appear here.
       </Text>
     </View>
   ), []);
@@ -93,46 +96,59 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
     marginBottom: 8
   },
+  matchIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F4F4F5',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   matchTitle: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontFamily: systemFontBold,
     color: '#0F172A'
   },
   matchDate: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#64748B',
     fontFamily: systemFont,
     marginTop: 2
   },
   matchResultText: {
-    fontSize: 11,
-    fontFamily: systemFontBold,
-    color: '#059669',
-    marginTop: 4
+    fontSize: 11.5,
+    fontFamily: systemFontMedium,
+    color: '#16A34A',
+    marginTop: 3
   },
   emptyMatchesCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 14,
+    padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
     gap: 6
   },
   emptyTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: systemFontBold,
     color: '#0F172A',
     marginTop: 4
   },
   emptySub: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#64748B',
     fontFamily: systemFont,
     textAlign: 'center',
-    lineHeight: 16
+    lineHeight: 17,
+    paddingHorizontal: 16
   }
 });
+
+export default ProfileMatchesTab;

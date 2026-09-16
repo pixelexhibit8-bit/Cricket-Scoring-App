@@ -2,13 +2,17 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
-import { systemFontBold, systemFontMedium } from '../../theme.js';
+import { systemFontBold, systemFontMedium, systemFont, themeColors } from '../../theme.js';
 
 export const ProfileHeroCard = React.memo(function ProfileHeroCard({
-  playerName,
-  profile,
-  onPressPhoto
+  playerName = 'Player',
+  profile = {},
+  onPressPhoto = () => {}
 }) {
+  const role = profile?.role || 'All-Rounder';
+  const city = profile?.city || 'Local Ground';
+  const jerseyNumber = profile?.jerseyNumber;
+
   return (
     <View style={styles.profileHeaderCard}>
       <View style={styles.profileAvatarRow}>
@@ -22,34 +26,35 @@ export const ProfileHeroCard = React.memo(function ProfileHeroCard({
             photoUrl={profile?.photoUrl}
             size={64}
           />
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark-circle" size={18} color="#18181B" />
+          </View>
         </TouchableOpacity>
 
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={styles.playerNameText} numberOfLines={1}>{playerName}</Text>
-            {profile?.jerseyNumber ? (
+        <View style={styles.infoCol}>
+          <View style={styles.nameRow}>
+            <Text style={styles.playerNameText} numberOfLines={1}>
+              {playerName}
+            </Text>
+            {jerseyNumber ? (
               <View style={styles.jerseyBadge}>
-                <Text style={styles.jerseyBadgeText}>#{profile.jerseyNumber}</Text>
+                <Text style={styles.jerseyBadgeText}>#{jerseyNumber}</Text>
               </View>
             ) : null}
-            <Ionicons name="checkmark-circle" size={17} color="#0284C7" />
           </View>
 
-          <Text style={styles.playerRoleText}>
-            {profile?.role || 'All-Rounder'} • {profile?.city || 'Local Ground'}
-          </Text>
+          <View style={styles.badgesRow}>
+            <View style={styles.roleBadge}>
+              <MaterialCommunityIcons name="cricket" size={13} color="#FFFFFF" />
+              <Text style={styles.roleBadgeText}>{role}</Text>
+            </View>
 
-          <View style={styles.styleBadgesRow}>
-            <View style={styles.styleBadgeItem}>
-              <MaterialCommunityIcons name="cricket" size={12} color="#18181B" />
-              <Text style={styles.styleBadgeText}>{profile?.battingStyle || 'Right Hand Bat'}</Text>
-            </View>
-            <View style={[styles.styleBadgeItem, styles.bowlingBadgeItem]}>
-              <MaterialCommunityIcons name="baseball" size={12} color="#64748B" />
-              <Text style={[styles.styleBadgeText, { color: '#475569' }]}>
-                {profile?.bowlingStyle || 'Right Arm Medium'}
-              </Text>
-            </View>
+            {city ? (
+              <View style={styles.locationBadge}>
+                <Ionicons name="location-outline" size={12} color="#64748B" />
+                <Text style={styles.locationBadgeText} numberOfLines={1}>{city}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       </View>
@@ -62,9 +67,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
     marginHorizontal: 14,
-    marginTop: 12,
+    marginTop: 10,
     marginBottom: 8
   },
   profileAvatarRow: {
@@ -75,51 +81,78 @@ const styles = StyleSheet.create({
   avatarWrapper: {
     position: 'relative'
   },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10
+  },
+  infoCol: {
+    flex: 1
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
   playerNameText: {
-    fontSize: 17,
+    fontSize: 18,
     fontFamily: systemFontBold,
-    color: '#0F172A'
+    color: '#0F172A',
+    flexShrink: 1
   },
   jerseyBadge: {
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 6,
+    backgroundColor: '#F4F4F5',
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 6
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E4E4E7'
   },
   jerseyBadgeText: {
-    color: '#FFFFFF',
+    color: '#18181B',
     fontSize: 11,
-    fontFamily: systemFontMedium
+    fontFamily: systemFontBold
   },
-  playerRoleText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontFamily: systemFontMedium,
-    marginTop: 2
-  },
-  styleBadgesRow: {
+  badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 8,
+    marginTop: 6,
     flexWrap: 'wrap'
   },
-  styleBadgeItem: {
+  roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#F0F9FF',
+    gap: 4,
+    backgroundColor: '#18181B',
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 6
+  },
+  roleBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11.5,
+    fontFamily: systemFontMedium
+  },
+  locationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#EEEEF0',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 0
+    paddingVertical: 3,
+    borderRadius: 6
   },
-  bowlingBadgeItem: {
-    backgroundColor: '#F8FAFC'
-  },
-  styleBadgeText: {
-    fontSize: 11,
+  locationBadgeText: {
+    color: '#64748B',
+    fontSize: 11.5,
     fontFamily: systemFontMedium,
-    color: '#0284C7'
+    maxWidth: 140
   }
 });
+
+export default ProfileHeroCard;

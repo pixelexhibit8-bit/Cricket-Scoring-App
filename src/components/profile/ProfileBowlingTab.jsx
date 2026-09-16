@@ -1,9 +1,23 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { systemFontBold, systemFontMedium } from '../../theme.js';
+import { systemFontBold, systemFontMedium, systemFont, themeColors } from '../../theme.js';
 
 export const ProfileBowlingTab = React.memo(function ProfileBowlingTab({ stats = {} }) {
+  const bowlingAvg = stats.wickets > 0
+    ? (stats.runsConceded / stats.wickets).toFixed(1)
+    : (stats.runsConceded > 0 ? `${stats.runsConceded}.0` : '0.0');
+
+  const bowlingMetrics = [
+    { label: 'Overs Bowled', value: stats.oversBowled ?? '0.0' },
+    { label: 'Maidens', value: stats.maidens ?? 0 },
+    { label: 'Runs Conceded', value: stats.runsConceded ?? 0 },
+    { label: 'Wickets Taken', value: stats.wickets ?? 0 },
+    { label: 'Best Bowling', value: stats.bestBowling || '-' },
+    { label: 'Bowling Economy', value: stats.economy ?? '0.00' },
+    { label: 'Bowling Average', value: bowlingAvg }
+  ];
+
   return (
     <ScrollView
       style={styles.pageScrollView}
@@ -11,41 +25,24 @@ export const ProfileBowlingTab = React.memo(function ProfileBowlingTab({ stats =
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.statsCard}>
-        <MaterialCommunityIcons
-          name="baseball"
-          size={135}
-          color="#EA580C"
-          style={styles.watermarkIcon}
-        />
         <View style={styles.statsCardHeader}>
-          <MaterialCommunityIcons name="baseball" size={18} color="#EA580C" />
-          <Text style={styles.statsCardTitle}>Bowling Performance</Text>
+          <MaterialCommunityIcons name="baseball" size={18} color="#18181B" />
+          <Text style={styles.statsCardTitle}>BOWLING CAREER STATS</Text>
         </View>
-        <View style={styles.statRowGrid}>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.oversBowled ?? '0.0'}</Text>
-            <Text style={styles.statColLbl}>Overs</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.wickets ?? 0}</Text>
-            <Text style={styles.statColLbl}>Wickets</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.economy ?? '0.00'}</Text>
-            <Text style={styles.statColLbl}>Economy</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.maidens ?? 0}</Text>
-            <Text style={styles.statColLbl}>Maidens</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.bestBowling || '-'}</Text>
-            <Text style={styles.statColLbl}>Best Bowling</Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={styles.statColVal}>{stats.runsConceded ?? 0}</Text>
-            <Text style={styles.statColLbl}>Runs Given</Text>
-          </View>
+
+        <View style={styles.metricsList}>
+          {bowlingMetrics.map((item, idx) => (
+            <View
+              key={item.label}
+              style={[
+                styles.metricRow,
+                idx === bowlingMetrics.length - 1 && { borderBottomWidth: 0 }
+              ]}
+            >
+              <Text style={styles.metricLabel}>{item.label}</Text>
+              <Text style={styles.metricValue}>{item.value}</Text>
+            </View>
+          ))}
         </View>
       </View>
     </ScrollView>
@@ -63,50 +60,46 @@ const styles = StyleSheet.create({
   statsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    padding: 14,
-    borderWidth: 0,
-    overflow: 'hidden',
-    position: 'relative'
-  },
-  watermarkIcon: {
-    position: 'absolute',
-    right: -15,
-    bottom: -25,
-    opacity: 0.04,
-    transform: [{ rotate: '12deg' }]
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#EEEEF0'
   },
   statsCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 12,
-    borderBottomWidth: 0,
-    borderBottomColor: '#F1F5F9',
-    paddingBottom: 8
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+    paddingBottom: 10
   },
   statsCardTitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontFamily: systemFontBold,
-    color: '#0F172A'
+    color: '#0F172A',
+    letterSpacing: 0.4
   },
-  statRowGrid: {
+  metricsList: {
+    gap: 0
+  },
+  metricRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    rowGap: 10
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8F8FA'
   },
-  statCol: {
-    width: '33.33%',
-    alignItems: 'center'
+  metricLabel: {
+    fontSize: 13,
+    fontFamily: systemFont,
+    color: '#64748B'
   },
-  statColVal: {
-    fontSize: 15,
-    fontFamily: systemFontBold,
-    color: '#0F172A'
-  },
-  statColLbl: {
-    fontSize: 10,
+  metricValue: {
+    fontSize: 14,
     fontFamily: systemFontMedium,
-    color: '#64748B',
-    marginTop: 2
+    color: '#0F172A'
   }
 });
+
+export default ProfileBowlingTab;
