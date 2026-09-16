@@ -40,7 +40,7 @@ import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { MatchListScoreCard } from '../components/MatchListScoreCard.jsx';
 import { UpcomingFixtureCardItem } from '../components/home/UpcomingFixtureCardItem.jsx';
 import { GroundSpotlightSection } from '../components/GroundSpotlightSection.jsx';
-import { formatOvers, getTossWinnerName, getTossDecisionText, getScorePartsFromText, getFinishedResultCardText } from '../utils/cricketUtils.js';
+import { formatOvers, getTossWinnerName, getTossDecisionText, getScorePartsFromText, getFinishedResultCardText, getResultColor } from '../utils/cricketUtils.js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScalePressable, FadeSlideIn } from '../components/motion/MotionSystem.jsx';
 import { showToast } from '../services/toastService.js';
@@ -181,7 +181,7 @@ export function MatchesScreen(props = {}) {
     const teamOneScore = getScorePartsFromText(match.team1?.score);
     const teamTwoScore = getScorePartsFromText(match.team2?.score);
     const resultCardText = getFinishedResultCardText(match);
-    const resultColor = match.winnerTeamName === match.team1?.name ? '#0369A1' : '#92400E';
+    const resultColor = getResultColor(match, index);
 
     const tourName = match.tournamentName || match.tournamentTitle || match.seriesName || '';
     const venue = match.venue || 'Sadokan Ground';

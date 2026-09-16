@@ -6,14 +6,18 @@ import {
   makeTeamCode,
   getTeamShortCode,
   getTeamLogoSource,
-  getScorePartsFromText
+  getScorePartsFromText,
+  getResultColor,
+  RESULT_PALETTE
 } from './teamUtils.js';
 
 export {
   makeTeamCode,
   getTeamShortCode,
   getTeamLogoSource,
-  getScorePartsFromText
+  getScorePartsFromText,
+  getResultColor,
+  RESULT_PALETTE
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────

@@ -366,6 +366,7 @@ export function HomeScreen(props = {}) {
                   <FinishedMatchCardItem
                     key={`home-fin-${match.id || 'm'}-${idx}`}
                     match={match}
+                    index={idx}
                     onPress={() => handleSelectFinishedMatch(match)}
                   />
                 ))

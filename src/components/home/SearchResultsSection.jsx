@@ -116,6 +116,7 @@ export const SearchResultsSection = React.memo(function SearchResultsSection({
               <FinishedMatchCardItem
                 key={`search-fin-${match.id || 'm'}-${idx}`}
                 match={match}
+                index={idx}
                 onPress={() => onSelectFinishedMatch && onSelectFinishedMatch(match)}
               />
             ))}

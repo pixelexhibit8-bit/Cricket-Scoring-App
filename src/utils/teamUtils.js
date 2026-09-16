@@ -248,6 +248,25 @@ export const getScorePartsFromText = (scoreText = '') => {
   return { score: raw, overs: '' };
 };
 
+export const RESULT_PALETTE = [
+  '#047857', // 1. Deep Emerald Green
+  '#0369A1', // 2. Royal Blue
+  '#BE123C', // 3. Crimson / Ruby Red
+  '#B45309', // 4. Warm Amber / Brown
+  '#6D28D9', // 5. Deep Purple / Violet
+  '#334155'  // 6. Dark Slate Charcoal
+];
+
+export const getResultColor = (match, index = 0) => {
+  if (!match) return RESULT_PALETTE[0];
+  const seed = String(match.id || match.title || match.winnerTeamName || index);
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return RESULT_PALETTE[hash % RESULT_PALETTE.length];
+};
+
 /**
  * Format match winner short headline and margin cleanly (e.g. "GAW-W Won", "by 5 wickets")
  */
