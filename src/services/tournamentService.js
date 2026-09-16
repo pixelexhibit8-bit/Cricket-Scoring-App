@@ -319,42 +319,22 @@ export async function getTournamentsFromStorage() {
 
     let changed = false;
 
-    // Guarantee Rajasthan League 2026 is always available with full schema v5
+    // Guarantee Rajasthan League 2026 is always available with full ball-by-ball records
     const rpl = buildRajasthanLeagueTournament();
     const existingRplIdx = list.findIndex(t => t.id === rpl.id || t.name === rpl.name);
     if (existingRplIdx === -1) {
       list = [rpl, ...list];
       changed = true;
-    } else if (
-      (list[existingRplIdx].schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION ||
-      !Array.isArray(list[existingRplIdx].venues) ||
-      !Array.isArray(list[existingRplIdx].rounds) ||
-      !list[existingRplIdx].rules ||
-      !list[existingRplIdx].prizes ||
-      list[existingRplIdx].organiserPhone !== rpl.organiserPhone
-    ) {
-      list[existingRplIdx] = {
-        ...rpl,
-        ...list[existingRplIdx],
-        venues: rpl.venues,
-        rounds: rpl.rounds,
-        groups: rpl.groups,
-        rules: rpl.rules,
-        prizes: rpl.prizes,
-        structure: rpl.structure,
-        pitchType: rpl.pitchType,
-        entryFee: rpl.entryFee,
-        broadcaster: rpl.broadcaster,
-        organiserName: rpl.organiserName,
-        organiserPhone: rpl.organiserPhone,
-        organiserId: rpl.organiserId,
-        organiserEmail: rpl.organiserEmail,
-        schemaVersion: TOURNAMENT_SCHEMA_VERSION
-      };
-      changed = true;
+    } else {
+      const existingRpl = list[existingRplIdx];
+      const hasFinishedMatches = (existingRpl.matches?.[0]?.status === 'FINISHED' && (existingRpl.matches?.[0]?.rawMatchData?.innings?.[0]?.overHistory?.length || 0) > 0);
+      if (!hasFinishedMatches || (existingRpl.schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION) {
+        list[existingRplIdx] = rpl;
+        changed = true;
+      }
     }
 
-    // Guarantee Sadokan Premier League 2026 is always available with full schema v5
+    // Guarantee Sadokan Premier League 2026 is always available with full ball-by-ball records
     const spl = buildSadokanPremierLeagueTournament();
     const existingSplIdx = list.findIndex(t => t.id === spl.id || t.name === spl.name);
     if (existingSplIdx === -1) {
@@ -362,38 +342,9 @@ export async function getTournamentsFromStorage() {
       changed = true;
     } else {
       const existingSpl = list[existingSplIdx];
-      const hasOverHistory = existingSpl.matches?.[0]?.rawMatchData?.innings?.[0]?.overHistory?.length > 0;
-      const needsFullReset = !hasOverHistory || (existingSpl.teams?.[0]?.players?.length || 0) < 11;
-
-      if (needsFullReset) {
+      const hasAll13Finished = (existingSpl.matches?.[12]?.status === 'FINISHED' && (existingSpl.matches?.[12]?.rawMatchData?.innings?.[0]?.overHistory?.length || 0) > 0);
+      if (!hasAll13Finished || (existingSpl.schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION) {
         list[existingSplIdx] = spl;
-        changed = true;
-      } else if (
-        (existingSpl.schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION ||
-        !Array.isArray(existingSpl.venues) ||
-        !Array.isArray(existingSpl.rounds) ||
-        !existingSpl.rules ||
-        !existingSpl.prizes ||
-        existingSpl.organiserPhone !== spl.organiserPhone
-      ) {
-        list[existingSplIdx] = {
-          ...spl,
-          ...existingSpl,
-          venues: spl.venues,
-          rounds: spl.rounds,
-          groups: spl.groups,
-          rules: spl.rules,
-          prizes: spl.prizes,
-          structure: spl.structure,
-          pitchType: spl.pitchType,
-          entryFee: spl.entryFee,
-          broadcaster: spl.broadcaster,
-          organiserName: spl.organiserName,
-          organiserPhone: spl.organiserPhone,
-          organiserId: spl.organiserId,
-          organiserEmail: spl.organiserEmail,
-          schemaVersion: TOURNAMENT_SCHEMA_VERSION
-        };
         changed = true;
       }
     }
@@ -468,48 +419,20 @@ export async function getTournaments() {
       if (rplIdx === -1) {
         cloudTournaments = [rpl, ...cloudTournaments];
       } else {
-        cloudTournaments[rplIdx] = {
-          ...rpl,
-          ...cloudTournaments[rplIdx],
-          venues: rpl.venues,
-          rounds: rpl.rounds,
-          groups: rpl.groups,
-          rules: rpl.rules,
-          prizes: rpl.prizes,
-          structure: rpl.structure,
-          pitchType: rpl.pitchType,
-          entryFee: rpl.entryFee,
-          broadcaster: rpl.broadcaster,
-          organiserName: rpl.organiserName,
-          organiserPhone: rpl.organiserPhone,
-          organiserId: rpl.organiserId,
-          organiserEmail: rpl.organiserEmail,
-          schemaVersion: TOURNAMENT_SCHEMA_VERSION
-        };
+        const hasFinished = cloudTournaments[rplIdx].matches?.[0]?.status === 'FINISHED' && (cloudTournaments[rplIdx].matches?.[0]?.rawMatchData?.innings?.[0]?.overHistory?.length || 0) > 0;
+        cloudTournaments[rplIdx] = hasFinished
+          ? { ...rpl, ...cloudTournaments[rplIdx] }
+          : rpl;
       }
 
       const splIdx = cloudTournaments.findIndex(t => t.id === spl.id || t.name === spl.name);
       if (splIdx === -1) {
         cloudTournaments = [...cloudTournaments, spl];
       } else {
-        cloudTournaments[splIdx] = {
-          ...spl,
-          ...cloudTournaments[splIdx],
-          venues: spl.venues,
-          rounds: spl.rounds,
-          groups: spl.groups,
-          rules: spl.rules,
-          prizes: spl.prizes,
-          structure: spl.structure,
-          pitchType: spl.pitchType,
-          entryFee: spl.entryFee,
-          broadcaster: spl.broadcaster,
-          organiserName: spl.organiserName,
-          organiserPhone: spl.organiserPhone,
-          organiserId: spl.organiserId,
-          organiserEmail: spl.organiserEmail,
-          schemaVersion: TOURNAMENT_SCHEMA_VERSION
-        };
+        const hasAllFinished = cloudTournaments[splIdx].matches?.[12]?.status === 'FINISHED' && (cloudTournaments[splIdx].matches?.[12]?.rawMatchData?.innings?.[0]?.overHistory?.length || 0) > 0;
+        cloudTournaments[splIdx] = hasAllFinished
+          ? { ...spl, ...cloudTournaments[splIdx] }
+          : spl;
       }
 
       // Sync local storage with latest cloud snapshot

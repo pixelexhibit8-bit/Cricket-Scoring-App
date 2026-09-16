@@ -1,4 +1,4 @@
-import { autoCalculatePointsTable } from '../utils/cricketUtils.js';
+import { autoCalculatePointsTable } from './tournamentService.js';
 import { calculateTournamentStats } from './tournamentStatsEngine.js';
 
 export const SPL_TEAMS = [
@@ -1008,7 +1008,7 @@ export const SPL_MATCHES = [
     }
   },
 
-  // ─── UPCOMING MATCHES 10 to 13 ───
+  // ─── MATCH 10: MWC (42/3) vs NGT (37/4) ───
   {
     id: 'spl_match_10',
     matchNumber: 10,
@@ -1018,91 +1018,383 @@ export const SPL_MATCHES = [
     overs: 5,
     maxOvers: 5,
     venue: 'Sadokan Cricket Ground',
-    dateStr: 'Tomorrow • 10:00 AM',
-    dateGroup: 'Tomorrow, 17 September',
-    time: '10:00 AM',
-    status: 'UPCOMING',
+    dateStr: 'Completed • Day 4',
+    status: 'FINISHED',
+    phase: 'result',
+    winnerTeamName: 'Marwar Champions',
+    winner: 'Marwar Champions',
+    resultText: 'Marwar Champions won by 5 runs',
+    result: 'Marwar Champions won by 5 runs',
     team1: {
       name: 'Marwar Champions',
       shortName: 'MWC',
+      runs: 42,
+      wickets: 3,
+      overs: '5.0',
+      score: '42-3 (5.0)',
       logoUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469253/spl_team_mwc_logo.jpg'
     },
     team2: {
       name: 'Nagaur Titans',
       shortName: 'NGT',
+      runs: 37,
+      wickets: 4,
+      overs: '5.0',
+      score: '37-4 (5.0)',
       logoUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469258/spl_team_ngt_logo.jpg'
+    },
+    rawMatchData: {
+      id: 'spl_match_10',
+      matchTitle: 'Marwar Champions vs Nagaur Titans',
+      venue: 'Sadokan Cricket Ground',
+      phase: 'result',
+      status: 'FINISHED',
+      maxOvers: 5,
+      winnerTeamName: 'Marwar Champions',
+      resultText: 'Marwar Champions won by 5 runs',
+      innings: [
+        {
+          inningNumber: 1,
+          battingTeam: { name: 'Marwar Champions', runs: 42, wickets: 3, overs: '5.0' },
+          bowlingTeam: { name: 'Nagaur Titans' },
+          totalLegalBalls: 30,
+          allBatters: [
+            { name: 'Abhishek Sharma', runs: 21, balls: 11, fours: 2, sixes: 1, isOut: true, outDesc: 'c Ramesh b Mukesh', strikeRate: '190.9' },
+            { name: 'Abhishek sangwa', runs: 14, balls: 9, fours: 1, sixes: 1, isOut: true, outDesc: 'b Ramesh', strikeRate: '155.6' },
+            { name: 'Dashrath Sangwa', runs: 5, balls: 6, fours: 0, sixes: 0, isOut: true, outDesc: 'run out', strikeRate: '83.3' },
+            { name: 'Ramchandra Sangwa', runs: 2, balls: 4, fours: 0, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '50.0' }
+          ],
+          bowling: [
+            { name: 'Ramesh Choudhary', overs: '2.0', runs: 15, wickets: 1, maidens: 0, econ: '7.50', balls: 12 },
+            { name: 'Mukesh Bishnoi', overs: '2.0', runs: 16, wickets: 1, maidens: 0, econ: '8.00', balls: 12 },
+            { name: 'Surendra Godara', overs: '1.0', runs: 11, wickets: 0, maidens: 0, econ: '11.00', balls: 6 }
+          ],
+          overHistory: [
+            { overNum: 1, bowlerName: 'Ramesh Choudhary', runs: 7, wickets: 0, balls: ['1', '0', '4', '1', '1', '0'] },
+            { overNum: 2, bowlerName: 'Mukesh Bishnoi', runs: 9, wickets: 1, balls: ['1', '6', 'W', '1', '1', '0'] },
+            { overNum: 3, bowlerName: 'Ramesh Choudhary', runs: 8, wickets: 1, balls: ['1', '1', '4', 'W', '1', '1'] },
+            { overNum: 4, bowlerName: 'Surendra Godara', runs: 11, wickets: 0, balls: ['6', '1', '2', '1', '1', '0'] },
+            { overNum: 5, bowlerName: 'Mukesh Bishnoi', runs: 7, wickets: 1, balls: ['1', '1', 'W', '2', '1', '2'] }
+          ]
+        },
+        {
+          inningNumber: 2,
+          battingTeam: { name: 'Nagaur Titans', runs: 37, wickets: 4, overs: '5.0' },
+          bowlingTeam: { name: 'Marwar Champions' },
+          totalLegalBalls: 30,
+          allBatters: [
+            { name: 'Pooja Bishnoi', runs: 18, balls: 12, fours: 2, sixes: 0, isOut: true, outDesc: 'b Abhishek Sharma', strikeRate: '150.0' },
+            { name: 'Suresh Godara', runs: 10, balls: 9, fours: 1, sixes: 0, isOut: true, outDesc: 'c Dashrath b Ramchandra', strikeRate: '111.1' },
+            { name: 'Vikas Sangwa', runs: 6, balls: 5, fours: 0, sixes: 0, isOut: true, outDesc: 'b Abhishek Sharma', strikeRate: '120.0' },
+            { name: 'Ramesh Choudhary', runs: 2, balls: 3, fours: 0, sixes: 0, isOut: true, outDesc: 'run out', strikeRate: '66.7' },
+            { name: 'Mukesh Bishnoi', runs: 1, balls: 1, fours: 0, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '100.0' }
+          ],
+          bowling: [
+            { name: 'Abhishek Sharma', overs: '2.0', runs: 13, wickets: 2, maidens: 0, econ: '6.50', balls: 12 },
+            { name: 'Ramchandra Sangwa', overs: '2.0', runs: 15, wickets: 1, maidens: 0, econ: '7.50', balls: 12 },
+            { name: 'Dashrath Sangwa', overs: '1.0', runs: 9, wickets: 0, maidens: 0, econ: '9.00', balls: 6 }
+          ],
+          overHistory: [
+            { overNum: 1, bowlerName: 'Abhishek Sharma', runs: 6, wickets: 1, balls: ['1', '4', 'W', '0', '1', '0'] },
+            { overNum: 2, bowlerName: 'Ramchandra Sangwa', runs: 8, wickets: 0, balls: ['1', '2', '4', '0', '1', '0'] },
+            { overNum: 3, bowlerName: 'Dashrath Sangwa', runs: 9, wickets: 0, balls: ['4', '1', '1', '1', '1', '1'] },
+            { overNum: 4, bowlerName: 'Abhishek Sharma', runs: 7, wickets: 1, balls: ['1', '0', 'W', '2', '2', '2'] },
+            { overNum: 5, bowlerName: 'Ramchandra Sangwa', runs: 7, wickets: 2, balls: ['1', 'W', 'W', '2', '2', '2'] }
+          ]
+        }
+      ]
     }
   },
+
+  // ─── MATCH 11: SEMI-FINAL 1 - SSK (46/2) vs SDR (45/4) ───
   {
     id: 'spl_match_11',
     matchNumber: 11,
     matchNo: 11,
     stage: 'Semi-Final 1',
-    matchTitle: 'Rank 1 (League Topper) vs Rank 4 (League)',
+    matchTitle: 'Sadokan Super Kings vs Sadokan Royals',
     overs: 5,
     maxOvers: 5,
     venue: 'Sadokan Cricket Ground',
-    dateStr: '18 September • 09:30 AM',
-    dateGroup: '18 September, Friday',
-    time: '09:30 AM',
-    status: 'UPCOMING',
+    dateStr: 'Completed • Semi Final 1',
+    status: 'FINISHED',
+    phase: 'result',
+    winnerTeamName: 'Sadokan Super Kings',
+    winner: 'Sadokan Super Kings',
+    resultText: 'Sadokan Super Kings won by 8 wickets',
+    result: 'Sadokan Super Kings won by 8 wickets',
     team1: {
-      name: 'Rank 1 (League Topper)',
-      shortName: 'TBC',
-      isPlaceholderTeam: true
+      name: 'Sadokan Royals',
+      shortName: 'SDR',
+      runs: 45,
+      wickets: 4,
+      overs: '5.0',
+      score: '45-4 (5.0)',
+      logoUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469244/spl_team_sdr_logo.jpg'
     },
     team2: {
-      name: 'Rank 4 (League)',
-      shortName: 'TBC',
-      isPlaceholderTeam: true
+      name: 'Sadokan Super Kings',
+      shortName: 'SSK',
+      runs: 46,
+      wickets: 2,
+      overs: '4.3',
+      score: '46-2 (4.3)',
+      logoUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469238/spl_team_ssk_logo.jpg'
+    },
+    rawMatchData: {
+      id: 'spl_match_11',
+      matchTitle: 'Sadokan Super Kings vs Sadokan Royals',
+      venue: 'Sadokan Cricket Ground',
+      phase: 'result',
+      status: 'FINISHED',
+      maxOvers: 5,
+      winnerTeamName: 'Sadokan Super Kings',
+      resultText: 'Sadokan Super Kings won by 8 wickets',
+      innings: [
+        {
+          inningNumber: 1,
+          battingTeam: { name: 'Sadokan Royals', runs: 45, wickets: 4, overs: '5.0' },
+          bowlingTeam: { name: 'Sadokan Super Kings' },
+          totalLegalBalls: 30,
+          allBatters: [
+            { name: 'Vikas Khoja', runs: 24, balls: 12, fours: 3, sixes: 1, isOut: true, outDesc: 'c Suresh b Basti Ram', strikeRate: '200.0' },
+            { name: 'Bhinvraj Sangwa', runs: 12, balls: 8, fours: 1, sixes: 0, isOut: true, outDesc: 'b Sunil', strikeRate: '150.0' },
+            { name: 'Pralhad Sangwa', runs: 6, balls: 5, fours: 0, sixes: 0, isOut: true, outDesc: 'c Bhagat b Basti Ram', strikeRate: '120.0' },
+            { name: 'Mohit Sangwa', runs: 2, balls: 3, fours: 0, sixes: 0, isOut: true, outDesc: 'run out', strikeRate: '66.7' },
+            { name: 'Prem Khoja', runs: 1, balls: 2, fours: 0, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '50.0' }
+          ],
+          bowling: [
+            { name: 'Basti Ram Suthar', overs: '2.0', runs: 14, wickets: 2, maidens: 0, econ: '7.00', balls: 12 },
+            { name: 'Sunil Choudhary', overs: '2.0', runs: 18, wickets: 1, maidens: 0, econ: '9.00', balls: 12 },
+            { name: 'Ganpat Sangwa', overs: '1.0', runs: 13, wickets: 0, maidens: 0, econ: '13.00', balls: 6 }
+          ],
+          overHistory: [
+            { overNum: 1, bowlerName: 'Basti Ram Suthar', runs: 6, wickets: 0, balls: ['1', '4', '0', '1', '0', '0'] },
+            { overNum: 2, bowlerName: 'Sunil Choudhary', runs: 10, wickets: 1, balls: ['1', '4', 'W', '4', '1', '0'] },
+            { overNum: 3, bowlerName: 'Ganpat Sangwa', runs: 13, wickets: 0, balls: ['6', '1', '2', '2', '1', '1'] },
+            { overNum: 4, bowlerName: 'Basti Ram Suthar', runs: 8, wickets: 2, balls: ['1', 'W', '4', 'W', '1', '2'] },
+            { overNum: 5, bowlerName: 'Sunil Choudhary', runs: 8, wickets: 1, balls: ['1', '1', 'W', '2', '2', '2'] }
+          ]
+        },
+        {
+          inningNumber: 2,
+          battingTeam: { name: 'Sadokan Super Kings', runs: 46, wickets: 2, overs: '4.3' },
+          bowlingTeam: { name: 'Sadokan Royals' },
+          totalLegalBalls: 27,
+          allBatters: [
+            { name: 'Sunil Choudhary', runs: 28, balls: 14, fours: 3, sixes: 2, isOut: false, outDesc: 'not out', strikeRate: '200.0' },
+            { name: 'Basti Ram Suthar', runs: 14, balls: 9, fours: 1, sixes: 1, isOut: true, outDesc: 'c Pralhad b Vikas', strikeRate: '155.6' },
+            { name: 'Sunli Sangwa', runs: 1, balls: 2, fours: 0, sixes: 0, isOut: true, outDesc: 'b Prem', strikeRate: '50.0' },
+            { name: 'Bhagat Sangwa', runs: 3, balls: 2, fours: 0, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '150.0' }
+          ],
+          bowling: [
+            { name: 'Vikas Khoja', overs: '2.0', runs: 18, wickets: 1, maidens: 0, econ: '9.00', balls: 12 },
+            { name: 'Prem Khoja', overs: '1.3', runs: 16, wickets: 1, maidens: 0, econ: '10.67', balls: 9 },
+            { name: 'Mohit Sangwa', overs: '1.0', runs: 12, wickets: 0, maidens: 0, econ: '12.00', balls: 6 }
+          ],
+          overHistory: [
+            { overNum: 1, bowlerName: 'Vikas Khoja', runs: 8, wickets: 0, balls: ['1', '4', '1', '1', '1', '0'] },
+            { overNum: 2, bowlerName: 'Prem Khoja', runs: 10, wickets: 1, balls: ['1', '6', 'W', '1', '2', '0'] },
+            { overNum: 3, bowlerName: 'Mohit Sangwa', runs: 12, wickets: 0, balls: ['4', '1', '1', '4', '1', '1'] },
+            { overNum: 4, bowlerName: 'Vikas Khoja', runs: 10, wickets: 1, balls: ['6', 'W', '1', '1', '1', '1'] },
+            { overNum: 5, bowlerName: 'Prem Khoja', runs: 6, wickets: 0, balls: ['4', '1', '1'] }
+          ]
+        }
+      ]
     }
   },
+
+  // ─── MATCH 12: SEMI-FINAL 2 - STR (40/3) vs MWC (39/5) ───
   {
     id: 'spl_match_12',
     matchNumber: 12,
     matchNo: 12,
     stage: 'Semi-Final 2',
-    matchTitle: 'Rank 2 (League) vs Rank 3 (League)',
+    matchTitle: 'Sangwa Strikers vs Marwar Champions',
     overs: 5,
     maxOvers: 5,
     venue: 'Sadokan Cricket Ground',
-    dateStr: '18 September • 02:00 PM',
-    dateGroup: '18 September, Friday',
-    time: '02:00 PM',
-    status: 'UPCOMING',
+    dateStr: 'Completed • Semi Final 2',
+    status: 'FINISHED',
+    phase: 'result',
+    winnerTeamName: 'Sangwa Strikers',
+    winner: 'Sangwa Strikers',
+    resultText: 'Sangwa Strikers won by 7 wickets',
+    result: 'Sangwa Strikers won by 7 wickets',
     team1: {
-      name: 'Rank 2 (League)',
-      shortName: 'TBC',
-      isPlaceholderTeam: true
+      name: 'Marwar Champions',
+      shortName: 'MWC',
+      runs: 39,
+      wickets: 5,
+      overs: '5.0',
+      score: '39-5 (5.0)',
+      logoUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469253/spl_team_mwc_logo.jpg'
     },
     team2: {
-      name: 'Rank 3 (League)',
-      shortName: 'TBC',
-      isPlaceholderTeam: true
+      name: 'Sangwa Strikers',
+      shortName: 'STR',
+      runs: 40,
+      wickets: 3,
+      overs: '4.4',
+      score: '40-3 (4.4)',
+      logoUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469248/spl_team_str_logo.jpg'
+    },
+    rawMatchData: {
+      id: 'spl_match_12',
+      matchTitle: 'Sangwa Strikers vs Marwar Champions',
+      venue: 'Sadokan Cricket Ground',
+      phase: 'result',
+      status: 'FINISHED',
+      maxOvers: 5,
+      winnerTeamName: 'Sangwa Strikers',
+      resultText: 'Sangwa Strikers won by 7 wickets',
+      innings: [
+        {
+          inningNumber: 1,
+          battingTeam: { name: 'Marwar Champions', runs: 39, wickets: 5, overs: '5.0' },
+          bowlingTeam: { name: 'Sangwa Strikers' },
+          totalLegalBalls: 30,
+          allBatters: [
+            { name: 'Abhishek Sharma', runs: 16, balls: 10, fours: 2, sixes: 0, isOut: true, outDesc: 'b Surendra', strikeRate: '160.0' },
+            { name: 'Dashrath Sangwa', runs: 12, balls: 9, fours: 1, sixes: 0, isOut: true, outDesc: 'c Naresh b Ramswaroop', strikeRate: '133.3' },
+            { name: 'Ramchandra Sangwa', runs: 7, balls: 6, fours: 0, sixes: 0, isOut: true, outDesc: 'b Surendra', strikeRate: '116.7' },
+            { name: 'Tejaram Sangwa', runs: 2, balls: 3, fours: 0, sixes: 0, isOut: true, outDesc: 'c Ronak b Ramswaroop', strikeRate: '66.7' },
+            { name: 'Abhishek sangwa', runs: 2, balls: 2, fours: 0, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '100.0' }
+          ],
+          bowling: [
+            { name: 'Surendra Sangwa', overs: '2.0', runs: 12, wickets: 2, maidens: 0, econ: '6.00', balls: 12 },
+            { name: 'Ramswaroop Sangwa', overs: '2.0', runs: 14, wickets: 2, maidens: 0, econ: '7.00', balls: 12 },
+            { name: 'Ronak Sangwa', overs: '1.0', runs: 13, wickets: 0, maidens: 0, econ: '13.00', balls: 6 }
+          ],
+          overHistory: [
+            { overNum: 1, bowlerName: 'Surendra Sangwa', runs: 5, wickets: 0, balls: ['1', '0', '2', '1', '1', '0'] },
+            { overNum: 2, bowlerName: 'Ramswaroop Sangwa', runs: 7, wickets: 1, balls: ['1', '4', 'W', '1', '1', '0'] },
+            { overNum: 3, bowlerName: 'Ronak Sangwa', runs: 13, wickets: 0, balls: ['4', '1', '4', '2', '1', '1'] },
+            { overNum: 4, bowlerName: 'Surendra Sangwa', runs: 7, wickets: 2, balls: ['1', 'W', '4', 'W', '1', '1'] },
+            { overNum: 5, bowlerName: 'Ramswaroop Sangwa', runs: 7, wickets: 2, balls: ['1', '1', 'W', 'W', '2', '3'] }
+          ]
+        },
+        {
+          inningNumber: 2,
+          battingTeam: { name: 'Sangwa Strikers', runs: 40, wickets: 3, overs: '4.4' },
+          bowlingTeam: { name: 'Marwar Champions' },
+          totalLegalBalls: 28,
+          allBatters: [
+            { name: 'Naresh Choudhary', runs: 22, balls: 13, fours: 2, sixes: 1, isOut: false, outDesc: 'not out', strikeRate: '169.2' },
+            { name: 'Surendra Sangwa', runs: 11, balls: 8, fours: 1, sixes: 0, isOut: true, outDesc: 'b Abhishek Sharma', strikeRate: '137.5' },
+            { name: 'Prakash Sangwa', runs: 2, balls: 3, fours: 0, sixes: 0, isOut: true, outDesc: 'c Dashrath b Ramchandra', strikeRate: '66.7' },
+            { name: 'Ramswaroop Sangwa', runs: 5, balls: 4, fours: 0, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '125.0' }
+          ],
+          bowling: [
+            { name: 'Abhishek Sharma', overs: '2.0', runs: 16, wickets: 1, maidens: 0, econ: '8.00', balls: 12 },
+            { name: 'Ramchandra Sangwa', overs: '1.4', runs: 14, wickets: 1, maidens: 0, econ: '8.40', balls: 10 },
+            { name: 'Dashrath Sangwa', overs: '1.0', runs: 10, wickets: 0, maidens: 0, econ: '10.00', balls: 6 }
+          ],
+          overHistory: [
+            { overNum: 1, bowlerName: 'Abhishek Sharma', runs: 7, wickets: 0, balls: ['1', '4', '0', '1', '1', '0'] },
+            { overNum: 2, bowlerName: 'Ramchandra Sangwa', runs: 8, wickets: 1, balls: ['1', '1', 'W', '4', '1', '1'] },
+            { overNum: 3, bowlerName: 'Dashrath Sangwa', runs: 10, wickets: 0, balls: ['4', '1', '2', '1', '1', '1'] },
+            { overNum: 4, bowlerName: 'Abhishek Sharma', runs: 9, wickets: 1, balls: ['6', 'W', '1', '1', '1', '0'] },
+            { overNum: 5, bowlerName: 'Ramchandra Sangwa', runs: 6, wickets: 0, balls: ['1', '4', '0', '1'] }
+          ]
+        }
+      ]
     }
   },
+
+  // ─── MATCH 13: GRAND FINAL - SSK (49/2) vs STR (48/3) ───
   {
     id: 'spl_match_13',
     matchNumber: 13,
     matchNo: 13,
     stage: 'Grand Final',
-    matchTitle: 'Winner Semi-Final 1 vs Winner Semi-Final 2',
+    matchTitle: 'Sadokan Super Kings vs Sangwa Strikers',
     overs: 5,
     maxOvers: 5,
     venue: 'Sadokan Cricket Ground',
-    dateStr: '19 September • 10:00 AM',
-    dateGroup: '19 September, Saturday',
-    time: '10:00 AM',
-    status: 'UPCOMING',
+    dateStr: 'Completed • Grand Final',
+    status: 'FINISHED',
+    phase: 'result',
+    winnerTeamName: 'Sadokan Super Kings',
+    winner: 'Sadokan Super Kings',
+    resultText: 'Sadokan Super Kings won by 8 wickets (SPL 2026 Champions)',
+    result: 'Sadokan Super Kings won by 8 wickets (SPL 2026 Champions)',
     team1: {
-      name: 'Winner Semi-Final 1',
-      shortName: 'TBC',
-      isPlaceholderTeam: true
+      name: 'Sangwa Strikers',
+      shortName: 'STR',
+      runs: 48,
+      wickets: 3,
+      overs: '5.0',
+      score: '48-3 (5.0)',
+      logoUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469248/spl_team_str_logo.jpg'
     },
     team2: {
-      name: 'Winner Semi-Final 2',
-      shortName: 'TBC',
-      isPlaceholderTeam: true
+      name: 'Sadokan Super Kings',
+      shortName: 'SSK',
+      runs: 49,
+      wickets: 2,
+      overs: '4.5',
+      score: '49-2 (4.5)',
+      logoUri: 'https://res.cloudinary.com/aov9a8tl/image/upload/v1789469238/spl_team_ssk_logo.jpg'
+    },
+    rawMatchData: {
+      id: 'spl_match_13',
+      matchTitle: 'Sadokan Super Kings vs Sangwa Strikers',
+      venue: 'Sadokan Cricket Ground',
+      phase: 'result',
+      status: 'FINISHED',
+      maxOvers: 5,
+      winnerTeamName: 'Sadokan Super Kings',
+      resultText: 'Sadokan Super Kings won by 8 wickets (SPL 2026 Champions)',
+      innings: [
+        {
+          inningNumber: 1,
+          battingTeam: { name: 'Sangwa Strikers', runs: 48, wickets: 3, overs: '5.0' },
+          bowlingTeam: { name: 'Sadokan Super Kings' },
+          totalLegalBalls: 30,
+          allBatters: [
+            { name: 'Naresh Choudhary', runs: 26, balls: 14, fours: 3, sixes: 1, isOut: true, outDesc: 'c Suresh b Basti Ram', strikeRate: '185.7' },
+            { name: 'Surendra Sangwa', runs: 15, balls: 10, fours: 2, sixes: 0, isOut: true, outDesc: 'b Sunil', strikeRate: '150.0' },
+            { name: 'Ramswaroop Sangwa', runs: 5, balls: 6, fours: 0, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '83.3' }
+          ],
+          bowling: [
+            { name: 'Basti Ram Suthar', overs: '2.0', runs: 15, wickets: 1, maidens: 0, econ: '7.50', balls: 12 },
+            { name: 'Sunil Choudhary', overs: '2.0', runs: 19, wickets: 1, maidens: 0, econ: '9.50', balls: 12 },
+            { name: 'Rakesh Sangwa', overs: '1.0', runs: 14, wickets: 0, maidens: 0, econ: '14.00', balls: 6 }
+          ],
+          overHistory: [
+            { overNum: 1, bowlerName: 'Basti Ram Suthar', runs: 6, wickets: 0, balls: ['1', '4', '0', '1', '0', '0'] },
+            { overNum: 2, bowlerName: 'Sunil Choudhary', runs: 10, wickets: 1, balls: ['1', '4', 'W', '4', '1', '0'] },
+            { overNum: 3, bowlerName: 'Rakesh Sangwa', runs: 14, wickets: 0, balls: ['6', '1', '2', '2', '2', '1'] },
+            { overNum: 4, bowlerName: 'Basti Ram Suthar', runs: 9, wickets: 1, balls: ['1', 'W', '4', '2', '1', '1'] },
+            { overNum: 5, bowlerName: 'Sunil Choudhary', runs: 9, wickets: 0, balls: ['1', '4', '1', '1', '1', '1'] }
+          ]
+        },
+        {
+          inningNumber: 2,
+          battingTeam: { name: 'Sadokan Super Kings', runs: 49, wickets: 2, overs: '4.5' },
+          bowlingTeam: { name: 'Sangwa Strikers' },
+          totalLegalBalls: 29,
+          allBatters: [
+            { name: 'Basti Ram Suthar', runs: 30, balls: 15, fours: 3, sixes: 2, isOut: false, outDesc: 'not out (Captain\'s Knock)', strikeRate: '200.0' },
+            { name: 'Sunil Choudhary', runs: 14, balls: 10, fours: 2, sixes: 0, isOut: true, outDesc: 'c Naresh b Surendra', strikeRate: '140.0' },
+            { name: 'Sunli Sangwa', runs: 1, balls: 2, fours: 0, sixes: 0, isOut: true, outDesc: 'b Ramswaroop', strikeRate: '50.0' },
+            { name: 'Bhagat Sangwa', runs: 4, balls: 2, fours: 1, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '200.0' }
+          ],
+          bowling: [
+            { name: 'Surendra Sangwa', overs: '2.0', runs: 18, wickets: 1, maidens: 0, econ: '9.00', balls: 12 },
+            { name: 'Ramswaroop Sangwa', overs: '2.0', runs: 19, wickets: 1, maidens: 0, econ: '9.50', balls: 12 },
+            { name: 'Ronak Sangwa', overs: '0.5', runs: 12, wickets: 0, maidens: 0, econ: '14.40', balls: 5 }
+          ],
+          overHistory: [
+            { overNum: 1, bowlerName: 'Surendra Sangwa', runs: 8, wickets: 0, balls: ['1', '4', '1', '1', '1', '0'] },
+            { overNum: 2, bowlerName: 'Ramswaroop Sangwa', runs: 10, wickets: 1, balls: ['1', '6', 'W', '1', '2', '0'] },
+            { overNum: 3, bowlerName: 'Surendra Sangwa', runs: 10, wickets: 0, balls: ['4', '1', '1', '2', '1', '1'] },
+            { overNum: 4, bowlerName: 'Ramswaroop Sangwa', runs: 9, wickets: 1, balls: ['6', 'W', '1', '1', '1', '0'] },
+            { overNum: 5, bowlerName: 'Ronak Sangwa', runs: 12, wickets: 0, balls: ['4', '1', '1', '2', '4'] }
+          ]
+        }
+      ]
     }
   }
 ];

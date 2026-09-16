@@ -1,3 +1,6 @@
+import { autoCalculatePointsTable } from './tournamentService.js';
+import { calculateTournamentStats } from './tournamentStatsEngine.js';
+
 /**
  * Rajasthan League 2026 - Comprehensive Tournament Seed Data
  * 10 Franchise Teams, 110 Unique Players (11 per team), 48 Fixtures (45 Round-Robin + 3 Playoffs), 3 Grounds
@@ -339,21 +342,362 @@ export const RAJASTHAN_LEAGUE_2026 = {
   ]
 };
 
+// Deterministic Pseudo-Random Generator (LCG)
+function createRng(seed) {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  return function() {
+    return (s = s * 16807 % 2147483647) / 2147483647;
+  };
+}
+
 /**
- * Generate 48 Complete Fixtures for Rajasthan League 2026:
- * - 45 Single Round-Robin League Matches (16 Sep to 12 Oct)
- * - Semi-Final 1 (13 Oct)
- * - Semi-Final 2 (14 Oct)
- * - Grand Final (15 Oct)
+ * Simulate an authentic 10-Over Limited Overs Cricket Match Ball-by-Ball
+ */
+export function simulateTenOverMatch(t1, t2, matchIndex, stage, dateStr, timeStr, venue) {
+  const rng = createRng(matchIndex * 7919 + 42);
+  const t1BatsFirst = rng() > 0.45;
+  const batTeam = t1BatsFirst ? t1 : t2;
+  const bowlTeam = t1BatsFirst ? t2 : t1;
+
+  const inn1Overs = 10;
+  const bat1Roster = batTeam.players || [];
+  const bowl1Roster = bowlTeam.players || [];
+
+  const bowlers1 = bowl1Roster.slice(5, 11).length >= 5
+    ? bowl1Roster.slice(5, 11)
+    : (bowl1Roster.length >= 5 ? bowl1Roster.slice(-5) : bowl1Roster);
+
+  let inn1Runs = 0;
+  let inn1Wickets = 0;
+  const maxWickets = Math.min(bat1Roster.length - 1, 8);
+
+  const batter1Stats = {};
+  let strikerIdx = 0;
+  let nonStrikerIdx = 1;
+
+  const initBatter = (name) => {
+    if (!batter1Stats[name]) {
+      batter1Stats[name] = { name, runs: 0, balls: 0, fours: 0, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '0.0' };
+    }
+  };
+
+  initBatter(bat1Roster[strikerIdx]?.name || 'Batter 1');
+  initBatter(bat1Roster[nonStrikerIdx]?.name || 'Batter 2');
+
+  const overHistory1 = [];
+  const bowler1Stats = {};
+
+  for (let o = 1; o <= inn1Overs; o++) {
+    if (inn1Wickets >= maxWickets) break;
+    const bowlerObj = bowlers1[(o - 1) % bowlers1.length] || { name: `Bowler ${(o % 5) + 1}` };
+    const bowlerName = bowlerObj.name;
+    if (!bowler1Stats[bowlerName]) {
+      bowler1Stats[bowlerName] = { name: bowlerName, overs: 0, balls: 0, maidens: 0, runs: 0, wickets: 0, econ: '0.00' };
+    }
+
+    const overBalls = [];
+    let overRuns = 0;
+    let overWkts = 0;
+
+    for (let b = 1; b <= 6; b++) {
+      if (inn1Wickets >= maxWickets) break;
+      const currentStriker = bat1Roster[strikerIdx]?.name || `Batter ${strikerIdx + 1}`;
+      initBatter(currentStriker);
+
+      const roll = rng();
+      let ballOutcome = '0';
+      let ballRuns = 0;
+
+      if (roll < 0.08 && inn1Wickets < maxWickets) {
+        inn1Wickets++;
+        overWkts++;
+        bowler1Stats[bowlerName].wickets++;
+        const fielderObj = bowl1Roster[Math.floor(rng() * bowl1Roster.length)]?.name || 'Fielder';
+        const isCaught = rng() > 0.35;
+        const dismissal = isCaught ? `c ${fielderObj} b ${bowlerName}` : (rng() > 0.5 ? `b ${bowlerName}` : `lbw b ${bowlerName}`);
+        batter1Stats[currentStriker].isOut = true;
+        batter1Stats[currentStriker].outDesc = dismissal;
+        batter1Stats[currentStriker].balls++;
+        ballOutcome = 'W';
+
+        strikerIdx = Math.max(strikerIdx, nonStrikerIdx) + 1;
+        if (strikerIdx < bat1Roster.length) {
+          initBatter(bat1Roster[strikerIdx].name);
+        }
+      } else if (roll < 0.35) {
+        ballOutcome = '0';
+        batter1Stats[currentStriker].balls++;
+      } else if (roll < 0.65) {
+        ballOutcome = '1';
+        ballRuns = 1;
+        batter1Stats[currentStriker].runs += 1;
+        batter1Stats[currentStriker].balls++;
+        const tmp = strikerIdx; strikerIdx = nonStrikerIdx; nonStrikerIdx = tmp;
+      } else if (roll < 0.80) {
+        ballOutcome = '2';
+        ballRuns = 2;
+        batter1Stats[currentStriker].runs += 2;
+        batter1Stats[currentStriker].balls++;
+      } else if (roll < 0.93) {
+        ballOutcome = '4';
+        ballRuns = 4;
+        batter1Stats[currentStriker].runs += 4;
+        batter1Stats[currentStriker].fours++;
+        batter1Stats[currentStriker].balls++;
+      } else {
+        ballOutcome = '6';
+        ballRuns = 6;
+        batter1Stats[currentStriker].runs += 6;
+        batter1Stats[currentStriker].sixes++;
+        batter1Stats[currentStriker].balls++;
+      }
+
+      inn1Runs += ballRuns;
+      overRuns += ballRuns;
+      overBalls.push(ballOutcome);
+      bowler1Stats[bowlerName].runs += ballRuns;
+      bowler1Stats[bowlerName].balls++;
+    }
+
+    if (overBalls.length > 0) {
+      if (overRuns === 0) bowler1Stats[bowlerName].maidens++;
+      overHistory1.push({ overNum: o, bowlerName, runs: overRuns, wickets: overWkts, balls: overBalls });
+      const tmp = strikerIdx; strikerIdx = nonStrikerIdx; nonStrikerIdx = tmp;
+    }
+  }
+
+  Object.values(batter1Stats).forEach(b => {
+    b.strikeRate = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
+  });
+  Object.values(bowler1Stats).forEach(b => {
+    const oFull = Math.floor(b.balls / 6);
+    const oPart = b.balls % 6;
+    b.overs = `${oFull}.${oPart}`;
+    const totalOversDec = oFull + oPart / 6;
+    b.econ = totalOversDec > 0 ? (b.runs / totalOversDec).toFixed(2) : '0.00';
+  });
+
+  const totalLegalBalls1 = overHistory1.reduce((sum, ov) => sum + ov.balls.length, 0);
+  const inn1OversStr = `${Math.floor(totalLegalBalls1 / 6)}.${totalLegalBalls1 % 6}`;
+
+  // ── INNINGS 2 (CHASE) ──
+  const target = inn1Runs + 1;
+  const bat2Roster = bowlTeam.players || [];
+  const bowl2Roster = batTeam.players || [];
+  const bowlers2 = bowl2Roster.slice(5, 11).length >= 5
+    ? bowl2Roster.slice(5, 11)
+    : (bowl2Roster.length >= 5 ? bowl2Roster.slice(-5) : bowl2Roster);
+
+  let inn2Runs = 0;
+  let inn2Wickets = 0;
+  let chaseComplete = false;
+
+  const batter2Stats = {};
+  let striker2Idx = 0;
+  let nonStriker2Idx = 1;
+
+  const initBatter2 = (name) => {
+    if (!batter2Stats[name]) {
+      batter2Stats[name] = { name, runs: 0, balls: 0, fours: 0, sixes: 0, isOut: false, outDesc: 'not out', strikeRate: '0.0' };
+    }
+  };
+
+  initBatter2(bat2Roster[striker2Idx]?.name || 'Batter 1');
+  initBatter2(bat2Roster[nonStriker2Idx]?.name || 'Batter 2');
+
+  const overHistory2 = [];
+  const bowler2Stats = {};
+
+  for (let o = 1; o <= 10; o++) {
+    if (chaseComplete || inn2Wickets >= maxWickets) break;
+    const bowlerObj = bowlers2[(o - 1) % bowlers2.length] || { name: `Bowler ${(o % 5) + 1}` };
+    const bowlerName = bowlerObj.name;
+    if (!bowler2Stats[bowlerName]) {
+      bowler2Stats[bowlerName] = { name: bowlerName, overs: 0, balls: 0, maidens: 0, runs: 0, wickets: 0, econ: '0.00' };
+    }
+
+    const overBalls = [];
+    let overRuns = 0;
+    let overWkts = 0;
+
+    for (let b = 1; b <= 6; b++) {
+      if (chaseComplete || inn2Wickets >= maxWickets) break;
+      const currentStriker = bat2Roster[striker2Idx]?.name || `Batter ${striker2Idx + 1}`;
+      initBatter2(currentStriker);
+
+      const roll = rng();
+      let ballOutcome = '0';
+      let ballRuns = 0;
+
+      if (roll < 0.09 && inn2Wickets < maxWickets) {
+        inn2Wickets++;
+        overWkts++;
+        bowler2Stats[bowlerName].wickets++;
+        const fielderObj = bowl2Roster[Math.floor(rng() * bowl2Roster.length)]?.name || 'Fielder';
+        const isCaught = rng() > 0.35;
+        const dismissal = isCaught ? `c ${fielderObj} b ${bowlerName}` : (rng() > 0.5 ? `b ${bowlerName}` : `lbw b ${bowlerName}`);
+        batter2Stats[currentStriker].isOut = true;
+        batter2Stats[currentStriker].outDesc = dismissal;
+        batter2Stats[currentStriker].balls++;
+        ballOutcome = 'W';
+
+        striker2Idx = Math.max(striker2Idx, nonStriker2Idx) + 1;
+        if (striker2Idx < bat2Roster.length) {
+          initBatter2(bat2Roster[striker2Idx].name);
+        }
+      } else if (roll < 0.35) {
+        ballOutcome = '0';
+        batter2Stats[currentStriker].balls++;
+      } else if (roll < 0.65) {
+        ballOutcome = '1';
+        ballRuns = 1;
+        batter2Stats[currentStriker].runs += 1;
+        batter2Stats[currentStriker].balls++;
+        const tmp = striker2Idx; striker2Idx = nonStriker2Idx; nonStriker2Idx = tmp;
+      } else if (roll < 0.80) {
+        ballOutcome = '2';
+        ballRuns = 2;
+        batter2Stats[currentStriker].runs += 2;
+        batter2Stats[currentStriker].balls++;
+      } else if (roll < 0.92) {
+        ballOutcome = '4';
+        ballRuns = 4;
+        batter2Stats[currentStriker].runs += 4;
+        batter2Stats[currentStriker].fours++;
+        batter2Stats[currentStriker].balls++;
+      } else {
+        ballOutcome = '6';
+        ballRuns = 6;
+        batter2Stats[currentStriker].runs += 6;
+        batter2Stats[currentStriker].sixes++;
+        batter2Stats[currentStriker].balls++;
+      }
+
+      inn2Runs += ballRuns;
+      overRuns += ballRuns;
+      overBalls.push(ballOutcome);
+      bowler2Stats[bowlerName].runs += ballRuns;
+      bowler2Stats[bowlerName].balls++;
+
+      if (inn2Runs >= target) {
+        chaseComplete = true;
+        break;
+      }
+    }
+
+    if (overBalls.length > 0) {
+      if (overRuns === 0) bowler2Stats[bowlerName].maidens++;
+      overHistory2.push({ overNum: o, bowlerName, runs: overRuns, wickets: overWkts, balls: overBalls });
+      const tmp = striker2Idx; striker2Idx = nonStriker2Idx; nonStriker2Idx = tmp;
+    }
+  }
+
+  Object.values(batter2Stats).forEach(b => {
+    b.strikeRate = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
+  });
+  Object.values(bowler2Stats).forEach(b => {
+    const oFull = Math.floor(b.balls / 6);
+    const oPart = b.balls % 6;
+    b.overs = `${oFull}.${oPart}`;
+    const totalOversDec = oFull + oPart / 6;
+    b.econ = totalOversDec > 0 ? (b.runs / totalOversDec).toFixed(2) : '0.00';
+  });
+
+  const totalLegalBalls2 = overHistory2.reduce((sum, ov) => sum + ov.balls.length, 0);
+  const inn2OversStr = `${Math.floor(totalLegalBalls2 / 6)}.${totalLegalBalls2 % 6}`;
+
+  let winnerTeamName = '';
+  let resultText = '';
+  if (inn2Runs >= target) {
+    winnerTeamName = bowlTeam.name;
+    const wktsLeft = Math.max(1, 10 - inn2Wickets);
+    resultText = `${bowlTeam.name} won by ${wktsLeft} wicket${wktsLeft !== 1 ? 's' : ''}`;
+  } else if (inn1Runs > inn2Runs) {
+    winnerTeamName = batTeam.name;
+    const runDiff = inn1Runs - inn2Runs;
+    resultText = `${batTeam.name} won by ${runDiff} run${runDiff !== 1 ? 's' : ''}`;
+  } else {
+    winnerTeamName = batTeam.name;
+    resultText = 'Match tied (Super Over won by ' + batTeam.name + ')';
+  }
+
+  const team1Final = t1.name === batTeam.name
+    ? { id: t1.id, name: t1.name, shortName: t1.shortName, code: t1.code, runs: inn1Runs, wickets: inn1Wickets, overs: inn1OversStr, score: `${inn1Runs}-${inn1Wickets} (${inn1OversStr})`, logoKey: t1.logoKey, color: t1.color, cardBg: t1.cardBg }
+    : { id: t1.id, name: t1.name, shortName: t1.shortName, code: t1.code, runs: inn2Runs, wickets: inn2Wickets, overs: inn2OversStr, score: `${inn2Runs}-${inn2Wickets} (${inn2OversStr})`, logoKey: t1.logoKey, color: t1.color, cardBg: t1.cardBg };
+
+  const team2Final = t2.name === bowlTeam.name
+    ? { id: t2.id, name: t2.name, shortName: t2.shortName, code: t2.code, runs: inn2Runs, wickets: inn2Wickets, overs: inn2OversStr, score: `${inn2Runs}-${inn2Wickets} (${inn2OversStr})`, logoKey: t2.logoKey, color: t2.color, cardBg: t2.cardBg }
+    : { id: t2.id, name: t2.name, shortName: t2.shortName, code: t2.code, runs: inn1Runs, wickets: inn1Wickets, overs: inn1OversStr, score: `${inn1Runs}-${inn1Wickets} (${inn1OversStr})`, logoKey: t2.logoKey, color: t2.color, cardBg: t2.cardBg };
+
+  return {
+    id: `match_rpl_${matchIndex}`,
+    matchNumber: matchIndex,
+    matchNo: matchIndex,
+    stage: stage || `Match ${matchIndex}`,
+    tournamentId: RAJASTHAN_LEAGUE_2026.id,
+    tournamentName: RAJASTHAN_LEAGUE_2026.name,
+    matchTitle: `${t1.name} vs ${t2.name}`,
+    overs: 10,
+    maxOvers: 10,
+    venue: venue || 'Sadokan Cricket Club',
+    dateStr: dateStr || '16 Sep 2026',
+    date: dateStr || '16 Sep 2026',
+    time: timeStr || '09:00 AM',
+    timeText: timeStr || '09:00 AM',
+    status: 'FINISHED',
+    phase: 'result',
+    winnerTeamName,
+    winner: winnerTeamName,
+    resultText,
+    result: resultText,
+    target: target,
+    team1: team1Final,
+    team2: team2Final,
+    rawMatchData: {
+      id: `match_rpl_${matchIndex}`,
+      matchTitle: `${t1.name} vs ${t2.name}`,
+      venue: venue || 'Sadokan Cricket Club',
+      phase: 'result',
+      status: 'FINISHED',
+      maxOvers: 10,
+      winnerTeamName,
+      resultText,
+      innings: [
+        {
+          inningNumber: 1,
+          battingTeam: { name: batTeam.name, runs: inn1Runs, wickets: inn1Wickets, overs: inn1OversStr },
+          bowlingTeam: { name: bowlTeam.name },
+          totalLegalBalls: totalLegalBalls1,
+          allBatters: Object.values(batter1Stats),
+          bowling: Object.values(bowler1Stats),
+          overHistory: overHistory1
+        },
+        {
+          inningNumber: 2,
+          battingTeam: { name: bowlTeam.name, runs: inn2Runs, wickets: inn2Wickets, overs: inn2OversStr },
+          bowlingTeam: { name: batTeam.name },
+          totalLegalBalls: totalLegalBalls2,
+          allBatters: Object.values(batter2Stats),
+          bowling: Object.values(bowler2Stats),
+          overHistory: overHistory2
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Generate 48 Complete Fixtures (45 League + 3 Playoffs) with Full Ball-by-Ball Records
  */
 export function generateRajasthanLeagueFixtures() {
   const teams = RAJASTHAN_LEAGUE_2026.teams;
   const venues = RAJASTHAN_LEAGUE_2026.venues;
-  const timings = ['09:00 AM', '01:30 PM', '05:30 PM'];
+  const timings = ['09:00 AM', '01:30 PM'];
   const matches = [];
 
   let matchIndex = 1;
-  const startDate = new Date(2026, 8, 16); // 16 Sep 2026 (Month 8 is Sept)
+  const startDate = new Date(2026, 8, 16);
 
   // 1. Generate 45 Round-Robin Pairings
   const pairings = [];
@@ -389,11 +733,11 @@ export function generateRajasthanLeagueFixtures() {
     lastPlayed.set(selectedB.id, distributed.length);
   }
 
-  // Assign Dates, Venues, Timings across ~26 match days
+  // Assign Dates, Venues, Timings across match days
   distributed.forEach((pair, idx) => {
     const [t1, t2] = pair;
-    const dayOffset = Math.floor(idx / 2); // 2 matches per day
-    const timeIdx = idx % 2; // 09:00 AM or 01:30 PM
+    const dayOffset = Math.floor(idx / 2);
+    const timeIdx = idx % 2;
     const venueIdx = idx % venues.length;
 
     const mDate = new Date(startDate);
@@ -404,118 +748,50 @@ export function generateRajasthanLeagueFixtures() {
     const year = mDate.getFullYear();
     const dateStr = `${day} ${month} ${year}`;
 
-    matches.push({
-      id: `match_rpl_${matchIndex}`,
-      matchNumber: matchIndex,
-      matchNo: matchIndex,
-      stage: `Match ${matchIndex}`,
-      tournamentId: RAJASTHAN_LEAGUE_2026.id,
-      tournamentName: RAJASTHAN_LEAGUE_2026.name,
-      matchTitle: `${t1.name} vs ${t2.name}`,
-      team1: {
-        id: t1.id,
-        name: t1.name,
-        shortName: t1.shortName,
-        code: t1.code,
-        logoKey: t1.logoKey,
-        color: t1.color,
-        cardBg: t1.cardBg
-      },
-      team2: {
-        id: t2.id,
-        name: t2.name,
-        shortName: t2.shortName,
-        code: t2.code,
-        logoKey: t2.logoKey,
-        color: t2.color,
-        cardBg: t2.cardBg
-      },
-      dateStr: dateStr,
-      date: dateStr,
-      time: timings[timeIdx],
-      timeText: timings[timeIdx],
-      venue: venues[venueIdx],
-      overs: 10,
-      maxOvers: 10,
-      ballType: 'tennis',
-      status: 'UPCOMING',
-      phase: 'upcoming'
-    });
+    const finishedMatch = simulateTenOverMatch(
+      t1,
+      t2,
+      matchIndex,
+      `Match ${matchIndex}`,
+      dateStr,
+      timings[timeIdx],
+      venues[venueIdx]
+    );
 
+    matches.push(finishedMatch);
     matchIndex++;
   });
 
-  // 2. Playoff Fixtures
+  // Calculate league standings to resolve Semi-Finalists
+  const leaguePointsTable = generateInitialPointsTable();
+  const sortedTeams = [...leaguePointsTable].sort((a, b) => (b.pts - a.pts) || parseFloat(b.nrr || 0) - parseFloat(a.nrr || 0));
+
+  const rank1Team = teams.find(t => t.name === sortedTeams[0]?.team) || teams[0];
+  const rank2Team = teams.find(t => t.name === sortedTeams[1]?.team) || teams[1];
+  const rank3Team = teams.find(t => t.name === sortedTeams[2]?.team) || teams[2];
+  const rank4Team = teams.find(t => t.name === sortedTeams[3]?.team) || teams[3];
+
   // Semi-Final 1 (13 Oct 2026)
-  matches.push({
-    id: `match_rpl_${matchIndex}`,
-    matchNumber: matchIndex,
-    matchNo: matchIndex,
-    stage: 'Semi-Final 1',
-    tournamentId: RAJASTHAN_LEAGUE_2026.id,
-    tournamentName: RAJASTHAN_LEAGUE_2026.name,
-    matchTitle: 'Rank 1 (League Topper) vs Rank 4 (League)',
-    team1: { name: 'Rank 1 (League Topper)', shortName: 'TBC', isPlaceholder: true },
-    team2: { name: 'Rank 4 (League)', shortName: 'TBC', isPlaceholder: true },
-    dateStr: '13 Oct 2026',
-    date: '13 Oct 2026',
-    time: '01:30 PM',
-    timeText: '01:30 PM',
-    venue: 'Sadokan Cricket Club',
-    overs: 10,
-    maxOvers: 10,
-    ballType: 'tennis',
-    status: 'UPCOMING',
-    phase: 'upcoming'
-  });
+  const sf1Match = simulateTenOverMatch(rank1Team, rank4Team, matchIndex, 'Semi-Final 1', '13 Oct 2026', '01:30 PM', 'Sadokan Cricket Club');
+  matches.push(sf1Match);
   matchIndex++;
 
   // Semi-Final 2 (14 Oct 2026)
-  matches.push({
-    id: `match_rpl_${matchIndex}`,
-    matchNumber: matchIndex,
-    matchNo: matchIndex,
-    stage: 'Semi-Final 2',
-    tournamentId: RAJASTHAN_LEAGUE_2026.id,
-    tournamentName: RAJASTHAN_LEAGUE_2026.name,
-    matchTitle: 'Rank 2 (League) vs Rank 3 (League)',
-    team1: { name: 'Rank 2 (League)', shortName: 'TBC', isPlaceholder: true },
-    team2: { name: 'Rank 3 (League)', shortName: 'TBC', isPlaceholder: true },
-    dateStr: '14 Oct 2026',
-    date: '14 Oct 2026',
-    time: '01:30 PM',
-    timeText: '01:30 PM',
-    venue: 'Deh Cricket Ground',
-    overs: 10,
-    maxOvers: 10,
-    ballType: 'tennis',
-    status: 'UPCOMING',
-    phase: 'upcoming'
-  });
+  const sf2Match = simulateTenOverMatch(rank2Team, rank3Team, matchIndex, 'Semi-Final 2', '14 Oct 2026', '01:30 PM', 'Deh Cricket Ground');
+  matches.push(sf2Match);
   matchIndex++;
 
   // Grand Final (15 Oct 2026)
-  matches.push({
-    id: `match_rpl_${matchIndex}`,
-    matchNumber: matchIndex,
-    matchNo: matchIndex,
-    stage: 'Final',
-    tournamentId: RAJASTHAN_LEAGUE_2026.id,
-    tournamentName: RAJASTHAN_LEAGUE_2026.name,
-    matchTitle: 'Winner Semi-Final 1 vs Winner Semi-Final 2',
-    team1: { name: 'Winner Semi-Final 1', shortName: 'TBC', isPlaceholder: true },
-    team2: { name: 'Winner Semi-Final 2', shortName: 'TBC', isPlaceholder: true },
-    dateStr: '15 Oct 2026',
-    date: '15 Oct 2026',
-    time: '05:30 PM',
-    timeText: '05:30 PM',
-    venue: 'Manasar Garden',
-    overs: 10,
-    maxOvers: 10,
-    ballType: 'tennis',
-    status: 'UPCOMING',
-    phase: 'upcoming'
-  });
+  const finalTeam1 = teams.find(t => t.name === sf1Match.winnerTeamName) || rank1Team;
+  const finalTeam2 = teams.find(t => t.name === sf2Match.winnerTeamName) || rank2Team;
+
+  const finalMatch = simulateTenOverMatch(finalTeam1, finalTeam2, matchIndex, 'Final', '15 Oct 2026', '05:30 PM', 'Manasar Garden');
+  const baseRes = finalMatch.resultText;
+  const winnerTeam = finalMatch.winnerTeamName;
+  finalMatch.resultText = `${winnerTeam} won by ${baseRes.includes('won by ') ? baseRes.split('won by ')[1] : '8 runs'} (Rajasthan League 2026 Champions)`;
+  finalMatch.result = finalMatch.resultText;
+  finalMatch.rawMatchData.resultText = finalMatch.resultText;
+  matches.push(finalMatch);
 
   return matches;
 }
@@ -549,23 +825,22 @@ export function generateInitialPointsTable() {
  */
 export function buildRajasthanLeagueTournament() {
   const matches = generateRajasthanLeagueFixtures();
-  const pointsTable = generateInitialPointsTable();
+  // Compute points table from the 45 league stage matches
+  const leagueMatches = matches.slice(0, 45);
+  const pointsTable = autoCalculatePointsTable(RAJASTHAN_LEAGUE_2026.teams, leagueMatches);
 
-  return {
+  const rawTourn = {
     ...RAJASTHAN_LEAGUE_2026,
     matches,
     pointsTable,
-    stats: {
-      totalMatches: matches.length,
-      completedMatches: 0,
-      liveMatches: 0,
-      upcomingMatches: matches.length,
-      topScorer: null,
-      topWicketTaker: null,
-      highestSixes: null,
-      mvpPlayer: null
-    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
+  };
+
+  const calculatedStats = calculateTournamentStats(rawTourn);
+
+  return {
+    ...rawTourn,
+    stats: calculatedStats
   };
 }
