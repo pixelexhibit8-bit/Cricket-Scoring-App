@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Alert,
   Pressable
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import {
   systemFont,
   systemFontBold,
@@ -20,16 +20,11 @@ import {
 } from '../../theme.js';
 import { useLocation } from '../../hooks/useLocation.js';
 
-const POPULAR_CITIES = [
-  'Nagaur', 'Jaipur', 'Jodhpur', 'Delhi', 'Mumbai',
-  'Bengaluru', 'Ahmedabad', 'Pune', 'Hyderabad', 'Kolkata', 'Indore', 'Lucknow'
-];
-
 export function LocationPickerModal({
   visible = false,
   currentLocation = null,
   currentCity = '',
-  title = 'Select City / Ground',
+  title = 'Select City / Location',
   onClose = () => {},
   onSelectLocation = () => {}
 }) {
@@ -42,7 +37,6 @@ export function LocationPickerModal({
     gpsStatusText,
     detectGps,
     selectResult,
-    applyCustomManual,
     clearSearch
   } = useLocation(currentLocation, (loc) => {
     if (onSelectLocation) {
@@ -79,24 +73,6 @@ export function LocationPickerModal({
     if (onClose) onClose();
   };
 
-  const handleSelectQuickCity = (cityName) => {
-    const customLoc = applyCustomManual(cityName);
-    if (onSelectLocation) {
-      onSelectLocation(customLoc);
-    }
-    if (onClose) onClose();
-  };
-
-  const handleSelectCustom = (text) => {
-    const trimmed = (text || '').trim();
-    if (!trimmed) return;
-    const customLoc = applyCustomManual(trimmed);
-    if (onSelectLocation) {
-      onSelectLocation(customLoc);
-    }
-    if (onClose) onClose();
-  };
-
   const queryTrimmed = searchQuery.trim();
 
   return (
@@ -121,19 +97,18 @@ export function LocationPickerModal({
             </TouchableOpacity>
           </View>
 
-          {/* Clean Unified Search Box */}
+          {/* Clean Search Input */}
           <View style={styles.searchBar}>
             <Ionicons name="search" size={17} color="#64748B" />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search city or enter ground name..."
+              placeholder="Search city or location..."
               placeholderTextColor="#94A3B8"
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="words"
               autoCorrect={false}
-              returnKeyType="done"
-              onSubmitEditing={() => queryTrimmed && handleSelectCustom(queryTrimmed)}
+              autoFocus={visible}
             />
             {isSearching ? (
               <ActivityIndicator size="small" color="#18181B" />
@@ -144,7 +119,7 @@ export function LocationPickerModal({
             ) : null}
           </View>
 
-          {/* Current Location (GPS) Sleek Row */}
+          {/* Use Current Location (GPS) Row */}
           <TouchableOpacity
             style={styles.gpsRow}
             onPress={handleDetectGps}
@@ -162,14 +137,14 @@ export function LocationPickerModal({
               <Text style={styles.gpsTitle}>
                 {gpsLoading ? (gpsStatusText || 'Detecting GPS location...') : 'Use Current Location'}
               </Text>
-              <Text style={styles.gpsSub}>Auto-detect using device GPS</Text>
+              <Text style={styles.gpsSub}>Auto-detect city using device GPS</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
-          {/* Content Area */}
+          {/* Pure Search Results List */}
           <ScrollView
             style={styles.scrollList}
             contentContainerStyle={styles.scrollListContent}
@@ -177,80 +152,53 @@ export function LocationPickerModal({
             keyboardShouldPersistTaps="handled"
           >
             {queryTrimmed.length > 0 ? (
-              /* ── LIVE SEARCH RESULTS ── */
-              <View>
-                {/* Option 1: Direct Custom Ground / City Entry */}
-                <TouchableOpacity
-                  style={styles.customMatchRow}
-                  onPress={() => handleSelectCustom(queryTrimmed)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.customIconBox}>
-                    <Ionicons name="add-circle-outline" size={18} color="#18181B" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.customMatchTitle} numberOfLines={1}>
-                      Use "{queryTrimmed}"
-                    </Text>
-                    <Text style={styles.customMatchSub}>Set as custom ground / city</Text>
-                  </View>
-                  <Ionicons name="arrow-forward" size={15} color="#18181B" />
-                </TouchableOpacity>
-
-                {/* API Search Results */}
-                {searchResults.length > 0 ? (
-                  <View style={{ marginTop: 8 }}>
-                    <Text style={styles.sectionHeader}>MATCHING CITIES</Text>
-                    {searchResults.map((item, idx) => {
-                      const subtitle = [item.district, item.state, item.country].filter(Boolean).join(', ');
-                      return (
-                        <TouchableOpacity
-                          key={`${item.formattedAddress}-${idx}`}
-                          onPress={() => handleSelectResult(item)}
-                          style={styles.resultItem}
-                          activeOpacity={0.7}
-                        >
-                          <View style={styles.pinIconBox}>
-                            <Ionicons name="location-outline" size={16} color="#64748B" />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.resultTitle} numberOfLines={1}>
-                              {item.city}
-                            </Text>
-                            {subtitle ? (
-                              <Text style={styles.resultSub} numberOfLines={1}>
-                                {subtitle}
-                              </Text>
-                            ) : null}
-                          </View>
-                          {item.countryCode ? (
-                            <View style={styles.countryBadge}>
-                              <Text style={styles.countryBadgeText}>{item.countryCode}</Text>
-                            </View>
-                          ) : null}
-                          <Ionicons name="chevron-forward" size={15} color="#CBD5E1" />
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                ) : null}
-              </View>
-            ) : (
-              /* ── POPULAR CITIES (When search is empty) ── */
-              <View>
-                <Text style={styles.sectionHeader}>POPULAR CITIES</Text>
-                <View style={styles.popularGrid}>
-                  {POPULAR_CITIES.map((city) => (
+              searchResults.length > 0 ? (
+                searchResults.map((item, idx) => {
+                  const subtitle = [item.district, item.state, item.country].filter(Boolean).join(', ');
+                  return (
                     <TouchableOpacity
-                      key={city}
-                      style={styles.popularCityChip}
-                      onPress={() => handleSelectQuickCity(city)}
+                      key={`${item.formattedAddress}-${idx}`}
+                      onPress={() => handleSelectResult(item)}
+                      style={styles.resultItem}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.popularCityText}>{city}</Text>
+                      <View style={styles.pinIconBox}>
+                        <Ionicons name="location-outline" size={16} color="#64748B" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.resultTitle} numberOfLines={1}>
+                          {item.city}
+                        </Text>
+                        {subtitle ? (
+                          <Text style={styles.resultSub} numberOfLines={1}>
+                            {subtitle}
+                          </Text>
+                        ) : null}
+                      </View>
+                      {item.countryCode ? (
+                        <View style={styles.countryBadge}>
+                          <Text style={styles.countryBadgeText}>{item.countryCode}</Text>
+                        </View>
+                      ) : null}
+                      <Ionicons name="chevron-forward" size={15} color="#CBD5E1" />
                     </TouchableOpacity>
-                  ))}
+                  );
+                })
+              ) : !isSearching ? (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="search-outline" size={26} color="#94A3B8" />
+                  <Text style={styles.emptyTitle}>No City Found</Text>
+                  <Text style={styles.emptySub}>
+                    No match found for "{queryTrimmed}". Check spelling or try nearby district.
+                  </Text>
                 </View>
+              ) : null
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="map-outline" size={28} color="#CBD5E1" />
+                <Text style={styles.emptyStateText}>
+                  Type city or town name to search across India & worldwide
+                </Text>
               </View>
             )}
           </ScrollView>
@@ -273,7 +221,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 24,
     paddingHorizontal: 20,
-    maxHeight: '85%',
+    maxHeight: '80%',
     borderWidth: 0,
     borderColor: '#EEEEF0'
   },
@@ -363,73 +311,15 @@ const styles = StyleSheet.create({
     marginVertical: 8
   },
   scrollList: {
-    maxHeight: 340
+    maxHeight: 320
   },
   scrollListContent: {
     paddingBottom: 16
   },
-  sectionHeader: {
-    fontSize: 11,
-    fontFamily: systemFontBold,
-    color: themeColors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: 8,
-    marginTop: 4
-  },
-  popularGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8
-  },
-  popularCityChip: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 7
-  },
-  popularCityText: {
-    fontSize: 12.5,
-    fontFamily: systemFontMedium,
-    color: '#334155'
-  },
-  customMatchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
-    borderRadius: 10,
-    padding: 12,
-    gap: 10,
-    marginBottom: 6
-  },
-  customIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  customMatchTitle: {
-    fontSize: 13.5,
-    fontFamily: systemFontBold,
-    color: themeColors.textPrimary
-  },
-  customMatchSub: {
-    fontSize: 11,
-    fontFamily: systemFont,
-    color: themeColors.textSecondary,
-    marginTop: 1
-  },
   resultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#F8F8FA',
@@ -444,7 +334,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   resultTitle: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontFamily: systemFontBold,
     color: themeColors.textPrimary
   },
@@ -464,6 +354,38 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: systemFontBold,
     color: '#64748B'
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    gap: 6
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontFamily: systemFontBold,
+    color: themeColors.textPrimary,
+    marginTop: 4
+  },
+  emptySub: {
+    fontSize: 12,
+    fontFamily: systemFont,
+    color: themeColors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: 20
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
+    gap: 8
+  },
+  emptyStateText: {
+    fontSize: 12,
+    fontFamily: systemFont,
+    color: themeColors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: 30
   }
 });
 
