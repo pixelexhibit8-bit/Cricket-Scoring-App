@@ -306,7 +306,11 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                     style={styles.upcomingMatchCard}
                     activeOpacity={0.85}
                     onPress={() => {
-                      if (isUserOrganiser && onStartMatchScoring) {
+                      if (onViewScorecard) {
+                        onViewScorecard(m);
+                      } else if (onWatchLive) {
+                        onWatchLive(m);
+                      } else if (isUserOrganiser && onStartMatchScoring) {
                         onStartMatchScoring(m);
                       }
                     }}

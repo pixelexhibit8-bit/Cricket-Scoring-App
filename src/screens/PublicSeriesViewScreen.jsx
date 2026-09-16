@@ -420,18 +420,28 @@ export function PublicSeriesViewScreen(props = {}) {
     }
   };
 
-  // Finished Scorecard
+  // Match Details / Scorecard Router
   const handleViewScorecard = (match = null) => {
+    const isFinished = match?.status === 'FINISHED' || Boolean(match?.result) || match?.phase === 'finished';
     const nav = navigation || props.navigation;
     const params = {
       matchId: match?.id,
       tournamentId: tournament?.id,
-      matchData: match
+      matchData: match,
+      isOrganiser: isUserOrganiser
     };
-    if (nav?.navigate) {
-      nav.navigate('FinishedMatchView', params);
+    if (isFinished) {
+      if (nav?.navigate) {
+        nav.navigate('FinishedMatchView', params);
+      } else {
+        navigate('finishedView', params);
+      }
     } else {
-      navigate('finishedView', params);
+      if (nav?.navigate) {
+        nav.navigate('PublicLiveView', params);
+      } else {
+        navigate('publicLiveView', params);
+      }
     }
   };
 

@@ -639,9 +639,18 @@ export function QuickMatchSetupScreen(props = {}) {
           <ScrollView ref={step1ScrollRef} style={{ flex: 1, backgroundColor: '#F8FAFC' }} contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
             {/* CARD 1: ULTRA-CLEAN PLAYING TEAMS & LOGOS MATCHUP */}
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 14 }}>
-              <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFont, textAlign: 'center' }}>
-                PLAYING TEAMS
-              </Text>
+              {tournamentId ? (
+                <View style={{ backgroundColor: '#F0F9FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#BAE6FD', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <MaterialCommunityIcons name="trophy" size={14} color="#0284C7" />
+                  <Text style={{ color: '#0369A1', fontSize: 11.5, fontFamily: systemFontBold }}>
+                    {tournamentName || 'Tournament Match'} • {totalOvers} Overs
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ fontSize: 11, fontWeight: fontWeights.bold, color: '#64748B', letterSpacing: 0.5, fontFamily: systemFont, textAlign: 'center' }}>
+                  PLAYING TEAMS
+                </Text>
+              )}
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 }}>
                 {/* LEFT SIDE: TEAM 1 LOGO (CIRCULAR) + NAME */}
@@ -663,35 +672,57 @@ export function QuickMatchSetupScreen(props = {}) {
                     </View>
                   </TouchableOpacity>
 
-                  <View style={{
-                    width: '100%',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: '#F8FAFC',
-                    borderRadius: 10,
-                    borderWidth: 1.5,
-                    borderColor: '#CBD5E1',
-                    paddingHorizontal: 8,
-                    paddingVertical: 4
-                  }}>
-                    <TextInput
-                      style={{
-                        flex: 1,
+                  {tournamentId ? (
+                    <View style={{
+                      width: '100%',
+                      alignItems: 'center',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      paddingHorizontal: 8,
+                      paddingVertical: 7
+                    }}>
+                      <Text style={{
                         fontSize: 13,
-                        fontWeight: fontWeights.bold,
                         color: '#0F172A',
                         fontFamily: systemFontBold,
-                        textAlign: 'center',
-                        paddingVertical: 2
-                      }}
-                      value={team1Name}
-                      onChangeText={(t) => setTeam1Name(capitalizeWords(t))}
-                      placeholder="Team A"
-                      placeholderTextColor="#94A3B8"
-                      autoCapitalize="words"
-                    />
-                    <Ionicons name="pencil" size={12} color="#0284C7" />
-                  </View>
+                        textAlign: 'center'
+                      }} numberOfLines={1}>
+                        {team1Name}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={{
+                      width: '100%',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 10,
+                      borderWidth: 1.5,
+                      borderColor: '#CBD5E1',
+                      paddingHorizontal: 8,
+                      paddingVertical: 4
+                    }}>
+                      <TextInput
+                        style={{
+                          flex: 1,
+                          fontSize: 13,
+                          fontWeight: fontWeights.bold,
+                          color: '#0F172A',
+                          fontFamily: systemFontBold,
+                          textAlign: 'center',
+                          paddingVertical: 2
+                        }}
+                        value={team1Name}
+                        onChangeText={(t) => setTeam1Name(capitalizeWords(t))}
+                        placeholder="Team A"
+                        placeholderTextColor="#94A3B8"
+                        autoCapitalize="words"
+                      />
+                      <Ionicons name="pencil" size={12} color="#0284C7" />
+                    </View>
+                  )}
                 </View>
 
                 {/* CENTER SIDE: LITTLE VS BADGE */}
@@ -720,35 +751,57 @@ export function QuickMatchSetupScreen(props = {}) {
                     </View>
                   </TouchableOpacity>
 
-                  <View style={{
-                    width: '100%',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: '#F8FAFC',
-                    borderRadius: 10,
-                    borderWidth: 1.5,
-                    borderColor: '#CBD5E1',
-                    paddingHorizontal: 8,
-                    paddingVertical: 4
-                  }}>
-                    <TextInput
-                      style={{
-                        flex: 1,
+                  {tournamentId ? (
+                    <View style={{
+                      width: '100%',
+                      alignItems: 'center',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      paddingHorizontal: 8,
+                      paddingVertical: 7
+                    }}>
+                      <Text style={{
                         fontSize: 13,
-                        fontWeight: fontWeights.bold,
                         color: '#0F172A',
                         fontFamily: systemFontBold,
-                        textAlign: 'center',
-                        paddingVertical: 2
-                      }}
-                      value={team2Name}
-                      onChangeText={(t) => setTeam2Name(capitalizeWords(t))}
-                      placeholder="Team B"
-                      placeholderTextColor="#94A3B8"
-                      autoCapitalize="words"
-                    />
-                    <Ionicons name="pencil" size={12} color="#0284C7" />
-                  </View>
+                        textAlign: 'center'
+                      }} numberOfLines={1}>
+                        {team2Name}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={{
+                      width: '100%',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 10,
+                      borderWidth: 1.5,
+                      borderColor: '#CBD5E1',
+                      paddingHorizontal: 8,
+                      paddingVertical: 4
+                    }}>
+                      <TextInput
+                        style={{
+                          flex: 1,
+                          fontSize: 13,
+                          fontWeight: fontWeights.bold,
+                          color: '#0F172A',
+                          fontFamily: systemFontBold,
+                          textAlign: 'center',
+                          paddingVertical: 2
+                        }}
+                        value={team2Name}
+                        onChangeText={(t) => setTeam2Name(capitalizeWords(t))}
+                        placeholder="Team B"
+                        placeholderTextColor="#94A3B8"
+                        autoCapitalize="words"
+                      />
+                      <Ionicons name="pencil" size={12} color="#0284C7" />
+                    </View>
+                  )}
                 </View>
               </View>
 

@@ -126,6 +126,8 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
                 onPress={() => {
                   if (isLive && onWatchLive) onWatchLive(m);
                   else if (isFinished && onViewScorecard) onViewScorecard(m);
+                  else if (onViewScorecard) onViewScorecard(m);
+                  else if (onWatchLive) onWatchLive(m);
                   else if (isUserOrganiser && onStartMatchScoring) onStartMatchScoring(m);
                 }}
               >
