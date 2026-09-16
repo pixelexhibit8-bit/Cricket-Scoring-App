@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
 } from '../theme.js';
 import { useMatch } from '../context/MatchContext.jsx';
 import { getCurrentUser, signOutUser, getPlayerProfile } from '../services/authService.js';
+import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { PhoneLoginModal } from '../components/modals/PhoneLoginModal.jsx';
 import { showToast } from '../services/toastService.js';
 
@@ -61,6 +62,9 @@ export function MenuScreen(props = {}) {
   const [pendingAction, setPendingAction] = useState(null);
   const [userProfileState, setUserProfileState] = useState({
     name: 'Guest User',
+    photoUrl: null,
+    role: '',
+    city: '',
     isLoggedIn: false
   });
 
@@ -72,11 +76,17 @@ export function MenuScreen(props = {}) {
         const p = await getPlayerProfile(user.id, user.phone);
         setUserProfileState({
           name: p?.name || user.name || 'CricFlow Player',
+          photoUrl: p?.photoUrl || p?.photo_url || user?.photoUrl || user?.photo_url || null,
+          role: p?.role || 'All-Rounder',
+          city: p?.city || '',
           isLoggedIn: true
         });
       } else {
         setUserProfileState({
           name: 'Guest User',
+          photoUrl: null,
+          role: '',
+          city: '',
           isLoggedIn: false
         });
       }
@@ -130,6 +140,9 @@ export function MenuScreen(props = {}) {
           setCurrentUser(null);
           setUserProfileState({
             name: 'Guest User',
+            photoUrl: null,
+            role: '',
+            city: '',
             isLoggedIn: false
           });
           showToast('Signed out successfully', 'info');
@@ -192,19 +205,34 @@ export function MenuScreen(props = {}) {
             onPress={handleProfileClick}
           >
             <View style={styles.avatarWrap}>
-              <Ionicons name="person-circle-outline" size={48} color="#475569" />
+              {userProfileState.isLoggedIn ? (
+                <PlayerAvatar
+                  name={userProfileState.name}
+                  photoUrl={userProfileState.photoUrl}
+                  size={50}
+                />
+              ) : (
+                <View style={styles.guestAvatarBox}>
+                  <Ionicons name="person-circle-outline" size={48} color="#94A3B8" />
+                </View>
+              )}
             </View>
+
             <View style={styles.profileTextWrap}>
               <Text style={styles.profileName} numberOfLines={1}>
                 {userProfileState.name}
               </Text>
-              {!userProfileState.isLoggedIn ? (
-                <Text style={[styles.profileEmail, { color: '#2563EB' }]} numberOfLines={1}>
+              {userProfileState.isLoggedIn ? (
+                <Text style={styles.profileRole} numberOfLines={1}>
+                  {userProfileState.role || 'Cricketer'}{userProfileState.city ? ` • ${userProfileState.city}` : ''}
+                </Text>
+              ) : (
+                <Text style={styles.profileSignInHint} numberOfLines={1}>
                   Tap to sign in with mobile OTP
                 </Text>
-              ) : null}
+              )}
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -223,18 +251,10 @@ export function MenuScreen(props = {}) {
               }}
             >
               <View style={styles.itemIconWrap}>
-                <Ionicons name="stats-chart" size={20} color="#2563EB" />
+                <Ionicons name="stats-chart" size={20} color="#18181B" />
               </View>
               <Text style={styles.itemLabel}>Rankings</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <View style={styles.itemIconWrap}>
-                <Ionicons name="calendar" size={20} color="#2563EB" />
-              </View>
-              <Text style={styles.itemLabel}>Fixtures</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -243,10 +263,10 @@ export function MenuScreen(props = {}) {
               onPress={handleHostTournamentClick}
             >
               <View style={styles.itemIconWrap}>
-                <MaterialCommunityIcons name="trophy" size={20} color="#D97706" />
+                <MaterialCommunityIcons name="trophy-award" size={20} color="#18181B" />
               </View>
               <Text style={styles.itemLabel}>Host a Tournament / Series</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -259,104 +279,52 @@ export function MenuScreen(props = {}) {
               }}
             >
               <View style={styles.itemIconWrap}>
-                <MaterialCommunityIcons name="trophy-outline" size={20} color="#2563EB" />
+                <MaterialCommunityIcons name="tournament" size={20} color="#18181B" />
               </View>
-              <Text style={styles.itemLabel}>All Series</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <View style={styles.itemIconWrap}>
-                <MaterialCommunityIcons name="account-group" size={20} color="#2563EB" />
-              </View>
-              <Text style={styles.itemLabel}>Following</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <View style={styles.itemIconWrap}>
-                <Ionicons name="radio-outline" size={20} color="#DC2626" />
-              </View>
-              <Text style={styles.itemLabel}>Go Live</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+              <Text style={styles.itemLabel}>All Series / Tournaments</Text>
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
             </TouchableOpacity>
           </View>
 
           {/* ── 4. APP SETTINGS SECTION HEADER ── */}
           <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionHeaderText}>APP SETTINGS</Text>
+            <Text style={styles.sectionHeaderText}>SETTINGS & ACCOUNT</Text>
           </View>
 
           {/* ── 5. APP SETTINGS ITEMS ── */}
           <View style={styles.menuGroup}>
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={handleProfileClick}
+            >
               <View style={styles.itemIconWrap}>
-                <Ionicons name="settings-outline" size={20} color="#475569" />
+                <Ionicons name="person-outline" size={20} color="#64748B" />
               </View>
-              <Text style={styles.itemLabel}>Match Settings</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+              <Text style={styles.itemLabel}>My Profile & Career Stats</Text>
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
               <View style={styles.itemIconWrap}>
-                <Ionicons name="contrast-outline" size={20} color="#475569" />
-              </View>
-              <Text style={styles.itemLabel}>App Theme</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <View style={styles.itemIconWrap}>
-                <Ionicons name="notifications-outline" size={20} color="#475569" />
-              </View>
-              <Text style={styles.itemLabel}>Notification Settings</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <View style={styles.itemIconWrap}>
-                <Ionicons name="language-outline" size={20} color="#475569" />
-              </View>
-              <Text style={styles.itemLabel}>Languages</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <View style={styles.itemIconWrap}>
-                <Ionicons name="alert-circle-outline" size={20} color="#475569" />
-              </View>
-              <Text style={styles.itemLabel}>Report a Problem</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <View style={styles.itemIconWrap}>
-                <Ionicons name="shield-checkmark-outline" size={20} color="#475569" />
+                <Ionicons name="shield-checkmark-outline" size={20} color="#64748B" />
               </View>
               <Text style={styles.itemLabel}>Terms & Privacy Policy</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-              <View style={styles.itemIconWrap}>
-                <Ionicons name="ellipsis-horizontal-circle-outline" size={20} color="#475569" />
-              </View>
-              <Text style={styles.itemLabel}>More</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={handleLogoutClick}>
               <View style={styles.itemIconWrap}>
-                <Ionicons name={currentUser ? "log-out-outline" : "log-in-outline"} size={20} color="#475569" />
+                <Ionicons name={currentUser ? "log-out-outline" : "log-in-outline"} size={20} color="#64748B" />
               </View>
               <Text style={styles.itemLabel}>{currentUser ? "Logout" : "Sign In with Mobile OTP"}</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+              <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
             </TouchableOpacity>
           </View>
 
           {/* ── 6. FOOTER VERSION ── */}
           <View style={styles.footerWrap}>
-            <Text style={styles.versionText}>v 26.08.04 (645)</Text>
+            <Text style={styles.versionText}>CricFlow v 26.09.16</Text>
           </View>
         </ScrollView>
 
@@ -384,7 +352,8 @@ const styles = StyleSheet.create({
   headerBar: {
     height: 52,
     backgroundColor: themeColors.surface,
-    borderBottomWidth: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEF0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -411,10 +380,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: themeColors.surface,
     paddingHorizontal: 16,
-    paddingVertical: 14
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEF0'
   },
   avatarWrap: {
     marginRight: 14
+  },
+  guestAvatarBox: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   profileTextWrap: {
     flex: 1
@@ -425,10 +402,15 @@ const styles = StyleSheet.create({
     color: themeColors.textPrimary,
     marginBottom: 2
   },
-  profileEmail: {
+  profileRole: {
+    fontSize: 12.5,
+    fontFamily: systemFontMedium,
+    color: '#64748B'
+  },
+  profileSignInHint: {
     fontSize: 12,
-    fontFamily: systemFont,
-    color: themeColors.textMuted
+    fontFamily: systemFontMedium,
+    color: '#18181B'
   },
   divider: {
     height: 1,
@@ -444,7 +426,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: 0
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8F8FA'
   },
   itemIconWrap: {
     width: 32,
@@ -460,9 +443,9 @@ const styles = StyleSheet.create({
   },
   sectionHeaderWrap: {
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 18,
     paddingBottom: 8,
-    backgroundColor: '#F8F8FA'
+    backgroundColor: themeColors.appBackground
   },
   sectionHeaderText: {
     fontSize: 11,
