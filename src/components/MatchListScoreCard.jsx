@@ -14,6 +14,7 @@ export const MatchListScoreCard = ({
   teamOneOvers,
   teamTwoScore,
   teamTwoOvers,
+  useFullName = false,
   activeTeamName,
   winnerTeamName,
   statusLabel,
@@ -28,26 +29,31 @@ export const MatchListScoreCard = ({
   onPress,
   delay = 0
 }) => {
+  const isUpcoming = useFullName || (!teamOneScore && !teamTwoScore && !resultTitle);
+
   const renderTeamRow = (team, score, overs, muted = false) => {
     const isActive = activeTeamName === team?.name;
     const isWinner = Boolean(winnerTeamName && winnerTeamName === team?.name);
     const isFinished = Boolean(winnerTeamName);
     const isLoser = isFinished && !isWinner;
     const scoreColor = isWinner || isActive ? '#0284C7' : (isLoser ? '#94A3B8' : '#0F172A');
+    const teamDisplayName = isUpcoming ? (team?.name || 'Team') : (getTeamShortCode(team, team?.name) || 'Team');
 
     return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
         <TeamIdentityMark team={team} size={26} isLoser={isLoser} />
         <Text
           style={{
-            fontSize: 15.5,
+            fontSize: isUpcoming ? 14.5 : 15.5,
             color: isLoser ? '#94A3B8' : (muted ? '#64748B' : '#0F172A'),
-            minWidth: 44,
+            minWidth: isUpcoming ? undefined : 44,
+            flex: isUpcoming ? 1 : undefined,
             fontFamily: systemFontMedium
           }}
           numberOfLines={1}
+          ellipsizeMode="tail"
         >
-          {getTeamShortCode(team, team?.name) || 'Team'}
+          {teamDisplayName}
         </Text>
 
         {score ? (
@@ -80,7 +86,7 @@ export const MatchListScoreCard = ({
             ) : null}
             {isActive ? <MaterialCommunityIcons name="cricket" size={14} color="#0284C7" /> : null}
           </View>
-        ) : (
+        ) : (!isUpcoming ? (
           <Text
             style={{
               color: muted ? '#94A3B8' : '#64748B',
@@ -91,7 +97,7 @@ export const MatchListScoreCard = ({
           >
             Yet to bat
           </Text>
-        )}
+        ) : null)}
       </View>
     );
   };
@@ -118,7 +124,7 @@ export const MatchListScoreCard = ({
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flex: 1, gap: 12 }}>
+          <View style={{ flex: 1, minWidth: 0, gap: 12 }}>
             {renderTeamRow(teamOne, teamOneScore, teamOneOvers)}
             {renderTeamRow(teamTwo, teamTwoScore, teamTwoOvers, !teamTwoScore)}
           </View>
@@ -160,13 +166,24 @@ export const MatchListScoreCard = ({
               ) : null}
             </View>
           ) : (statusLabel ? (
-            <View style={{ minWidth: 90, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <View style={{ width: 6.5, height: 6.5, borderRadius: 3.5, backgroundColor: statusDotColor }} />
-                <Text style={{ fontSize: 14, color: statusColor, fontFamily: systemFontMedium }}>
-                  {statusLabel}
-                </Text>
-              </View>
+            <View style={{ minWidth: 90, alignItems: 'flex-end', justifyContent: 'center', gap: 2 }}>
+              {isUpcoming ? (
+                <>
+                  <Text style={{ fontSize: 11, color: '#64748B', fontFamily: systemFont }}>
+                    {statusLabel.toLowerCase().includes('m') || statusLabel.toLowerCase().includes('s') || statusLabel.toLowerCase().includes(':') ? 'Starting in:' : 'Scheduled'}
+                  </Text>
+                  <Text style={{ fontSize: 14.5, color: statusColor || '#0284C7', fontFamily: systemFontBold }}>
+                    {statusLabel}
+                  </Text>
+                </>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <View style={{ width: 6.5, height: 6.5, borderRadius: 3.5, backgroundColor: statusDotColor }} />
+                  <Text style={{ fontSize: 14, color: statusColor, fontFamily: systemFontMedium }}>
+                    {statusLabel}
+                  </Text>
+                </View>
+              )}
             </View>
           ) : null)}
         </View>
