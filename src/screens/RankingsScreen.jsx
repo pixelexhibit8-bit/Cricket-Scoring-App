@@ -129,11 +129,14 @@ export function RankingsScreen(props = {}) {
     topBatters = props.topBatters || matchCtx.TOP_BATTERS || [],
     topBowlers = props.topBowlers || matchCtx.TOP_BOWLERS || [],
     topAllRounders = props.topAllRounders || matchCtx.TOP_ALLROUNDERS || [],
-    onSelectPlayer = props.onSelectPlayer || ((playerName, meta) => {
-      if (matchCtx.setSelectedPlayerProfile) {
-        matchCtx.setSelectedPlayerProfile({ name: playerName, ...meta });
+    onSelectPlayer = props.onSelectPlayer || ((playerName, meta = {}) => {
+      const playerPayload = { name: playerName, ...(meta || {}) };
+      if (matchCtx?.setSelectedPlayerProfile) {
+        matchCtx.setSelectedPlayerProfile(playerPayload);
       }
-      if (matchCtx.setCurrentScreen) {
+      if (navigation?.navigate) {
+        navigation.navigate('PlayerProfile', playerPayload);
+      } else if (matchCtx?.setCurrentScreen) {
         matchCtx.setCurrentScreen('playerProfile');
       }
     }),
