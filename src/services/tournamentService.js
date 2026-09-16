@@ -1223,3 +1223,136 @@ export async function deleteTournament(tournamentId) {
     return false;
   }
 }
+
+/**
+ * Add a player to a specific team in a tournament and sync across storage and Supabase
+ */
+export async function addPlayerToTournamentTeam(tournamentId, teamNameOrId, playerObj) {
+  try {
+    if (!tournamentId || !teamNameOrId || !playerObj) return null;
+    const playerName = typeof playerObj === 'string' ? playerObj.trim() : (playerObj.name || '').trim();
+    if (!playerName) return null;
+
+    const list = await getTournamentsFromStorage();
+    const target = list.find(t => t.id === tournamentId);
+    if (!target || !Array.isArray(target.teams)) return null;
+
+    const targetKey = String(teamNameOrId).trim().toLowerCase();
+    const teamIndex = target.teams.findIndex(t => (t.id && String(t.id).toLowerCase() === targetKey) || (t.name && String(t.name).trim().toLowerCase() === targetKey));
+    if (teamIndex === -1) return null;
+
+    const existingTeam = target.teams[teamIndex];
+    const currentPlayers = Array.isArray(existingTeam.players) ? [...existingTeam.players] : (Array.isArray(existingTeam.squad) ? [...existingTeam.squad] : []);
+
+    // Check if player already exists in this team
+    const alreadyExists = currentPlayers.some(p => {
+      const pName = typeof p === 'string' ? p.trim() : (p?.name || '').trim();
+      return pName.toLowerCase() === playerName.toLowerCase();
+    });
+
+    if (!alreadyExists) {
+      const normalizedPlayer = typeof playerObj === 'string'
+        ? { id: `tp_${Date.now()}_${currentPlayers.length + 1}`, name: playerName, role: 'All-Rounder', phone: '', isCaptain: false, isWicketKeeper: false }
+        : {
+            id: playerObj.id || `tp_${Date.now()}_${currentPlayers.length + 1}`,
+            name: playerName,
+            role: playerObj.role || 'All-Rounder',
+            phone: playerObj.phone || playerObj.mobile || '',
+            photoUrl: playerObj.photoUrl || playerObj.avatar || '',
+            isCaptain: Boolean(playerObj.isCaptain),
+            isWicketKeeper: Boolean(playerObj.isWicketKeeper)
+          };
+
+      currentPlayers.push(normalizedPlayer);
+    }
+
+    const updatedTeam = {
+      ...existingTeam,
+      players: currentPlayers,
+      count: `${currentPlayers.length} Players`,
+      playersCount: currentPlayers.length
+    };
+
+    target.teams[teamIndex] = updatedTeam;
+    target.updatedAt = new Date().toISOString();
+
+    await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+
+    if (supabase) {
+      try {
+        await supabase
+          .from('tournaments')
+          .update({
+            teams: target.teams,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase addPlayerToTournamentTeam error:', cloudErr);
+      }
+    }
+
+    return target;
+  } catch (err) {
+    console.error('[TournamentService] addPlayerToTournamentTeam error:', err);
+    return null;
+  }
+}
+
+/**
+ * Remove a player from a specific team in a tournament
+ */
+export async function removePlayerFromTournamentTeam(tournamentId, teamNameOrId, playerName) {
+  try {
+    if (!tournamentId || !teamNameOrId || !playerName) return null;
+    const targetName = String(playerName).trim().toLowerCase();
+
+    const list = await getTournamentsFromStorage();
+    const target = list.find(t => t.id === tournamentId);
+    if (!target || !Array.isArray(target.teams)) return null;
+
+    const targetKey = String(teamNameOrId).trim().toLowerCase();
+    const teamIndex = target.teams.findIndex(t => (t.id && String(t.id).toLowerCase() === targetKey) || (t.name && String(t.name).trim().toLowerCase() === targetKey));
+    if (teamIndex === -1) return null;
+
+    const existingTeam = target.teams[teamIndex];
+    const currentPlayers = Array.isArray(existingTeam.players) ? [...existingTeam.players] : (Array.isArray(existingTeam.squad) ? [...existingTeam.squad] : []);
+
+    const updatedPlayers = currentPlayers.filter(p => {
+      const pName = typeof p === 'string' ? p.trim() : (p?.name || '').trim();
+      return pName.toLowerCase() !== targetName;
+    });
+
+    const updatedTeam = {
+      ...existingTeam,
+      players: updatedPlayers,
+      count: `${updatedPlayers.length} Players`,
+      playersCount: updatedPlayers.length
+    };
+
+    target.teams[teamIndex] = updatedTeam;
+    target.updatedAt = new Date().toISOString();
+
+    await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
+
+    if (supabase) {
+      try {
+        await supabase
+          .from('tournaments')
+          .update({
+            teams: target.teams,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tournamentId);
+      } catch (cloudErr) {
+        console.warn('[TournamentService] Supabase removePlayerFromTournamentTeam error:', cloudErr);
+      }
+    }
+
+    return target;
+  } catch (err) {
+    console.error('[TournamentService] removePlayerFromTournamentTeam error:', err);
+    return null;
+  }
+}
+

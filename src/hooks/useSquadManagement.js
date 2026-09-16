@@ -6,6 +6,7 @@ import { showToast } from '../services/toastService.js';
 import { capitalizeWords } from '../utils/textUtils.js';
 import { syncMatchToSupabase } from '../services/matchService.js';
 import { getPlayerMatchStatus } from '../utils/cricketUtils.js';
+import { addPlayerToTournamentTeam } from '../services/tournamentService.js';
 
 export function useSquadManagement({ activeMatch, setActiveMatch }) {
   const [localPlayersList, setLocalPlayersList] = useState([]);
@@ -55,15 +56,34 @@ export function useSquadManagement({ activeMatch, setActiveMatch }) {
     let currentT1 = [...(activeMatch.playingXI?.[t1Name] || activeMatch?.teams?.[0]?.roster || [])];
     let currentT2 = [...(activeMatch.playingXI?.[t2Name] || activeMatch?.teams?.[1]?.roster || [])];
 
+    const isAddingToT1 = targetTeam === 'team1' || targetTeam === t1Name;
+    const isAddingToT2 = targetTeam === 'team2' || targetTeam === t2Name;
+
+    // Enforce 11-player limit
+    if (isAddingToT1 && currentT1.length >= 11 && !currentT1.includes(playerName)) {
+      showToast(`Playing XI for ${t1Name} is full (11/11). Remove an existing player first.`, 'warning', 'Playing XI Full');
+      return;
+    }
+    if (isAddingToT2 && currentT2.length >= 11 && !currentT2.includes(playerName)) {
+      showToast(`Playing XI for ${t2Name} is full (11/11). Remove an existing player first.`, 'warning', 'Playing XI Full');
+      return;
+    }
+
     currentT1 = currentT1.filter(p => p !== playerName);
     currentT2 = currentT2.filter(p => p !== playerName);
 
-    if (targetTeam === 'team1' || targetTeam === t1Name) {
+    if (isAddingToT1) {
       currentT1.push(playerName);
       showToast(`${playerName} added to ${t1Name} squad!`, 'success');
-    } else if (targetTeam === 'team2' || targetTeam === t2Name) {
+      if (activeMatch?.tournamentId) {
+        addPlayerToTournamentTeam(activeMatch.tournamentId, t1Name, { name: playerName, role: 'All-Rounder' }).catch(() => {});
+      }
+    } else if (isAddingToT2) {
       currentT2.push(playerName);
       showToast(`${playerName} added to ${t2Name} squad!`, 'success');
+      if (activeMatch?.tournamentId) {
+        addPlayerToTournamentTeam(activeMatch.tournamentId, t2Name, { name: playerName, role: 'All-Rounder' }).catch(() => {});
+      }
     } else {
       showToast(`${playerName} removed from squad`, 'info');
     }
@@ -104,6 +124,11 @@ export function useSquadManagement({ activeMatch, setActiveMatch }) {
       setLocalPlayersList(prev => [...(prev || []).filter(p => p.name !== cleanName), playerObj]);
 
       handleMidMatchMoveToTeam(cleanName, 'team1');
+
+      if (activeMatch?.tournamentId) {
+        const t1Name = activeMatch?.teams?.[0]?.name || activeMatch?.innings?.[0]?.battingTeam?.name || 'Team 1';
+        addPlayerToTournamentTeam(activeMatch.tournamentId, t1Name, playerObj).catch(() => {});
+      }
 
       setIsAddPlayerModalOpen(false);
       setNewPlayerPhoneInput('');

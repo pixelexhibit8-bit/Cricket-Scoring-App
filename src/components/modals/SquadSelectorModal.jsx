@@ -118,17 +118,31 @@ export function SquadSelectorModal({
                 {team1Name}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                {team1Roster.length > 0 ? (
+                {team1Roster.length === 11 ? (
                   <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                     <Ionicons name="checkmark-circle" size={11} color="#15803D" />
                     <Text style={{ fontSize: 10.5, color: '#15803D', fontFamily: systemFontBold }}>
-                      {team1Roster.length} Added
+                      11/11 Playing XI
+                    </Text>
+                  </View>
+                ) : team1Roster.length > 11 ? (
+                  <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                    <Ionicons name="alert-circle" size={11} color="#DC2626" />
+                    <Text style={{ fontSize: 10.5, color: '#DC2626', fontFamily: systemFontBold }}>
+                      {team1Roster.length}/11 (Max 11)
+                    </Text>
+                  </View>
+                ) : team1Roster.length > 0 ? (
+                  <View style={{ backgroundColor: '#E0F2FE', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                    <Ionicons name="people" size={11} color="#0284C7" />
+                    <Text style={{ fontSize: 10.5, color: '#0284C7', fontFamily: systemFontBold }}>
+                      {team1Roster.length}/11 Selected
                     </Text>
                   </View>
                 ) : (
                   <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
                     <Text style={{ fontSize: 10.5, color: '#B45309', fontFamily: systemFontMedium }}>
-                      0 Selected
+                      0/11 Selected
                     </Text>
                   </View>
                 )}
@@ -161,17 +175,31 @@ export function SquadSelectorModal({
                 {team2Name}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                {team2Roster.length > 0 ? (
+                {team2Roster.length === 11 ? (
                   <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                     <Ionicons name="checkmark-circle" size={11} color="#15803D" />
                     <Text style={{ fontSize: 10.5, color: '#15803D', fontFamily: systemFontBold }}>
-                      {team2Roster.length} Added
+                      11/11 Playing XI
+                    </Text>
+                  </View>
+                ) : team2Roster.length > 11 ? (
+                  <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                    <Ionicons name="alert-circle" size={11} color="#DC2626" />
+                    <Text style={{ fontSize: 10.5, color: '#DC2626', fontFamily: systemFontBold }}>
+                      {team2Roster.length}/11 (Max 11)
+                    </Text>
+                  </View>
+                ) : team2Roster.length > 0 ? (
+                  <View style={{ backgroundColor: '#E0F2FE', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                    <Ionicons name="people" size={11} color="#0284C7" />
+                    <Text style={{ fontSize: 10.5, color: '#0284C7', fontFamily: systemFontBold }}>
+                      {team2Roster.length}/11 Selected
                     </Text>
                   </View>
                 ) : (
                   <View style={{ backgroundColor: team1Roster.length > 0 ? '#FEF3C7' : '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
                     <Text style={{ fontSize: 10.5, color: team1Roster.length > 0 ? '#B45309' : '#64748B', fontFamily: systemFontBold }}>
-                      {team1Roster.length > 0 ? 'Needs Players' : '0 Selected'}
+                      {team1Roster.length > 0 ? 'Needs Players' : '0/11 Selected'}
                     </Text>
                   </View>
                 )}
@@ -205,8 +233,8 @@ export function SquadSelectorModal({
           <Text style={styles.listHeaderText}>
             SELECT PLAYERS FOR {activeTeamName.toUpperCase()}
           </Text>
-          <Text style={styles.listHeaderCount}>
-            {activeRoster.length} in Squad
+          <Text style={[styles.listHeaderCount, activeRoster.length >= 11 && { color: activeRoster.length === 11 ? '#15803D' : '#DC2626', fontFamily: systemFontBold }]}>
+            {activeRoster.length}/11 {activeRoster.length === 11 ? 'Playing XI Complete' : activeRoster.length > 11 ? '(Max 11 Exceeded)' : 'Selected'}
           </Text>
         </View>
 
@@ -308,12 +336,25 @@ export function SquadSelectorModal({
                     </View>
                   ) : (
                     <TouchableOpacity
-                      onPress={() => moveHandler && moveHandler(playerName, activeTab)}
-                      style={styles.selectBtn}
+                      onPress={() => {
+                        if (activeRoster.length >= 11) {
+                          showToast(
+                            `Playing XI for ${activeTeamName} is full (11/11). Deselect an existing player to replace.`,
+                            'warning',
+                            'Playing XI Full'
+                          );
+                          return;
+                        }
+                        if (moveHandler) moveHandler(playerName, activeTab);
+                      }}
+                      style={[
+                        styles.selectBtn,
+                        activeRoster.length >= 11 && { borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' }
+                      ]}
                       activeOpacity={0.8}
                     >
-                      <Ionicons name="add" size={15} color="#0284C7" />
-                      <Text style={styles.selectBtnText}>Select</Text>
+                      <Ionicons name="add" size={15} color={activeRoster.length >= 11 ? '#94A3B8' : '#0284C7'} />
+                      <Text style={[styles.selectBtnText, activeRoster.length >= 11 && { color: '#94A3B8' }]}>Select</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -338,13 +379,33 @@ export function SquadSelectorModal({
 
           <View style={styles.bottomSummaryRow}>
             <Text style={styles.bottomSummaryText}>
-              {team1Name}: <Text style={{ color: team1Roster.length > 0 ? '#15803D' : '#B45309', fontFamily: systemFontBold }}>{team1Roster.length} Players</Text>
+              {team1Name}: <Text style={{ color: team1Roster.length === 11 ? '#15803D' : team1Roster.length > 11 ? '#DC2626' : '#B45309', fontFamily: systemFontBold }}>{team1Roster.length}/11 Players</Text>
               {'  •  '}
-              {team2Name}: <Text style={{ color: team2Roster.length > 0 ? '#15803D' : '#B45309', fontFamily: systemFontBold }}>{team2Roster.length} Players</Text>
+              {team2Name}: <Text style={{ color: team2Roster.length === 11 ? '#15803D' : team2Roster.length > 11 ? '#DC2626' : '#B45309', fontFamily: systemFontBold }}>{team2Roster.length}/11 Players</Text>
             </Text>
           </View>
 
           {(() => {
+            const team1OverLimit = team1Roster.length > 11;
+            const team2OverLimit = team2Roster.length > 11;
+
+            if (team1OverLimit || team2OverLimit) {
+              const overTeam = team1OverLimit ? team1Name : team2Name;
+              const overCount = team1OverLimit ? team1Roster.length : team2Roster.length;
+              return (
+                <TouchableOpacity
+                  onPress={() => {
+                    showToast(`${overTeam} has ${overCount} players. Maximum 11 players allowed. Please deselect ${overCount - 11} player(s).`, 'warning', 'Max 11 Players');
+                  }}
+                  style={[styles.confirmBtn, { backgroundColor: '#DC2626' }]}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="alert-circle" size={18} color="#FFFFFF" />
+                  <Text style={styles.confirmBtnText}>MAX 11 PLAYERS ALLOWED ({overCount}/11)</Text>
+                </TouchableOpacity>
+              );
+            }
+
             // If active on Team 1 and Team 1 has players, but Team 2 has 0 players: Prompt to switch to Team 2!
             const needsTeam2 = activeTab === 'team1' && team1Roster.length > 0 && team2Roster.length === 0;
             const bothReady = team1Roster.length > 0 && team2Roster.length > 0;

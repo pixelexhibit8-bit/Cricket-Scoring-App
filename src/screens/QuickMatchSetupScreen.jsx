@@ -35,6 +35,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
 import { showToast } from '../services/toastService.js';
 import { capitalizeWords } from '../utils/textUtils.js';
+import { addPlayerToTournamentTeam } from '../services/tournamentService.js';
 
 const DEFAULT_TEAM_A_ROSTER = [];
 const DEFAULT_TEAM_B_ROSTER = [];
@@ -314,6 +315,15 @@ export function QuickMatchSetupScreen(props = {}) {
   };
 
   const handleMoveToTeam = (playerName, targetSlot) => {
+    if (targetSlot === 'team1' && team1Roster.length >= 11 && !team1Roster.includes(playerName)) {
+      showToast(`Playing XI for ${team1Name} is full (11/11). Remove an existing player first.`, 'warning', 'Playing XI Full');
+      return;
+    }
+    if (targetSlot === 'team2' && team2Roster.length >= 11 && !team2Roster.includes(playerName)) {
+      showToast(`Playing XI for ${team2Name} is full (11/11). Remove an existing player first.`, 'warning', 'Playing XI Full');
+      return;
+    }
+
     setTeam1Roster(prev => prev.filter(p => p !== playerName));
     setTeam2Roster(prev => prev.filter(p => p !== playerName));
     setPlayerPool(prev => prev.filter(p => p !== playerName));
@@ -379,6 +389,12 @@ export function QuickMatchSetupScreen(props = {}) {
 
     if (!team1Roster.includes(trimmed) && !team2Roster.includes(trimmed) && !playerPool.includes(trimmed)) {
       setPlayerPool(prev => [trimmed, ...prev]);
+    }
+
+    // If in tournament match, auto-sync player to tournament team squad
+    if (tournamentId) {
+      const targetTeam = activeSquadTab === 'team2' ? team2Name : team1Name;
+      addPlayerToTournamentTeam(tournamentId, targetTeam, activePlayerObj).catch(console.error);
     }
 
     setNewPlayerFirstName('');
@@ -1206,7 +1222,17 @@ export function QuickMatchSetupScreen(props = {}) {
                 }
               ]}
               disabled={!team1Name.trim() || !team2Name.trim() || !totalOvers}
-              onPress={() => setWizardStep(2)}
+              onPress={() => {
+                if (team1Roster.length > 11) {
+                  showToast(`${team1Name} has ${team1Roster.length} players. Maximum 11 players allowed in Playing XI.`, 'warning', 'Max 11 Players');
+                  return;
+                }
+                if (team2Roster.length > 11) {
+                  showToast(`${team2Name} has ${team2Roster.length} players. Maximum 11 players allowed in Playing XI.`, 'warning', 'Max 11 Players');
+                  return;
+                }
+                setWizardStep(2);
+              }}
             >
               <Text style={styles.btnText}>NEXT: COIN TOSS</Text>
               <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
@@ -1288,6 +1314,10 @@ export function QuickMatchSetupScreen(props = {}) {
               registerPlayerPhoto(active.name, active.photoUrl);
               setLocalPlayersDb(prev => [active, ...prev.filter(p => p && p.name !== active.name)]);
               setPlayerPool(prev => [active.name, ...prev.filter(p => p !== active.name)]);
+              if (tournamentId) {
+                const targetTeam = activeSquadTab === 'team2' ? team2Name : team1Name;
+                addPlayerToTournamentTeam(tournamentId, targetTeam, active).catch(console.error);
+              }
               showToast(`${active.name} added to player pool!`, 'success');
             }}
           />
