@@ -20,6 +20,7 @@ import {
   systemFont,
   systemFontMedium,
   systemFontBold
+} from '../../theme.js';
 import { getTournamentByJoinCode, registerTeamViaJoinCode } from '../../services/teamService.js';
 import { showToast } from '../../services/toastService.js';
 import { TeamIdentityMark } from '../TeamIdentityMark.jsx';
