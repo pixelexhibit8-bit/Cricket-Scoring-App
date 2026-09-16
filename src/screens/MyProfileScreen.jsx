@@ -418,11 +418,13 @@ export function MyProfileScreen(props = {}) {
       const user = await getCurrentUser();
       setCurrentUser(user);
       if (user) {
-        const p = await getPlayerProfile(user.id);
+        const p = await getPlayerProfile(user.id, user.phone);
         setProfile(p);
         if (p?.name && p?.photoUrl) {
           registerPlayerPhoto(p.name, p.photoUrl);
         }
+      } else {
+        setProfile(null);
       }
     } catch (e) {
       console.error(e);
@@ -430,6 +432,16 @@ export function MyProfileScreen(props = {}) {
       setLoading(false);
     }
   }, [targetPlayer]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isExplicitMyProfile && matchCtx?.selectedPlayerProfile) {
+        matchCtx.setSelectedPlayerProfile(null);
+      }
+      loadUserSession();
+      loadMatchesForCareer();
+    }, [isExplicitMyProfile, matchCtx, loadUserSession, loadMatchesForCareer])
+  );
 
   // Auth Listener & App Lifecycle Effect (Fixed keystroke re-render bug)
   useEffect(() => {
