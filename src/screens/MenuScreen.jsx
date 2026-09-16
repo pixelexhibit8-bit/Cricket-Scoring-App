@@ -42,8 +42,11 @@ export function MenuScreen(props = {}) {
       }
     }),
     onProfilePress = props.onProfilePress || (() => {
+      if (matchCtx?.setSelectedPlayerProfile) {
+        matchCtx.setSelectedPlayerProfile(null);
+      }
       if (props.navigation) {
-        props.navigation.navigate('PlayerProfile');
+        props.navigation.navigate('PlayerProfile', { targetPlayer: null, isMyProfile: true });
       } else if (matchCtx.setCurrentScreen) {
         matchCtx.setCurrentScreen('playerProfile');
       }
@@ -100,11 +103,14 @@ export function MenuScreen(props = {}) {
   );
 
   const handleProfileClick = () => {
+    if (matchCtx?.setSelectedPlayerProfile) {
+      matchCtx.setSelectedPlayerProfile(null);
+    }
     if (currentUser) {
       if (onProfilePress) {
         onProfilePress();
       } else if (navigation) {
-        navigation.navigate('PlayerProfile');
+        navigation.navigate('PlayerProfile', { targetPlayer: null, isMyProfile: true });
       }
     } else {
       setPendingAction('profile');
@@ -161,8 +167,13 @@ export function MenuScreen(props = {}) {
       }
     } else if (pendingAction === 'profile') {
       setPendingAction(null);
-      if (navigation) {
-        navigation.navigate('PlayerProfile');
+      if (matchCtx?.setSelectedPlayerProfile) {
+        matchCtx.setSelectedPlayerProfile(null);
+      }
+      if (onProfilePress) {
+        onProfilePress();
+      } else if (navigation) {
+        navigation.navigate('PlayerProfile', { targetPlayer: null, isMyProfile: true });
       }
     }
   };
@@ -222,15 +233,11 @@ export function MenuScreen(props = {}) {
               <Text style={styles.profileName} numberOfLines={1}>
                 {userProfileState.name}
               </Text>
-              {userProfileState.isLoggedIn ? (
-                <Text style={styles.profileRole} numberOfLines={1}>
-                  {userProfileState.role || 'Cricketer'}{userProfileState.city ? ` • ${userProfileState.city}` : ''}
-                </Text>
-              ) : (
+              {!userProfileState.isLoggedIn ? (
                 <Text style={styles.profileSignInHint} numberOfLines={1}>
                   Tap to sign in with mobile OTP
                 </Text>
-              )}
+              ) : null}
             </View>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </TouchableOpacity>
