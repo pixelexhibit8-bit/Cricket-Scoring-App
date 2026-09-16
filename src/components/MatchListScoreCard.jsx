@@ -33,19 +33,16 @@ export const MatchListScoreCard = ({
 
   const renderTeamRow = (team, score, overs, muted = false) => {
     const isActive = activeTeamName === team?.name;
-    const isWinner = Boolean(winnerTeamName && winnerTeamName === team?.name);
-    const isFinished = Boolean(winnerTeamName);
-    const isLoser = isFinished && !isWinner;
-    const scoreColor = isWinner || isActive ? '#0284C7' : (isLoser ? '#94A3B8' : '#0F172A');
+    const scoreColor = isActive ? '#0284C7' : '#0F172A';
     const teamDisplayName = isUpcoming ? (team?.name || 'Team') : (getTeamShortCode(team, team?.name) || 'Team');
 
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-        <TeamIdentityMark team={team} size={26} isLoser={isLoser} />
+        <TeamIdentityMark team={team} size={26} />
         <Text
           style={{
             fontSize: isUpcoming ? 14.5 : 15.5,
-            color: isLoser ? '#94A3B8' : (muted ? '#64748B' : '#0F172A'),
+            color: muted ? '#64748B' : '#0F172A',
             minWidth: isUpcoming ? undefined : 44,
             flex: isUpcoming ? 1 : undefined,
             fontFamily: systemFontMedium
