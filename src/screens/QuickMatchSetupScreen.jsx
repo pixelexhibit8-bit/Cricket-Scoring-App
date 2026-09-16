@@ -905,51 +905,110 @@ export function QuickMatchSetupScreen(props = {}) {
 
               {tournamentId ? (
                 /* TOURNAMENT LOCKED SPECIFICATIONS SUMMARY */
-                <View style={{
-                  backgroundColor: '#F8FAFC',
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: '#E2E8F0',
-                  padding: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-around'
-                }}>
-                  <View style={{ alignItems: 'center', gap: 4 }}>
-                    <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: '#64748B' }}>TOTAL OVERS</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <MaterialCommunityIcons name="cricket" size={16} color="#0284C7" />
-                      <Text style={{ fontSize: 14, fontFamily: systemFontBold, color: '#0F172A' }}>{totalOvers} Overs</Text>
+                <View style={{ gap: 10 }}>
+                  <View style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    padding: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-around'
+                  }}>
+                    <View style={{ alignItems: 'center', gap: 4 }}>
+                      <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: '#64748B' }}>TOTAL OVERS</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <MaterialCommunityIcons name="cricket" size={16} color="#0284C7" />
+                        <Text style={{ fontSize: 13.5, fontFamily: systemFontBold, color: '#0F172A' }}>{totalOvers} Overs</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ width: 1, height: 28, backgroundColor: '#E2E8F0' }} />
+
+                    <View style={{ alignItems: 'center', gap: 4 }}>
+                      <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: '#64748B' }}>BALL TYPE</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {ballType === 'leather' ? (
+                          <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: '#991B1B' }} />
+                        ) : ballType === 'other' ? (
+                          <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: '#FACC15' }} />
+                        ) : (
+                          <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: '#EF4444' }} />
+                        )}
+                        <Text style={{ fontSize: 13.5, fontFamily: systemFontBold, color: '#0F172A', textTransform: 'capitalize' }}>
+                          {ballType} Ball
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ width: 1, height: 28, backgroundColor: '#E2E8F0' }} />
+
+                    <View style={{ alignItems: 'center', gap: 4 }}>
+                      <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: '#64748B' }}>RULES</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <MaterialCommunityIcons name="shield-check" size={16} color="#16A34A" />
+                        <Text style={{ fontSize: 13, fontFamily: systemFontBold, color: '#15803D' }}>Official</Text>
+                      </View>
                     </View>
                   </View>
 
-                  <View style={{ width: 1, height: 28, backgroundColor: '#E2E8F0' }} />
-
-                  <View style={{ alignItems: 'center', gap: 4 }}>
-                    <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: '#64748B' }}>BALL TYPE</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      {ballType === 'leather' ? (
-                        <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: '#991B1B' }} />
-                      ) : ballType === 'other' ? (
-                        <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: '#FACC15' }} />
-                      ) : (
-                        <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: '#EF4444' }} />
-                      )}
-                      <Text style={{ fontSize: 14, fontFamily: systemFontBold, color: '#0F172A', textTransform: 'capitalize' }}>
-                        {ballType} Ball
-                      </Text>
+                  {/* LOCKED GROUND / VENUE ROW */}
+                  <View style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <MaterialCommunityIcons name="stadium" size={18} color="#0284C7" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 10, fontFamily: systemFontMedium, color: '#64748B' }}>MATCH VENUE / GROUND</Text>
+                        <Text style={{ fontSize: 13, fontFamily: systemFontBold, color: '#0F172A' }} numberOfLines={1}>
+                          {venueName || 'Official Tournament Ground'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
-                  <View style={{ width: 1, height: 28, backgroundColor: '#E2E8F0' }} />
-
-                  <View style={{ alignItems: 'center', gap: 4 }}>
-                    <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: '#64748B' }}>RULES</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <MaterialCommunityIcons name="shield-check" size={16} color="#16A34A" />
-                      <Text style={{ fontSize: 13, fontFamily: systemFontBold, color: '#15803D' }}>Official</Text>
+                  {/* MULTIPLE TOURNAMENT VENUES SELECTOR (ONLY IF TOURNAMENT HAS MULTIPLE GROUNDS) */}
+                  {tournamentVenues && tournamentVenues.length > 1 ? (
+                    <View style={{ gap: 4 }}>
+                      <Text style={styles.labelHeader}>SELECT TOURNAMENT GROUND</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingTop: 2 }}>
+                        {tournamentVenues.map((v, idx) => {
+                          const isSelected = venueName === v;
+                          return (
+                            <TouchableOpacity
+                              key={idx}
+                              onPress={() => setVenueName(v)}
+                              style={{
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 8,
+                                backgroundColor: isSelected ? '#0284C7' : '#F1F5F9',
+                                borderWidth: 1,
+                                borderColor: isSelected ? '#0284C7' : '#CBD5E1',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4
+                              }}
+                            >
+                              <MaterialCommunityIcons name="stadium" size={13} color={isSelected ? '#FFFFFF' : '#475569'} />
+                              <Text style={{ fontSize: 11.5, color: isSelected ? '#FFFFFF' : '#475569', fontFamily: systemFontMedium }}>
+                                {v}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
                     </View>
-                  </View>
+                  ) : null}
                 </View>
               ) : (
                 /* REGULAR QUICK MATCH: INTERACTIVE OVERS STEPPER & PRESETS + BALL SELECTOR */
@@ -1104,56 +1163,33 @@ export function QuickMatchSetupScreen(props = {}) {
                       })}
                     </View>
                   </View>
+
+                  {/* VENUE / GROUND TEXT INPUT FOR CASUAL QUICK MATCH */}
+                  <View style={{ gap: 4 }}>
+                    <Text style={styles.labelHeader}>VENUE / GROUND</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={venueName}
+                      onChangeText={(t) => setVenueName(capitalizeWords(t))}
+                      placeholder="Ground, School or Turf Name"
+                      placeholderTextColor="#94A3B8"
+                      autoCapitalize="words"
+                    />
+                  </View>
                 </>
               )}
 
-              {/* VENUE & UMPIRE COMPACT INPUTS */}
-              <View style={{ gap: 10 }}>
-                <View style={{ gap: 4 }}>
-                  <Text style={styles.labelHeader}>VENUE / GROUND</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={venueName}
-                    onChangeText={(t) => setVenueName(capitalizeWords(t))}
-                    placeholder="Ground, School or Turf Name"
-                    placeholderTextColor="#94A3B8"
-                    autoCapitalize="words"
-                  />
-                  {tournamentVenues && tournamentVenues.length > 1 ? (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingTop: 4 }}>
-                      {tournamentVenues.map((v, idx) => (
-                        <TouchableOpacity
-                          key={idx}
-                          onPress={() => setVenueName(v)}
-                          style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 4,
-                            borderRadius: 6,
-                            backgroundColor: venueName === v ? '#0284C7' : '#F1F5F9',
-                            borderWidth: 1,
-                            borderColor: venueName === v ? '#0284C7' : '#CBD5E1'
-                          }}
-                        >
-                          <Text style={{ fontSize: 11, color: venueName === v ? '#FFFFFF' : '#475569', fontFamily: systemFontMedium }}>
-                            {v}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  ) : null}
-                </View>
-
-                <View style={{ gap: 4 }}>
-                  <Text style={styles.labelHeader}>UMPIRE NAME</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={umpireName}
-                    onChangeText={(t) => setUmpireName(capitalizeWords(t))}
-                    placeholder="Umpire Name"
-                    placeholderTextColor="#94A3B8"
-                    autoCapitalize="words"
-                  />
-                </View>
+              {/* UMPIRE NAME INPUT */}
+              <View style={{ gap: 4 }}>
+                <Text style={styles.labelHeader}>UMPIRE NAME</Text>
+                <TextInput
+                  style={styles.input}
+                  value={umpireName}
+                  onChangeText={(t) => setUmpireName(capitalizeWords(t))}
+                  placeholder="Umpire Name"
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="words"
+                />
               </View>
             </View>
           </ScrollView>
