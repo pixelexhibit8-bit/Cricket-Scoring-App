@@ -231,9 +231,12 @@ export function useMatchSync({
     return () => clearInterval(timer);
   }, [flushOfflineSyncQueue]);
 
-  // Scorer Broadcast: Auto-sync activeMatch to Supabase and tournament with offline queue fallback
+  // Scorer Broadcast: Auto-sync activeMatch to Supabase with offline queue fallback
   useEffect(() => {
     if (activeMatch && currentScreen === 'scorerWizard') {
+      if (activeMatch.tournamentId) {
+        syncLiveMatchToTournament(activeMatch.tournamentId, activeMatch).catch(() => { });
+      }
       syncMatchToSupabase(activeMatch).then(res => {
         if (!res) {
           // Enqueue for background retry if network failed
@@ -241,18 +244,13 @@ export function useMatchSync({
             const queue = raw ? JSON.parse(raw) : [];
             const filtered = (Array.isArray(queue) ? queue : []).filter(m => m?.id !== activeMatch.id);
             filtered.push(activeMatch);
-            AsyncStorage.setItem(OFFLINE_SYNC_QUEUE_KEY, JSON.stringify(filtered)).catch(() => {});
-          }).catch(() => {});
+            AsyncStorage.setItem(OFFLINE_SYNC_QUEUE_KEY, JSON.stringify(filtered)).catch(() => { });
+          }).catch(() => { });
         } else {
           // Connection healthy: flush any backlog
           flushOfflineSyncQueue();
         }
       }).catch(() => { });
-
-      // Automatically sync live match score & state to tournament fixtures
-      if (activeMatch.tournamentId) {
-        syncLiveMatchToTournament(activeMatch.tournamentId, activeMatch).catch(() => {});
-      }
     }
   }, [activeMatch, currentScreen, flushOfflineSyncQueue]);
 

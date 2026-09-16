@@ -132,8 +132,7 @@ const styles = StyleSheet.create({
   inviteCaptainsBtn: {
     flex: 1,
     backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -148,9 +147,8 @@ const styles = StyleSheet.create({
   },
   addTeamBtn: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#DCDCE0',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -166,8 +164,7 @@ const styles = StyleSheet.create({
   teamsListContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     overflow: 'hidden'
   },
   teamCardRow: {
@@ -203,8 +200,7 @@ const styles = StyleSheet.create({
   emptyCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',

@@ -213,7 +213,7 @@ export function PublicSeriesViewScreen(props = {}) {
             return updatedList.find(t => t.id === prev.id) || prev;
           });
         }
-      }).catch(() => {});
+      }).catch(() => { });
     });
 
     return () => {
@@ -277,101 +277,104 @@ export function PublicSeriesViewScreen(props = {}) {
     });
   }, [filteredSheetTournaments, currentUser]);
 
-  // Dynamic Live & Finished Match Overlay on Tournament
+  // Dynamic Real-time Live Match Merged Tournament State
   const effectiveTournament = useMemo(() => {
     if (!tournament) return null;
-    const originalMatches = Array.isArray(tournament.matches) ? tournament.matches : [];
-    if (originalMatches.length === 0) return tournament;
+    const baseMatches = Array.isArray(tournament.matches) ? [...tournament.matches] : [];
 
-    const livePool = [];
-    if (matchCtx?.activeMatch && (matchCtx.activeMatch.phase === 'playing' || matchCtx.activeMatch.phase === 'inningBreak')) {
-      livePool.push(matchCtx.activeMatch);
+    const activeTournMatch = (matchCtx?.activeMatch?.tournamentId && String(matchCtx.activeMatch.tournamentId) === String(tournament.id))
+      ? matchCtx.activeMatch
+      : null;
+
+    const allLiveForTourn = Array.isArray(matchCtx?.liveMatches)
+      ? matchCtx.liveMatches.filter(lm => lm.tournamentId && String(lm.tournamentId) === String(tournament.id))
+      : [];
+
+    const liveSources = activeTournMatch
+      ? [activeTournMatch, ...allLiveForTourn.filter(m => m.id !== activeTournMatch.id)]
+      : allLiveForTourn;
+
+    if (liveSources.length === 0) {
+      return tournament;
     }
-    if (Array.isArray(matchCtx?.liveMatches)) {
-      matchCtx.liveMatches.forEach(lm => {
-        if (!livePool.some(m => (m.id && m.id === lm.id) || (m.supabaseId && m.supabaseId === lm.id))) {
-          livePool.push(lm);
-        }
-      });
-    }
 
-    const formatOversLocal = (balls = 0) => {
-      const b = Number(balls) || 0;
-      return `${Math.floor(b / 6)}.${b % 6}`;
-    };
-
-    const enrichedMatches = originalMatches.map(m => {
-      // 1. Check if matching any Live match
-      const matchingLive = livePool.find(lm => {
-        if (m.id && (lm.tournamentMatchId === m.id || lm.id === m.id)) return true;
-        const tournMatch = (lm.tournamentId && lm.tournamentId === tournament.id) || (lm.tournamentName && lm.tournamentName === tournament.name);
-        if (tournMatch) {
-          const t1A = String(m.team1?.name || m.team1 || '').trim().toLowerCase();
-          const t2A = String(m.team2?.name || m.team2 || '').trim().toLowerCase();
-          const t1B = String(lm.team1?.name || lm.teams?.[0]?.name || '').trim().toLowerCase();
-          const t2B = String(lm.team2?.name || lm.teams?.[1]?.name || '').trim().toLowerCase();
-          return (t1A === t1B && t2A === t2B) || (t1A === t2B && t2A === t1B);
-        }
-        return false;
+    const updatedMatches = baseMatches.map(m => {
+      const matchId = m.id;
+      const liveCandidate = liveSources.find(ls => {
+        if (ls.tournamentMatchId && (ls.tournamentMatchId === matchId || ls.id === matchId)) return true;
+        if (ls.id === matchId) return true;
+        const mT1 = String(m.team1?.name || m.team1 || '').trim().toLowerCase();
+        const mT2 = String(m.team2?.name || m.team2 || '').trim().toLowerCase();
+        const lsT1 = String(ls.team1?.name || ls.teams?.[0]?.name || ls.team1 || '').trim().toLowerCase();
+        const lsT2 = String(ls.team2?.name || ls.teams?.[1]?.name || ls.team2 || '').trim().toLowerCase();
+        return (mT1 && mT2 && ((mT1 === lsT1 && mT2 === lsT2) || (mT1 === lsT2 && mT2 === lsT1)));
       });
 
-      if (matchingLive) {
-        const inn1 = matchingLive.innings?.[0];
-        const inn2 = matchingLive.innings?.[1];
+      if (liveCandidate) {
         let t1Score = '';
         let t2Score = '';
-        if (inn1?.battingTeam) {
-          t1Score = `${inn1.battingTeam.runs ?? 0}/${inn1.battingTeam.wickets ?? 0} (${formatOversLocal(inn1.totalLegalBalls || 0)})`;
-        }
-        if (inn2?.battingTeam) {
-          t2Score = `${inn2.battingTeam.runs ?? 0}/${inn2.battingTeam.wickets ?? 0} (${formatOversLocal(inn2.totalLegalBalls || 0)})`;
+        let t1Overs = '';
+        let t2Overs = '';
+
+        if (Array.isArray(liveCandidate.innings)) {
+          if (liveCandidate.innings[0]?.battingTeam) {
+            const inn1 = liveCandidate.innings[0];
+            t1Score = `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}`;
+            t1Overs = `${inn1.overs ?? '0.0'}`;
+          }
+          if (liveCandidate.innings[1]?.battingTeam) {
+            const inn2 = liveCandidate.innings[1];
+            t2Score = `${inn2.battingTeam.runs ?? 0}-${inn2.battingTeam.wickets ?? 0}`;
+            t2Overs = `${inn2.overs ?? '0.0'}`;
+          } else if (liveCandidate.phase === 'playing' || liveCandidate.phase === 'inningBreak') {
+            t2Score = 'Yet to bat';
+          }
         }
 
         return {
           ...m,
-          ...matchingLive,
-          id: m.id || matchingLive.id,
-          status: 'LIVE',
-          phase: matchingLive.phase || 'playing',
+          ...liveCandidate,
+          id: m.id || liveCandidate.id,
+          tournamentMatchId: m.id,
           team1: {
-            ...(typeof m.team1 === 'object' ? m.team1 : {}),
-            name: matchingLive.team1?.name || matchingLive.teams?.[0]?.name || m.team1?.name || m.team1,
-            score: t1Score || matchingLive.team1?.score || ''
+            ...m.team1,
+            name: liveCandidate.team1?.name || m.team1?.name,
+            score: t1Score ? `${t1Score} (${t1Overs})` : (liveCandidate.team1?.score || m.team1?.score || '')
           },
           team2: {
-            ...(typeof m.team2 === 'object' ? m.team2 : {}),
-            name: matchingLive.team2?.name || matchingLive.teams?.[1]?.name || m.team2?.name || m.team2,
-            score: t2Score || matchingLive.team2?.score || ''
+            ...m.team2,
+            name: liveCandidate.team2?.name || m.team2?.name,
+            score: t2Score ? (t2Score === 'Yet to bat' ? 'Yet to bat' : `${t2Score} (${t2Overs})`) : (liveCandidate.team2?.score || m.team2?.score || '')
           },
-          innings: matchingLive.innings || m.innings || [],
-          rawMatchData: matchingLive
+          status: liveCandidate.status || (liveCandidate.phase === 'finished' ? 'FINISHED' : 'LIVE'),
+          phase: liveCandidate.phase || 'playing',
+          rawMatchData: liveCandidate
         };
       }
-
       return m;
     });
 
     return {
       ...tournament,
-      matches: enrichedMatches
+      matches: updatedMatches
     };
   }, [tournament, matchCtx?.activeMatch, matchCtx?.liveMatches]);
 
   // Dynamic Calculated Points Table Data
   const pointsTableData = useMemo(() => {
-    const currentTourn = effectiveTournament || tournament;
-    if (!currentTourn) return [];
-    const teamsList = currentTourn.teams || [];
-    const matchesList = currentTourn.matches || [];
+    const target = effectiveTournament || tournament;
+    if (!target) return [];
+    const teamsList = target.teams || [];
+    const matchesList = target.matches || [];
     if (teamsList.length === 0) return [];
     return autoCalculatePointsTable(teamsList, matchesList);
   }, [effectiveTournament, tournament]);
 
   // Comprehensive Calculated Stats from Engine
   const tournamentStats = useMemo(() => {
-    const currentTourn = effectiveTournament || tournament;
-    if (!currentTourn) return null;
-    return calculateTournamentStats(currentTourn);
+    const target = effectiveTournament || tournament;
+    if (!target) return null;
+    return calculateTournamentStats(target);
   }, [effectiveTournament, tournament]);
 
   // Tournament Code Generator
@@ -450,11 +453,47 @@ export function PublicSeriesViewScreen(props = {}) {
     }
   };
 
-  // Start Instant Scoring
+  // Start Instant Scoring or Resume Active Match
   const handleStartMatchScoring = (match = null) => {
-    const isLive = match?.status === 'LIVE' || match?.phase === 'playing' || (match?.rawMatchData && match.rawMatchData.phase === 'playing');
-    if (isLive) {
-      handleWatchLive(match);
+    const activeTournMatch = matchCtx?.activeMatch;
+    const isThisMatchActive = activeTournMatch && (
+      (match?.id && (activeTournMatch.id === match.id || activeTournMatch.tournamentMatchId === match.id)) ||
+      (activeTournMatch.tournamentId && String(activeTournMatch.tournamentId) === String(tournament?.id) && (
+        (String(activeTournMatch.team1?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase() &&
+         String(activeTournMatch.team2?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase()) ||
+        (String(activeTournMatch.team1?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase() &&
+         String(activeTournMatch.team2?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase())
+      ))
+    );
+
+    if (isThisMatchActive && activeTournMatch.phase && activeTournMatch.phase !== 'finished') {
+      if (matchCtx?.setIsScorerUnlocked) matchCtx.setIsScorerUnlocked(true);
+      if (matchCtx?.setCurrentScreen) matchCtx.setCurrentScreen('scorerWizard');
+      const nav = navigation || props.navigation;
+      if (nav?.navigate) {
+        nav.navigate('ScorerConsole', { matchId: activeTournMatch.id });
+      }
+      return;
+    }
+
+    const liveMatchCandidate = matchCtx?.liveMatches?.find(lm =>
+      (match?.id && (lm.id === match.id || lm.tournamentMatchId === match.id)) ||
+      (lm.tournamentId && String(lm.tournamentId) === String(tournament?.id) && (
+        (String(lm.team1?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase() &&
+         String(lm.team2?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase()) ||
+        (String(lm.team1?.name || '').trim().toLowerCase() === String(match?.team2?.name || match?.team2 || '').trim().toLowerCase() &&
+         String(lm.team2?.name || '').trim().toLowerCase() === String(match?.team1?.name || match?.team1 || '').trim().toLowerCase())
+      ))
+    );
+
+    if (liveMatchCandidate && liveMatchCandidate.phase && liveMatchCandidate.phase !== 'finished') {
+      if (matchCtx?.setActiveMatch) matchCtx.setActiveMatch(liveMatchCandidate);
+      if (matchCtx?.setIsScorerUnlocked) matchCtx.setIsScorerUnlocked(true);
+      if (matchCtx?.setCurrentScreen) matchCtx.setCurrentScreen('scorerWizard');
+      const nav = navigation || props.navigation;
+      if (nav?.navigate) {
+        nav.navigate('ScorerConsole', { matchId: liveMatchCandidate.id });
+      }
       return;
     }
 
@@ -498,22 +537,12 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Watch Live
   const handleWatchLive = (match = null) => {
-    const liveTarget = match?.rawMatchData || match || matchCtx?.activeMatch;
-    if (matchCtx?.setActiveMatch && liveTarget) {
-      matchCtx.setActiveMatch(liveTarget);
-    }
     const nav = navigation || props.navigation;
     const params = {
-      matchId: liveTarget?.id || match?.id,
+      matchId: match?.id,
       tournamentId: tournament?.id,
-      matchData: liveTarget
+      matchData: match
     };
-    if (nav?.navigate) {
-      nav.navigate('PublicLiveView', params);
-    } else {
-      navigate('publicLiveView', params);
-    }
-  };
     if (nav?.navigate) {
       nav.navigate('PublicLiveView', params);
     } else {
@@ -1122,8 +1151,8 @@ export function PublicSeriesViewScreen(props = {}) {
             <TournamentStatsTab
               tournament={effectiveTournament || tournament}
               stats={tournamentStats}
-              onSelectStatCategory={() => {}}
-              onSelectPlayer={(p) => {}}
+              onSelectStatCategory={() => { }}
+              onSelectPlayer={(p) => { }}
             />
           </View>
 
@@ -1131,7 +1160,7 @@ export function PublicSeriesViewScreen(props = {}) {
           <View key="venues" style={{ flex: 1 }}>
             <TournamentVenuesTab
               tournament={effectiveTournament || tournament}
-              onSelectVenue={() => {}}
+              onSelectVenue={() => { }}
             />
           </View>
 
@@ -1197,9 +1226,9 @@ export function PublicSeriesViewScreen(props = {}) {
             setSelectedTeamDrawer(null);
             setAddPlayerInlineVisible(false);
           }}>
-            <Pressable style={styles.modalContent} onPress={() => {}}>
+            <Pressable style={styles.modalContent} onPress={() => { }}>
               <View style={styles.modalHandle} />
-              
+
               {/* Header */}
               <View style={styles.modalHeaderRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -1669,8 +1698,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
     position: 'relative',
     marginRight: 8,
     elevation: 2,
@@ -1680,8 +1708,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3
   },
   carouselCardSelected: {
-    borderColor: '#18181B',
-    borderWidth: 2,
+    borderWidth: 0,
     elevation: 4,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
@@ -1689,8 +1716,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4
   },
   carouselCardActive: {
-    borderColor: '#18181B',
-    borderWidth: 2,
+    borderWidth: 0,
     elevation: 4,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
@@ -1792,8 +1818,7 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 8,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -1926,8 +1951,7 @@ const styles = StyleSheet.create({
   },
   modalTextInput: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1950,8 +1974,7 @@ const styles = StyleSheet.create({
   },
   teamSelectPill: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 14
@@ -2055,8 +2078,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 40,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     marginBottom: 12
   },
   searchInput: {
@@ -2092,11 +2114,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 6,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F1F5F9'
+    borderWidth: 0
   },
   seriesSheetItemRowSelected: {
-    borderColor: '#BAE6FD',
     backgroundColor: '#F0F9FF'
   },
   sheetItemLogoWrap: {
@@ -2173,15 +2193,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8
   },
   drawerActionPillActive: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B'
+    backgroundColor: '#18181B'
   },
   drawerActionPillText: {
     fontSize: 11.5,
@@ -2193,8 +2211,7 @@ const styles = StyleSheet.create({
   },
   drawerActionPillDelete: {
     backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
+    borderWidth: 0,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 8,
@@ -2203,8 +2220,7 @@ const styles = StyleSheet.create({
   },
   inlineAddPlayerBox: {
     backgroundColor: themeColors.surfaceOffWhite,
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     borderRadius: 10,
     padding: 10,
     marginBottom: 10
@@ -2212,8 +2228,7 @@ const styles = StyleSheet.create({
   inlinePlayerInput: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: themeColors.borderDark,
+    borderWidth: 0,
     borderRadius: 8,
     paddingHorizontal: 10,
     height: 36,
@@ -2223,15 +2238,13 @@ const styles = StyleSheet.create({
   },
   roleSelectChip: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 6
   },
   roleSelectChipActive: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B'
+    backgroundColor: '#18181B'
   },
   roleSelectChipText: {
     fontSize: 10.5,
@@ -2257,20 +2270,17 @@ const styles = StyleSheet.create({
     fontFamily: systemFontBold
   },
   roleToggleBadge: {
-    borderWidth: 1,
-    borderColor: themeColors.border,
+    borderWidth: 0,
     backgroundColor: themeColors.surfaceOffWhite,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4
   },
   roleToggleBadgeCaptain: {
-    backgroundColor: '#18181B',
-    borderColor: '#18181B'
+    backgroundColor: '#18181B'
   },
   roleToggleBadgeWk: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7'
+    backgroundColor: '#0284C7'
   },
   roleToggleBadgeText: {
     fontSize: 9.5,
@@ -2291,8 +2301,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderWidth: 0,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,

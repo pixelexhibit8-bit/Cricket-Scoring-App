@@ -78,7 +78,7 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
       const t1Short = String(t1Resolved.shortName || m.team1?.shortName || '').toLowerCase().trim();
       const t2Short = String(t2Resolved.shortName || m.team2?.shortName || '').toLowerCase().trim();
       return t1Name.includes(filterNorm) || t2Name.includes(filterNorm) ||
-             (t1Short && t1Short === filterNorm) || (t2Short && t2Short === filterNorm);
+        (t1Short && t1Short === filterNorm) || (t2Short && t2Short === filterNorm);
     });
   }, [matches, selectedTeamFilter, teams]);
 
@@ -90,7 +90,7 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
 
     filteredMatches.forEach(m => {
       const isFinished = Boolean(m.result || m.status === 'FINISHED' || m.phase === 'result' || m.phase === 'finished');
-      const isLive = m.status === 'LIVE' || m.phase === 'playing' || m.phase === 'inningBreak' || (m.rawMatchData && (m.rawMatchData.phase === 'playing' || m.rawMatchData.phase === 'inningBreak'));
+      const isLive = m.status === 'LIVE' || m.phase === 'playing' || m.phase === 'inningBreak' || Boolean(m.rawMatchData && m.rawMatchData.phase !== 'finished');
 
       if (isFinished) {
         completed.push(m);
@@ -237,38 +237,21 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
               const t1Name = t1Resolved.name || t1Resolved.shortName || 'Team 1';
               const t2Name = t2Resolved.name || t2Resolved.shortName || 'Team 2';
 
-              const inn1 = m.innings?.[0] || m.rawMatchData?.innings?.[0];
-              const inn2 = m.innings?.[1] || m.rawMatchData?.innings?.[1];
-
-              const formatOversClean = (balls = 0) => {
-                const b = Number(balls) || 0;
-                return `${Math.floor(b / 6)}.${b % 6}`;
-              };
-
-              let t1ScoreDisplay = m.team1?.score;
-              let t2ScoreDisplay = m.team2?.score;
-
-              if (inn1?.battingTeam) {
-                const runs1 = inn1.battingTeam.runs ?? 0;
-                const wkts1 = inn1.battingTeam.wickets ?? 0;
-                const ov1 = formatOversClean(inn1.totalLegalBalls || 0);
-                t1ScoreDisplay = `${runs1}-${wkts1}  (${ov1})`;
-              }
-              if (inn2?.battingTeam) {
-                const runs2 = inn2.battingTeam.runs ?? 0;
-                const wkts2 = inn2.battingTeam.wickets ?? 0;
-                const ov2 = formatOversClean(inn2.totalLegalBalls || 0);
-                t2ScoreDisplay = `${runs2}-${wkts2}  (${ov2})`;
-              } else if (!t2ScoreDisplay) {
-                t2ScoreDisplay = 'Yet to bat';
-              }
+              const t1Score = m.team1?.score || (m.innings?.[0]?.battingTeam?.runs != null ? `${m.innings[0].battingTeam.runs}-${m.innings[0].battingTeam.wickets || 0} (${m.innings[0].overs || 0})` : '0-0 (0.0)');
+              const t2Score = m.team2?.score || (m.innings?.[1]?.battingTeam?.runs != null ? `${m.innings[1].battingTeam.runs}-${m.innings[1].battingTeam.wickets || 0} (${m.innings[1].overs || 0})` : 'Yet to bat');
 
               return (
                 <TouchableOpacity
                   key={m.id || `live_${idx}`}
                   style={styles.liveMatchCard}
                   activeOpacity={0.85}
-                  onPress={() => onWatchLive && onWatchLive(m)}
+                  onPress={() => {
+                    if (isUserOrganiser && onStartMatchScoring) {
+                      onStartMatchScoring(m);
+                    } else if (onWatchLive) {
+                      onWatchLive(m);
+                    }
+                  }}
                 >
                   <View style={styles.liveHeaderRow}>
                     <View style={styles.liveBadgeRow}>
@@ -284,12 +267,12 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                     <View style={styles.liveTeamRow}>
                       <TeamIdentityMark team={t1Resolved} tournamentTeams={teams} size={24} />
                       <Text style={styles.liveTeamName} numberOfLines={1}>{t1Name}</Text>
-                      <Text style={styles.liveTeamScore}>{t1ScoreDisplay || '0-0 (0.0)'}</Text>
+                      <Text style={styles.liveTeamScore}>{t1Score}</Text>
                     </View>
-                    <View style={[styles.liveTeamRow, { marginTop: 8 }]}>
+                    <View style={[styles.liveTeamRow, { marginTop: 6 }]}>
                       <TeamIdentityMark team={t2Resolved} tournamentTeams={teams} size={24} />
                       <Text style={styles.liveTeamName} numberOfLines={1}>{t2Name}</Text>
-                      <Text style={[styles.liveTeamScore, t2ScoreDisplay === 'Yet to bat' && { color: '#64748B', fontFamily: systemFontMedium }]}>{t2ScoreDisplay}</Text>
+                      <Text style={styles.liveTeamScore}>{t2Score}</Text>
                     </View>
                   </View>
 
@@ -297,12 +280,30 @@ export const TournamentMatchesTab = React.memo(function TournamentMatchesTab({
                     <Text style={styles.liveStatusText} numberOfLines={1}>
                       {m.equation || m.statusText || 'Match is live in progress'}
                     </Text>
-                    <TouchableOpacity
-                      style={styles.watchLiveBtn}
-                      onPress={() => onWatchLive && onWatchLive(m)}
-                    >
-                      <Text style={styles.watchLiveBtnText}>Watch Live ›</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      {isUserOrganiser ? (
+                        <TouchableOpacity
+                          style={styles.resumeScoringLiveBtn}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (onStartMatchScoring) onStartMatchScoring(m);
+                          }}
+                          activeOpacity={0.85}
+                        >
+                          <MaterialCommunityIcons name="cricket" size={12} color="#FFFFFF" />
+                          <Text style={styles.resumeScoringLiveText}>Resume Scoring</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      <TouchableOpacity
+                        style={styles.watchLiveBtn}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          if (onWatchLive) onWatchLive(m);
+                        }}
+                      >
+                        <Text style={styles.watchLiveBtnText}>Watch Live ›</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </TouchableOpacity>
               );
@@ -572,9 +573,8 @@ const styles = StyleSheet.create({
   },
   outlineActionBtn: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#DCDCE0',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -729,9 +729,23 @@ const styles = StyleSheet.create({
     fontFamily: systemFontMedium,
     color: '#0284C7'
   },
-  watchLiveBtn: {
+  resumeScoringLiveBtn: {
+    backgroundColor: '#18181B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 2
+    paddingVertical: 4,
+    borderRadius: 6
+  },
+  resumeScoringLiveText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontFamily: systemFontBold
+  },
+  watchLiveBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4
   },
   watchLiveBtnText: {
     fontSize: 11.5,
@@ -821,8 +835,7 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 8,
     backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD'
+    borderWidth: 0
   },
   rescheduleBtnText: {
     fontSize: 12,

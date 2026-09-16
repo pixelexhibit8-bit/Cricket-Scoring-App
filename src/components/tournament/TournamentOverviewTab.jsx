@@ -167,30 +167,15 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
                         );
                       })()
                     ) : isLive ? (
-                      (() => {
-                        const inn1 = m.innings?.[0] || m.rawMatchData?.innings?.[0];
-                        const inn2 = m.innings?.[1] || m.rawMatchData?.innings?.[1];
-                        const activeInn = inn2?.battingTeam ? inn2 : (inn1?.battingTeam ? inn1 : null);
-                        const formatOversClean = (balls = 0) => {
-                          const b = Number(balls) || 0;
-                          return `${Math.floor(b / 6)}.${b % 6}`;
-                        };
-                        const liveScore = activeInn
-                          ? `${activeInn.battingTeam.runs ?? 0}-${activeInn.battingTeam.wickets ?? 0} (${formatOversClean(activeInn.totalLegalBalls || 0)})`
-                          : (m.team1?.score || 'In Progress');
-
-                        return (
-                          <View style={styles.liveCenterBlock}>
-                            <View style={styles.liveBadge}>
-                              <View style={styles.liveDot} />
-                              <Text style={styles.liveBadgeText}>LIVE</Text>
-                            </View>
-                            <Text style={styles.liveScoreText}>
-                              {liveScore}
-                            </Text>
-                          </View>
-                        );
-                      })()
+                      <View style={styles.liveCenterBlock}>
+                        <View style={styles.liveBadge}>
+                          <View style={styles.liveDot} />
+                          <Text style={styles.liveBadgeText}>LIVE</Text>
+                        </View>
+                        <Text style={styles.liveScoreText}>
+                          {m.team1?.score || 'In Progress'}
+                        </Text>
+                      </View>
                     ) : (
                       <View style={styles.upcomingCenterBlock}>
                         <Text style={styles.matchTimeText}>
@@ -613,8 +598,7 @@ const styles = StyleSheet.create({
   heroStatCard: {
     backgroundColor: '#FAF5FF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
+    borderWidth: 0,
     padding: 14,
     marginBottom: 10
   },
@@ -676,8 +660,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0FDF4',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderWidth: 0,
     padding: 12
   },
   miniCardCategoryLabel: {
@@ -719,8 +702,7 @@ const styles = StyleSheet.create({
   singleRowStatCard: {
     backgroundColor: '#EFF6FF',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
+    borderWidth: 0,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 8
@@ -763,10 +745,9 @@ const styles = StyleSheet.create({
   },
   teamSquadCard: {
     width: 100,
-    backgroundColor: '#F8F8FA',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -788,8 +769,7 @@ const styles = StyleSheet.create({
   seriesInfoCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     paddingHorizontal: 16,
     paddingVertical: 8
   },
@@ -817,8 +797,7 @@ const styles = StyleSheet.create({
   statsNotAvailableCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center'
@@ -830,8 +809,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E0F2FE'
+    borderWidth: 0
   },
   statsNotAvailableTitle: {
     fontSize: 13.5,

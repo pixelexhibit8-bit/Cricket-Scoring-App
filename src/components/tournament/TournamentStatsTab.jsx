@@ -277,8 +277,7 @@ const styles = StyleSheet.create({
   emptyStatsContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     padding: 32,
     alignItems: 'center',
     justifyContent: 'center'
@@ -291,8 +290,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E0F2FE'
+    borderWidth: 0
   },
   emptyStatsTitle: {
     fontSize: 16,
@@ -318,8 +316,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#EEEEF0'
+    borderWidth: 0
   },
   emptyMatchesBadgeText: {
     fontSize: 11.5,
@@ -329,8 +326,7 @@ const styles = StyleSheet.create({
   topAggregateCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
@@ -384,8 +380,7 @@ const styles = StyleSheet.create({
   statsListContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     overflow: 'hidden'
   },
   statRowItem: {
@@ -407,8 +402,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 1,
-    borderWidth: 1,
-    borderColor: '#EEEEF0'
+    borderWidth: 0
   },
   statPlayerInfoCol: {
     flex: 1
@@ -442,8 +436,7 @@ const styles = StyleSheet.create({
   allStatsBottomBtn: {
     backgroundColor: '#EFF6FF',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
+    borderWidth: 0,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',

@@ -364,7 +364,7 @@ export async function getTournamentsFromStorage() {
       const existingSpl = list[existingSplIdx];
       const hasOverHistory = existingSpl.matches?.[0]?.rawMatchData?.innings?.[0]?.overHistory?.length > 0;
       const needsFullReset = !hasOverHistory || (existingSpl.teams?.[0]?.players?.length || 0) < 11;
-      
+
       if (needsFullReset) {
         list[existingSplIdx] = spl;
         changed = true;
@@ -921,7 +921,7 @@ export async function saveTournamentFixtures(tournamentId, fixtures = []) {
  */
 export function subscribeToTournamentsLive(onUpdate) {
   if (!supabase || typeof onUpdate !== 'function') {
-    return () => {};
+    return () => { };
   }
 
   try {
@@ -941,11 +941,11 @@ export function subscribeToTournamentsLive(onUpdate) {
     return () => {
       try {
         supabase.removeChannel(channel);
-      } catch (e) {}
+      } catch (e) { }
     };
   } catch (err) {
     console.warn('[TournamentService Realtime Init Error]:', err);
-    return () => {};
+    return () => { };
   }
 }
 
@@ -969,14 +969,14 @@ export async function syncFinishedMatchToTournament(tournamentId, finishedMatch)
             list = [target, ...list];
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (!target) return null;
 
     const currentMatches = Array.isArray(target.matches) ? target.matches : [];
     const matchId = finishedMatch.tournamentMatchId || finishedMatch.id;
-    
+
     const t1Name = finishedMatch.team1?.name || finishedMatch.team1Name || finishedMatch.inn1BattingTeam || 'Team 1';
     const t2Name = finishedMatch.team2?.name || finishedMatch.team2Name || finishedMatch.inn1BowlingTeam || 'Team 2';
     const t1Norm = String(t1Name).trim().toLowerCase();
@@ -1093,77 +1093,61 @@ export async function syncLiveMatchToTournament(tournamentId, liveMatch) {
   if (!tournamentId || !liveMatch) return null;
   try {
     const list = await getTournamentsFromStorage();
-    const target = list.find(t => t.id === tournamentId);
+    const target = list.find(t => String(t.id) === String(tournamentId));
     if (!target) return null;
 
     const currentMatches = Array.isArray(target.matches) ? target.matches : [];
     const matchId = liveMatch.tournamentMatchId || liveMatch.id;
+
     const t1Name = liveMatch.team1?.name || liveMatch.teams?.[0]?.name || 'Team 1';
     const t2Name = liveMatch.team2?.name || liveMatch.teams?.[1]?.name || 'Team 2';
 
-    let matchIndex = currentMatches.findIndex(m => m.id === matchId);
-    if (matchIndex === -1) {
-      const norm1 = String(t1Name).trim().toLowerCase();
-      const norm2 = String(t2Name).trim().toLowerCase();
-      matchIndex = currentMatches.findIndex(m => {
-        const m1 = String(m.team1?.name || m.team1 || '').trim().toLowerCase();
-        const m2 = String(m.team2?.name || m.team2 || '').trim().toLowerCase();
-        return (m1 === norm1 && m2 === norm2) || (m1 === norm2 && m2 === norm1);
-      });
+    let t1Score = liveMatch.team1?.score || '';
+    let t2Score = liveMatch.team2?.score || '';
+    let t1Overs = liveMatch.team1?.overs || '';
+    let t2Overs = liveMatch.team2?.overs || '';
+
+    if (Array.isArray(liveMatch.innings)) {
+      if (liveMatch.innings[0]?.battingTeam) {
+        const inn1 = liveMatch.innings[0];
+        t1Score = `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}`;
+        t1Overs = `${inn1.overs ?? '0.0'}`;
+      }
+      if (liveMatch.innings[1]?.battingTeam) {
+        const inn2 = liveMatch.innings[1];
+        t2Score = `${inn2.battingTeam.runs ?? 0}-${inn2.battingTeam.wickets ?? 0}`;
+        t2Overs = `${inn2.overs ?? '0.0'}`;
+      } else if (liveMatch.phase === 'playing' || liveMatch.phase === 'inningBreak') {
+        t2Score = 'Yet to bat';
+      }
     }
 
-    const inn1 = liveMatch.innings?.[0];
-    const inn2 = liveMatch.innings?.[1];
+    const matchIndex = currentMatches.findIndex(m => {
+      if (m.id && (m.id === matchId || m.tournamentMatchId === matchId)) return true;
+      if (m.tournamentMatchId && m.tournamentMatchId === matchId) return true;
+      const mT1 = String(m.team1?.name || m.team1 || '').trim().toLowerCase();
+      const mT2 = String(m.team2?.name || m.team2 || '').trim().toLowerCase();
+      const lT1 = String(t1Name).trim().toLowerCase();
+      const lT2 = String(t2Name).trim().toLowerCase();
+      return (mT1 && mT2 && ((mT1 === lT1 && mT2 === lT2) || (mT1 === lT2 && mT2 === lT1)));
+    });
 
-    let t1Score = '';
-    let t2Score = '';
-
-    const formatOversLocal = (balls = 0) => {
-      const b = Number(balls) || 0;
-      return `${Math.floor(b / 6)}.${b % 6}`;
-    };
-
-    if (inn1) {
-      const runs1 = inn1.battingTeam?.runs ?? 0;
-      const wkts1 = inn1.battingTeam?.wickets ?? 0;
-      const ov1 = formatOversLocal(inn1.totalLegalBalls || 0);
-      t1Score = `${runs1}/${wkts1} (${ov1})`;
-    }
-    if (inn2) {
-      const runs2 = inn2.battingTeam?.runs ?? 0;
-      const wkts2 = inn2.battingTeam?.wickets ?? 0;
-      const ov2 = formatOversLocal(inn2.totalLegalBalls || 0);
-      t2Score = `${runs2}/${wkts2} (${ov2})`;
-    }
-
-    const existing = matchIndex >= 0 ? currentMatches[matchIndex] : null;
     const liveMatchObj = {
-      ...(existing || {}),
-      id: existing?.id || matchId,
-      matchNumber: existing?.matchNumber || existing?.matchNo || currentMatches.length + 1,
-      stage: existing?.stage || 'LEAGUE',
-      team1: {
-        ...(typeof existing?.team1 === 'object' ? existing.team1 : {}),
-        name: existing?.team1?.name || (typeof existing?.team1 === 'string' ? existing.team1 : null) || t1Name,
-        score: t1Score || liveMatch.team1?.score || ''
-      },
-      team2: {
-        ...(typeof existing?.team2 === 'object' ? existing.team2 : {}),
-        name: existing?.team2?.name || (typeof existing?.team2 === 'string' ? existing.team2 : null) || t2Name,
-        score: t2Score || liveMatch.team2?.score || ''
-      },
-      dateStr: liveMatch.matchDate || existing?.dateStr || 'Live Now',
+      id: matchId,
+      tournamentMatchId: matchId,
+      team1: { name: t1Name, score: t1Score ? `${t1Score} (${t1Overs})` : (liveMatch.team1?.score || '') },
+      team2: { name: t2Name, score: t2Score ? (t2Score === 'Yet to bat' ? 'Yet to bat' : `${t2Score} (${t2Overs})`) : (liveMatch.team2?.score || '') },
+      dateStr: liveMatch.matchDate || 'Live Now',
       status: 'LIVE',
       phase: liveMatch.phase || 'playing',
-      venue: liveMatch.venue || existing?.venue || target.city || 'Local Ground',
-      innings: liveMatch.innings || existing?.innings || [],
+      venue: liveMatch.venue || target.city || 'Local Ground',
       rawMatchData: liveMatch
     };
 
     let newMatchesList;
     if (matchIndex >= 0) {
       newMatchesList = [...currentMatches];
-      newMatchesList[matchIndex] = liveMatchObj;
+      newMatchesList[matchIndex] = { ...newMatchesList[matchIndex], ...liveMatchObj };
     } else {
       newMatchesList = [...currentMatches, liveMatchObj];
     }
@@ -1174,22 +1158,14 @@ export async function syncLiveMatchToTournament(tournamentId, liveMatch) {
     await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(list));
 
     if (supabase) {
-      try {
-        await supabase
-          .from('tournaments')
-          .update({
-            matches: newMatchesList,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', tournamentId);
-      } catch (cloudErr) {
-        console.warn('[TournamentService] Supabase sync error on live match:', cloudErr);
-      }
+      supabase.from('tournaments').update({
+        matches: newMatchesList,
+        updated_at: new Date().toISOString()
+      }).eq('id', target.id).then(() => { }).catch(() => { });
     }
 
     return target;
   } catch (err) {
-    console.warn('[TournamentService] syncLiveMatchToTournament error:', err);
     return null;
   }
 }
@@ -1316,14 +1292,14 @@ export async function addPlayerToTournamentTeam(tournamentId, teamNameOrId, play
       const normalizedPlayer = typeof playerObj === 'string'
         ? { id: `tp_${Date.now()}_${currentPlayers.length + 1}`, name: playerName, role: 'All-Rounder', phone: '', isCaptain: false, isWicketKeeper: false }
         : {
-            id: playerObj.id || `tp_${Date.now()}_${currentPlayers.length + 1}`,
-            name: playerName,
-            role: playerObj.role || 'All-Rounder',
-            phone: playerObj.phone || playerObj.mobile || '',
-            photoUrl: playerObj.photoUrl || playerObj.avatar || '',
-            isCaptain: Boolean(playerObj.isCaptain),
-            isWicketKeeper: Boolean(playerObj.isWicketKeeper)
-          };
+          id: playerObj.id || `tp_${Date.now()}_${currentPlayers.length + 1}`,
+          name: playerName,
+          role: playerObj.role || 'All-Rounder',
+          phone: playerObj.phone || playerObj.mobile || '',
+          photoUrl: playerObj.photoUrl || playerObj.avatar || '',
+          isCaptain: Boolean(playerObj.isCaptain),
+          isWicketKeeper: Boolean(playerObj.isWicketKeeper)
+        };
 
       currentPlayers.push(normalizedPlayer);
     }

@@ -121,8 +121,7 @@ const styles = StyleSheet.create({
   venuesCardContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     overflow: 'hidden'
   },
   venueRowItem: {

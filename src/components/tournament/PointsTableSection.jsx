@@ -316,8 +316,7 @@ const styles = StyleSheet.create({
   tableCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     overflow: 'hidden'
   },
   tableHeaderRow: {
@@ -544,8 +543,7 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     gap: 6
   },
   emptyCardTitle: {

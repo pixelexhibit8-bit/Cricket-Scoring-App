@@ -142,8 +142,7 @@ const styles = StyleSheet.create({
   specsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#EEEEF0',
+    borderWidth: 0,
     paddingHorizontal: 16,
     paddingVertical: 6
   },
