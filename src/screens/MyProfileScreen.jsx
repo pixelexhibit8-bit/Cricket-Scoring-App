@@ -15,6 +15,7 @@ import {
   StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PagerView from 'react-native-pager-view';
 import * as ImagePicker from 'expo-image-picker';
@@ -59,6 +60,9 @@ import {
 
 export function MyProfileScreen(props = {}) {
   const matchCtx = useMatch();
+  const routeParams = props.route?.params || {};
+  const isExplicitMyProfile = props.isMyProfile === true || routeParams.isMyProfile === true || props.targetPlayer === null || routeParams.targetPlayer === null;
+
   const {
     finishedMatches = props.finishedMatches || matchCtx.finishedArchive || [],
     activeMatch = props.activeMatch !== undefined ? props.activeMatch : matchCtx.activeMatch,
@@ -68,7 +72,13 @@ export function MyProfileScreen(props = {}) {
     }),
     onStartQuickMatch = props.onStartQuickMatch || matchCtx.openScorerScreen,
     onJoinMatchByCode = props.onJoinMatchByCode || matchCtx.handleJoinMatchByCode,
-    targetPlayer = props.targetPlayer !== undefined ? props.targetPlayer : matchCtx.selectedPlayerProfile,
+    targetPlayer = isExplicitMyProfile
+      ? null
+      : (props.targetPlayer !== undefined
+          ? props.targetPlayer
+          : (routeParams.targetPlayer !== undefined
+              ? routeParams.targetPlayer
+              : (routeParams.name ? routeParams : matchCtx.selectedPlayerProfile))),
     onBack = props.onBack || (() => {
       if (props.navigation && props.navigation.canGoBack()) {
         props.navigation.goBack();
