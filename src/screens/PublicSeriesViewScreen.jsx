@@ -553,11 +553,19 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Watch Live
   const handleWatchLive = (match = null) => {
+    if (!match) return;
+    if (matchCtx?.setActiveMatch) {
+      matchCtx.setActiveMatch(match.rawMatchData || match);
+    }
+    if (matchCtx?.setCurrentScreen) {
+      matchCtx.setCurrentScreen('liveView');
+    }
     const nav = navigation || props.navigation;
     const params = {
       matchId: match?.id,
-      tournamentId: tournament?.id,
-      matchData: match
+      tournamentId: tournament?.id || match?.tournamentId,
+      matchData: match,
+      match: match
     };
     if (nav?.navigate) {
       nav.navigate('PublicLiveView', params);
@@ -568,21 +576,35 @@ export function PublicSeriesViewScreen(props = {}) {
 
   // Match Details / Scorecard Router
   const handleViewScorecard = (match = null) => {
+    if (!match) return;
     const isFinished = match?.status === 'FINISHED' || Boolean(match?.result) || match?.phase === 'finished';
     const nav = navigation || props.navigation;
     const params = {
       matchId: match?.id,
-      tournamentId: tournament?.id,
+      tournamentId: tournament?.id || match?.tournamentId,
       matchData: match,
+      match: match,
       isOrganiser: isUserOrganiser
     };
     if (isFinished) {
+      if (matchCtx?.setSelectedMatch) {
+        matchCtx.setSelectedMatch(match);
+      }
+      if (matchCtx?.setCurrentScreen) {
+        matchCtx.setCurrentScreen('finishedView');
+      }
       if (nav?.navigate) {
         nav.navigate('FinishedMatchView', params);
       } else {
         navigate('finishedView', params);
       }
     } else {
+      if (matchCtx?.setActiveMatch) {
+        matchCtx.setActiveMatch(match.rawMatchData || match);
+      }
+      if (matchCtx?.setCurrentScreen) {
+        matchCtx.setCurrentScreen('liveView');
+      }
       if (nav?.navigate) {
         nav.navigate('PublicLiveView', params);
       } else {
@@ -1950,12 +1972,12 @@ const styles = StyleSheet.create({
   },
   tabItemBtn: {
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center'
   },
   tabLabelText: {
-    fontSize: 14.5,
+    fontSize: 16.5,
     fontFamily: systemFontMedium,
     color: themeColors.textMuted
   },
@@ -1969,7 +1991,7 @@ const styles = StyleSheet.create({
     left: 0,
     height: 2.5,
     borderRadius: 2,
-    backgroundColor: '#E11D48'
+    backgroundColor: '#18181B'
   },
   emptyScreenContainer: {
     flex: 1,

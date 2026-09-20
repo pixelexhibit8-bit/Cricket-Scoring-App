@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 12.5,
     letterSpacing: 0.2
   },
   tabLabelActive: {

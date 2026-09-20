@@ -7,7 +7,8 @@ import {
   fetchLiveMatchFromSupabase,
   fetchLiveMatchesFromSupabase,
   subscribeToSupabaseLiveMatches,
-  fetchMatchByAccessCode
+  fetchMatchByAccessCode,
+  clearAllMatchesFromSupabase
 } from '../services/matchService.js';
 import { buildFinishedMatch } from '../utils/cricketUtils.js';
 import { aggregateMatchToPlayerStats } from '../services/localPlayerService.js';
@@ -19,7 +20,7 @@ import {
   subscribeToTournamentsLive
 } from '../services/tournamentService.js';
 
-const STORAGE_KEY = '@cricflow_app_state_v3';
+const STORAGE_KEY = '@cricflow_app_state_v4_clean';
 
 export function useMatchSync({
   currentScreen,
@@ -36,38 +37,29 @@ export function useMatchSync({
   const [liveSyncState, setLiveSyncState] = useState('connected');
   const [storageReady, setStorageReady] = useState(false);
 
-  // 1. Initial Load: Fetch remote players, finished matches & upcoming tournament fixtures
+  // 1. Initial Load: Fetch remote players & perform clean match reset
   useEffect(() => {
+    // Explicitly reset in-memory match states
+    setActiveMatch(null);
+    setLiveMatches([]);
+    setUpcomingMatches([]);
+    setFinishedArchive([]);
+    setSelectedMatch(null);
+
+    // Clear cloud database matches
+    clearAllMatchesFromSupabase().catch(() => {});
+
+    // Clear legacy storage keys & offline sync queue
+    AsyncStorage.removeItem('@cricflow_app_state_v3').catch(() => {});
+    AsyncStorage.removeItem('@cricflow_app_state_v2').catch(() => {});
+    AsyncStorage.removeItem('@cricflow_app_state_v1').catch(() => {});
+    AsyncStorage.removeItem('@cricflow_offline_sync_queue_v1').catch(() => {});
+    AsyncStorage.removeItem('@cricflow_my_created_matches_v1').catch(() => {});
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ activeMatch: null, selectedMatch: null, finishedMatches: [] })).catch(() => {});
+
     fetchPlayersFromSupabase().then(dbPlayers => {
       if (Array.isArray(dbPlayers) && dbPlayers.length > 0) {
         setPlayerPool(dbPlayers.map(p => p.name));
-      }
-    }).catch(() => { });
-
-    getAllUpcomingTournamentMatches().then(upList => {
-      if (Array.isArray(upList)) {
-        setUpcomingMatches(upList);
-      }
-    }).catch(() => { });
-
-    fetchFinishedMatchesFromSupabase().then(dbMatches => {
-      if (Array.isArray(dbMatches) && dbMatches.length > 0) {
-        setFinishedArchive(prev => {
-          const map = new Map();
-          (prev || []).forEach(m => {
-            if (m?.title || m?.id) map.set(m.id || m.title, m);
-          });
-          (dbMatches || []).filter(m => Boolean(m && (m.team1?.name || m.teams?.[0]?.name))).forEach(m => {
-            const key = m.id || m.title;
-            if (key) {
-              const existing = map.get(key);
-              if (!existing || (m.team1?.batting?.length || 0) > (existing.team1?.batting?.length || 0)) {
-                map.set(key, m);
-              }
-            }
-          });
-          return Array.from(map.values());
-        });
       }
     }).catch(() => { });
   }, []);

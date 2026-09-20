@@ -1329,7 +1329,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#18181B'
   },
   stepTabText: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontFamily: systemFontMedium,
     color: themeColors.textSecondary
   },

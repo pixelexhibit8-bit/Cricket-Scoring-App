@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     elevation: 1
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontFamily: systemFontMedium,
     color: '#64748B'
   },

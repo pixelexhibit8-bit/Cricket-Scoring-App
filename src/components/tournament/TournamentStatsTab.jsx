@@ -193,7 +193,7 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
               <PlayerAvatar name={item.player} size={46} />
               {item.team ? (
                 <View style={styles.avatarTeamBadge}>
-                  <TeamIdentityMark teamName={item.team} size={16} />
+                  <TeamIdentityMark team={item.team} tournamentTeams={teams} size={16} />
                 </View>
               ) : null}
             </View>
@@ -227,7 +227,7 @@ export const TournamentStatsTab = React.memo(function TournamentStatsTab({
               <PlayerAvatar name={item.player} size={46} />
               {item.team ? (
                 <View style={styles.avatarTeamBadge}>
-                  <TeamIdentityMark teamName={item.team} size={16} />
+                  <TeamIdentityMark team={item.team} tournamentTeams={teams} size={16} />
                 </View>
               ) : null}
             </View>

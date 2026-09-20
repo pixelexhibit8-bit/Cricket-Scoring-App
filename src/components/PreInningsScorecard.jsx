@@ -10,14 +10,14 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
       {/* Notice Banner / Flip Clock Icon */}
       <View
         style={{
-          backgroundColor: '#F4F7FA',
+          backgroundColor: '#FFFFFF',
           borderRadius: 14,
           paddingVertical: 24,
           paddingHorizontal: 16,
           alignItems: 'center',
-          justify: 'center',
-          borderWidth: 0,
-          borderColor: '#E2E8F0',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: '#EEEEF0',
           gap: 10
         }}
       >
@@ -25,7 +25,7 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
           style={{
             flexDirection: 'row',
             gap: 6,
-            backgroundColor: '#F1F5F9',
+            backgroundColor: '#F8F8FA',
             paddingHorizontal: 14,
             paddingVertical: 10,
             borderRadius: 10
@@ -38,14 +38,14 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
                 char === ':'
                   ? { justifyContent: 'center' }
                   : {
-                      backgroundColor: '#F4F7FA',
+                      backgroundColor: '#FFFFFF',
                       width: 22,
                       height: 28,
                       borderRadius: 4,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      borderWidth: 0,
-                      borderColor: '#CBD5E1'
+                      borderWidth: 1,
+                      borderColor: '#EEEEF0'
                     }
               }
             >
@@ -78,10 +78,10 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
       {/* Declared Playing XI Roster Table */}
       <View
         style={{
-          backgroundColor: '#F4F7FA',
+          backgroundColor: '#FFFFFF',
           borderRadius: 14,
-          borderWidth: 0,
-          borderColor: '#E2E8F0',
+          borderWidth: 1,
+          borderColor: '#EEEEF0',
           overflow: 'hidden'
         }}
       >
@@ -91,9 +91,9 @@ export const PreInningsScorecard = ({ players = [], title = 'Inning has not star
             paddingHorizontal: 16,
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: '#F8FAFC',
-            borderBottomWidth: 0,
-            borderBottomColor: '#E2E8F0'
+            backgroundColor: '#F8F8FA',
+            borderBottomWidth: 1,
+            borderBottomColor: '#EEEEF0'
           }}
         >
           <Text

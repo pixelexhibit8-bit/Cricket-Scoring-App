@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   tabButtonText: {
-    fontSize: 15,
+    fontSize: 16.5,
     color: '#64748B',
     fontFamily: systemFontMedium,
     letterSpacing: -0.1

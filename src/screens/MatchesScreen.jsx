@@ -357,9 +357,9 @@ export function MatchesScreen(props = {}) {
                   }}
                 >
                   <Text style={{
-                    fontSize: 15,
-                    color: active ? themeColors.primary : themeColors.textMuted,
-                    fontFamily: systemFontMedium,
+                    fontSize: 16.5,
+                    color: active ? themeColors.primary : '#64748B',
+                    fontFamily: active ? systemFontBold : systemFontMedium,
                     letterSpacing: -0.1
                   }}>
                     {t.label}

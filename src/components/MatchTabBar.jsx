@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Animated } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { systemFontMedium } from '../theme';
 
 export const MatchTabBar = ({
@@ -48,6 +48,14 @@ export const MatchTabBar = ({
       <View style={{ position: 'relative', flexDirection: 'row', gap: 24, paddingLeft: 14, paddingRight: 18 }}>
         {tabs.map(tab => {
           const isActive = activeTab === tab.id;
+          const iconColor = isActive
+            ? isDark
+              ? '#E0F2FE'
+              : '#0284C7'
+            : isDark
+            ? '#7EAAC2'
+            : '#64748B';
+
           return (
             <TouchableOpacity
               key={tab.id}
@@ -63,25 +71,25 @@ export const MatchTabBar = ({
                 position: 'relative'
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 {tab.icon ? (
-                  <Ionicons
-                    name={tab.icon}
-                    size={16}
-                    color={
-                      isActive
-                        ? isDark
-                          ? '#E0F2FE'
-                          : '#0284C7'
-                        : isDark
-                        ? '#7EAAC2'
-                        : '#64748B'
-                    }
-                  />
+                  tab.isMCI || tab.iconType === 'mci' ? (
+                    <MaterialCommunityIcons
+                      name={tab.icon}
+                      size={16.5}
+                      color={iconColor}
+                    />
+                  ) : (
+                    <Ionicons
+                      name={tab.icon}
+                      size={16}
+                      color={iconColor}
+                    />
+                  )
                 ) : null}
                 <Text
                   style={{
-                    fontSize: 15,
+                    fontSize: 15.5,
                     color:
                       isActive
                         ? isDark

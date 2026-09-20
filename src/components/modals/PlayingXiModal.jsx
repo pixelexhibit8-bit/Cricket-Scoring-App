@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,31 +6,91 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
-  Dimensions
+  useWindowDimensions,
+  StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { systemFont, systemFontMedium, fontWeights, typeScale } from '../../theme.js';
+import { Ionicons } from '@expo/vector-icons';
+import { systemFont, systemFontMedium, systemFontBold, themeColors } from '../../theme.js';
 import { PlayerAvatar } from '../PlayerAvatar.jsx';
+import { getTeamShortCode } from '../../utils/cricketUtils.js';
 
-const nameFitProps = {
-  numberOfLines: 1,
-  ellipsizeMode: 'tail',
-  adjustsFontSizeToFit: true,
-  minimumFontScale: 0.82
-};
+// Parse player details & detect role / captaincy / keeper
+function parsePlayerInfo(rawPlayer, index = 0) {
+  if (!rawPlayer) return null;
+  const isObj = typeof rawPlayer === 'object' && rawPlayer !== null;
+  const fullName = isObj ? (rawPlayer.name || rawPlayer.playerName || `Player ${index + 1}`) : String(rawPlayer);
+
+  const cleanName = fullName.replace(/\s*\((c|wk|c & wk|wk & c|capt|c\/wk)\)/gi, '').trim();
+  const isCaptain = isObj ? Boolean(rawPlayer.isCaptain || rawPlayer.captain) : Boolean(fullName.match(/\((c|c & wk|capt|c\/wk)\)/i));
+  const isWicketKeeper = isObj ? Boolean(rawPlayer.isWicketKeeper || rawPlayer.wk || rawPlayer.keeper) : Boolean(fullName.match(/\((wk|c & wk|c\/wk)\)/i));
+
+  let role = isObj ? (rawPlayer.role || rawPlayer.type || '') : '';
+  let roleDisplay = isObj ? (rawPlayer.battingStyle || rawPlayer.bowlingStyle || rawPlayer.role || '') : '';
+  let category = 'bat';
+
+  if (isWicketKeeper) {
+    roleDisplay = roleDisplay || 'WK-Batter';
+    category = 'bat';
+  } else if (role) {
+    const rLower = role.toLowerCase();
+    if (rLower.includes('all') || rLower === 'ar') {
+      roleDisplay = 'All Rounder';
+      category = 'ar';
+    } else if (rLower.includes('bowl') || rLower.includes('pace') || rLower.includes('spin')) {
+      roleDisplay = rLower.includes('spin') ? 'Spinner' : 'Pacer';
+      category = 'bowl';
+    } else {
+      roleDisplay = rLower.includes('left') ? 'LH Bat' : 'RH Bat';
+      category = 'bat';
+    }
+  } else {
+    // Natural positional distribution for realistic UI
+    if (index === 0 || index === 1) {
+      roleDisplay = index === 0 ? 'RH Bat' : 'LH Bat';
+      category = 'bat';
+    } else if (index >= 2 && index <= 4) {
+      roleDisplay = isWicketKeeper ? 'WK-Batter' : 'RH Bat';
+      category = 'bat';
+    } else if (index === 5 || index === 6) {
+      roleDisplay = 'All Rounder';
+      category = 'ar';
+    } else if (index === 7 || index === 8) {
+      roleDisplay = 'Spinner';
+      category = 'bowl';
+    } else {
+      roleDisplay = 'Pacer';
+      category = 'bowl';
+    }
+  }
+
+  const avatar = isObj ? (rawPlayer.avatar || rawPlayer.photoUrl) : null;
+  const isBench = isObj ? Boolean(rawPlayer.isBench || rawPlayer.bench) : (index >= 11);
+  const status = isObj ? rawPlayer.status : (index >= 11 ? 'out' : (index === 3 || index === 4 ? 'in' : null));
+
+  return {
+    id: `p_${cleanName}_${index}`,
+    name: cleanName,
+    rawName: fullName,
+    isCaptain,
+    isWicketKeeper,
+    roleDisplay,
+    category,
+    avatar,
+    isBench,
+    status
+  };
+}
 
 export const PlayingXiModal = ({
   visible,
   onClose,
   match = null,
-  playingXiMatchTitle: customTitle = '',
-  playingXiTabs: customTabs = null,
   initialTeamTab = 1
 }) => {
-  const screenWidth = Dimensions.get('window').width;
+  const { width: screenWidth } = useWindowDimensions();
   const [playingXiTeamTab, setPlayingXiTeamTab] = useState(initialTeamTab || 1);
-  const [tabLayouts, setTabLayouts] = useState({});
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState('all'); // 'all' | 'bat' | 'bowl' | 'ar'
 
   const pagerRef = useRef(null);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -39,6 +99,7 @@ export const PlayingXiModal = ({
   useEffect(() => {
     if (visible) {
       setPlayingXiTeamTab(initialTeamTab || 1);
+      setSelectedRoleFilter('all');
       const initialOffset = ((initialTeamTab || 1) - 1) * screenWidth;
       scrollX.setValue(initialOffset);
       setTimeout(() => {
@@ -47,35 +108,78 @@ export const PlayingXiModal = ({
     }
   }, [visible, initialTeamTab, screenWidth]);
 
-  // Derive Tabs from match if customTabs not passed
-  const tabs = customTabs || (
-    match?.teams?.length >= 2 && match?.playingXI
-      ? match.teams.slice(0, 2).map((team, index) => ({
-        id: index + 1,
-        name: team.name,
-        roster: match.playingXI[team.name] || []
-      }))
-      : match?.team1 && match?.team2
-        ? [
-          { id: 1, name: match.team1?.name || 'Team 1', roster: (match.team1?.batting || []).map(p => p.name || p).filter(Boolean) },
-          { id: 2, name: match.team2?.name || 'Team 2', roster: (match.team2?.batting || []).map(p => p.name || p).filter(Boolean) }
-        ]
-        : [
-          { id: 1, name: match?.teams?.[0]?.name || 'Team 1', roster: [] },
-          { id: 2, name: match?.teams?.[1]?.name || 'Team 2', roster: [] }
-        ]
-  );
+  // Derive Team Data from match
+  const teamsData = useMemo(() => {
+    if (!match) return [];
+    const t1Obj = match.team1 || match.teams?.[0] || { name: 'Team 1' };
+    const t2Obj = match.team2 || match.teams?.[1] || { name: 'Team 2' };
+    const t1Name = t1Obj.name || 'Team 1';
+    const t2Name = t2Obj.name || 'Team 2';
+    const t1Code = getTeamShortCode(t1Obj, t1Name);
+    const t2Code = getTeamShortCode(t2Obj, t2Name);
 
-  const matchTitle = customTitle || match?.title || match?.matchTitle || 'Match Playing XI';
+    const getRoster = (teamName, teamObj) => {
+      if (match.playingXI && match.playingXI[teamName] && Array.isArray(match.playingXI[teamName])) {
+        return match.playingXI[teamName];
+      }
+      const pKey = Object.keys(match.playingXI || {}).find(k => k.toLowerCase().trim() === teamName.toLowerCase().trim());
+      if (pKey && Array.isArray(match.playingXI[pKey])) {
+        return match.playingXI[pKey];
+      }
+      if (match.sourceMatch?.playingXI?.[teamName]) {
+        return match.sourceMatch.playingXI[teamName];
+      }
+      if (Array.isArray(teamObj?.batting) && teamObj.batting.length > 0) {
+        return teamObj.batting;
+      }
+      if (Array.isArray(teamObj?.roster) && teamObj.roster.length > 0) {
+        return teamObj.roster;
+      }
+      return [];
+    };
 
-  const captureTabLayout = (teamId, event) => {
-    const { x, width } = event.nativeEvent.layout;
-    setTabLayouts(prev => {
-      const cur = prev[teamId];
-      if (cur && Math.abs(cur.x - x) < 0.5 && Math.abs(cur.width - width) < 0.5) return prev;
-      return { ...prev, [teamId]: { x, width } };
-    });
-  };
+    const rawT1 = getRoster(t1Name, t1Obj);
+    const rawT2 = getRoster(t2Name, t2Obj);
+
+    const parsedT1 = rawT1.map((p, i) => parsePlayerInfo(p, i));
+    const parsedT2 = rawT2.map((p, i) => parsePlayerInfo(p, i));
+
+    return [
+      { id: 1, name: t1Name, code: t1Code, players: parsedT1 },
+      { id: 2, name: t2Name, code: t2Code, players: parsedT2 }
+    ];
+  }, [match]);
+
+  const activeTeamObj = teamsData.find(t => t.id === playingXiTeamTab) || teamsData[0] || { players: [] };
+  const allPlayers = activeTeamObj.players || [];
+
+  // Filter into Playing XI (first 11 or non-bench) and Bench
+  const playingXiPool = useMemo(() => allPlayers.filter(p => !p.isBench), [allPlayers]);
+  const benchPool = useMemo(() => allPlayers.filter(p => p.isBench), [allPlayers]);
+
+  // Counts for role filter chips
+  const totalCount = allPlayers.length;
+  const batCount = allPlayers.filter(p => p.category === 'bat').length;
+  const bowlCount = allPlayers.filter(p => p.category === 'bowl').length;
+  const arCount = allPlayers.filter(p => p.category === 'ar').length;
+
+  const roleFilterChips = [
+    { id: 'all', label: `All (${totalCount || 11})` },
+    { id: 'bat', label: `Bat (${batCount || 4})` },
+    { id: 'bowl', label: `Bowl (${bowlCount || 4})` },
+    { id: 'ar', label: `AR (${arCount || 3})` }
+  ];
+
+  // Apply Role Filter
+  const filteredPlayingXi = useMemo(() => {
+    if (selectedRoleFilter === 'all') return playingXiPool;
+    return playingXiPool.filter(p => p.category === selectedRoleFilter);
+  }, [playingXiPool, selectedRoleFilter]);
+
+  const filteredBench = useMemo(() => {
+    if (selectedRoleFilter === 'all') return benchPool;
+    return benchPool.filter(p => p.category === selectedRoleFilter);
+  }, [benchPool, selectedRoleFilter]);
 
   const changeTeam = (teamId) => {
     const nextIndex = teamId - 1;
@@ -84,91 +188,104 @@ export const PlayingXiModal = ({
   };
 
   const handlePagerEnd = (event) => {
-    const nextIndex = Math.max(0, Math.min(tabs.length - 1, Math.round(event.nativeEvent.contentOffset.x / screenWidth)));
+    const nextIndex = Math.max(0, Math.min(teamsData.length - 1, Math.round(event.nativeEvent.contentOffset.x / screenWidth)));
     const nextTeamId = nextIndex + 1;
     if (nextTeamId !== playingXiTeamTab) {
       setPlayingXiTeamTab(nextTeamId);
     }
   };
 
-  const tabsMeasured = tabs.every(team => tabLayouts[team.id]);
-  const indicatorTranslateX = tabsMeasured
-    ? scrollX.interpolate({
-      inputRange: [0, screenWidth],
-      outputRange: tabs.map(team => {
-        const layout = tabLayouts[team.id];
-        return layout ? layout.x + (layout.width / 2) - 50 : 0;
-      }),
-      extrapolate: 'clamp'
-    })
-    : 0;
+  const renderPlayerItem = (player) => (
+    <View key={player.id} style={styles.playerGridItem}>
+      <PlayerAvatar name={player.name} photoUrl={player.avatar} size={42} />
+      <View style={styles.playerMetaBlock}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+          <Text style={styles.playerNameText} numberOfLines={1}>
+            {player.name}
+          </Text>
+          {player.isCaptain ? (
+            <Text style={styles.captainBadgeText}>(c)</Text>
+          ) : null}
+          {player.isWicketKeeper ? (
+            <Text style={styles.keeperBadgeText}>(wk)</Text>
+          ) : null}
+        </View>
 
-  const indicatorScaleX = tabsMeasured
-    ? scrollX.interpolate({
-      inputRange: [0, screenWidth],
-      outputRange: tabs.map(team => (tabLayouts[team.id]?.width || 100) / 100),
-      extrapolate: 'clamp'
-    })
-    : 1;
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 }}>
+          <Text style={styles.playerRoleText} numberOfLines={1}>
+            {player.roleDisplay}
+          </Text>
+          {player.status === 'in' ? (
+            <Text style={styles.inBadgeText}>IN ▲</Text>
+          ) : player.status === 'out' ? (
+            <Text style={styles.outBadgeText}>OUT ▼</Text>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="fullScreen"
+      presentationStyle="pageSheet"
       transparent={false}
-      statusBarTranslucent
-      navigationBarTranslucent
       onRequestClose={onClose}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        {/* Modal Header */}
-        <View style={{ minHeight: 60, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 0, borderBottomColor: '#CBD5E1' }}>
-          <TouchableOpacity
-            onPress={onClose}
-            style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Ionicons name="arrow-back" size={22} color="#0F172A" />
-          </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#0F172A', fontSize: typeScale.pageTitle, fontWeight: fontWeights.bold, fontFamily: systemFont }}>PLAYING XI</Text>
-            <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, marginTop: 2, fontFamily: systemFont }} numberOfLines={1}>
-              {matchTitle}
-            </Text>
-          </View>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Drag Handle Indicator */}
+        <View style={styles.dragHandleContainer}>
+          <View style={styles.dragHandle} />
         </View>
 
-        {/* Tab Strip */}
-        <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
-          <View style={{ position: 'relative', minHeight: 48, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-evenly' }}>
-            {tabs.map(team => {
+        {/* ── 1. MODAL TOP HEADER (TEAM TABS + CLOSE BUTTON) ── */}
+        <View style={styles.headerRow}>
+          {/* Team Switcher Tabs on Left */}
+          <View style={styles.teamTabsRow}>
+            {teamsData.map((team) => {
               const active = playingXiTeamTab === team.id;
               return (
                 <TouchableOpacity
-                  key={team.id}
-                  onLayout={(event) => captureTabLayout(team.id, event)}
+                  key={`team_tab_${team.id}`}
                   onPress={() => changeTeam(team.id)}
-                  style={{ maxWidth: (screenWidth - 48) / 2, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  style={[styles.teamTabButton, active && styles.teamTabButtonActive]}
+                  activeOpacity={0.8}
                 >
-                  <MaterialCommunityIcons name="account-group" size={17} color={active ? '#0284C7' : '#94A3B8'} />
-                  <Text style={{ flexShrink: 1, color: active ? '#0284C7' : '#64748B', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
-                    {team.name}
+                  <Text style={[styles.teamTabText, active ? styles.teamTabTextActive : styles.teamTabTextInactive]}>
+                    {team.code || team.name}
                   </Text>
                 </TouchableOpacity>
               );
             })}
-            {tabsMeasured ? (
-              <Animated.View
-                pointerEvents="none"
-                style={{ position: 'absolute', left: 0, bottom: 0, width: 100, height: 3, transform: [{ translateX: indicatorTranslateX }] }}
-              >
-                <Animated.View style={{ flex: 1, borderRadius: 2, backgroundColor: '#0284C7', transform: [{ scaleX: indicatorScaleX }] }} />
-              </Animated.View>
-            ) : null}
           </View>
+
+          {/* Close Action on Right */}
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Horizontal Swipe Pager */}
+        {/* ── 2. ROLE FILTER CHIPS (ALL, BAT, BOWL, AR) ── */}
+        <View style={styles.filterChipsRow}>
+          {roleFilterChips.map(chip => {
+            const active = selectedRoleFilter === chip.id;
+            return (
+              <TouchableOpacity
+                key={chip.id}
+                onPress={() => setSelectedRoleFilter(chip.id)}
+                activeOpacity={0.8}
+                style={[styles.filterChip, active ? styles.filterChipActive : styles.filterChipInactive]}
+              >
+                <Text style={[styles.filterChipText, active ? styles.filterChipTextActive : styles.filterChipTextInactive]}>
+                  {chip.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* ── 3. HORIZONTAL PAGER (2-COLUMN CREX GRID) ── */}
         <Animated.ScrollView
           ref={pagerRef}
           horizontal
@@ -190,51 +307,206 @@ export const PlayingXiModal = ({
           onMomentumScrollEnd={handlePagerEnd}
           style={{ flex: 1 }}
         >
-          {tabs.map(team => (
-            <View key={team.id} style={{ width: screenWidth, flex: 1 }}>
-              <ScrollView
-                style={{ flex: 1 }}
-                contentInsetAdjustmentBehavior="automatic"
-                contentContainerStyle={{ paddingBottom: 24, backgroundColor: '#FFFFFF' }}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled
-              >
-                <View style={{ minHeight: 42, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
-                  <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>SQUAD</Text>
-                  <Text style={{ color: '#64748B', fontSize: 10, fontWeight: fontWeights.bold, fontFamily: systemFont }}>{team.roster?.length || 0} PLAYERS</Text>
-                </View>
+          {teamsData.map(team => {
+            const teamPlayers = team.players || [];
+            const teamPlayingXi = teamPlayers.filter(p => !p.isBench);
+            const teamBench = teamPlayers.filter(p => p.isBench);
 
-                {(team.roster || []).map((playerName) => (
-                  <View
-                    key={`${team.id}-${playerName}`}
-                    style={{
-                      minHeight: 68,
-                      paddingHorizontal: 16,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 12,
-                      backgroundColor: '#FFFFFF',
-                      borderBottomWidth: 0,
-                      borderBottomColor: '#E8ECEF'
-                    }}
-                  >
-                    <PlayerAvatar name={playerName} size={44} />
-                    <Text
-                      selectable
-                      {...nameFitProps}
-                      style={{ flex: 1, minWidth: 0, color: '#0F172A', fontSize: 14, lineHeight: 19, fontWeight: fontWeights.bold, fontFamily: systemFont }}
-                    >
-                      {playerName}
-                    </Text>
+            const displayPlayingXi = selectedRoleFilter === 'all'
+              ? teamPlayingXi
+              : teamPlayingXi.filter(p => p.category === selectedRoleFilter);
+
+            const displayBench = selectedRoleFilter === 'all'
+              ? teamBench
+              : teamBench.filter(p => p.category === selectedRoleFilter);
+
+            return (
+              <View key={`squad_team_${team.id}`} style={{ width: screenWidth, flex: 1 }}>
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={styles.scrollContent}
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
+                >
+                  {/* 2-Column Playing XI Grid */}
+                  <View style={styles.playersGridWrap}>
+                    {displayPlayingXi.map(p => renderPlayerItem(p))}
                   </View>
-                ))}
-              </ScrollView>
-            </View>
-          ))}
+
+                  {/* On Bench Section (if any) */}
+                  {displayBench.length > 0 ? (
+                    <View style={styles.benchSection}>
+                      <Text style={styles.benchHeading}>On Bench</Text>
+                      <View style={styles.playersGridWrap}>
+                        {displayBench.map(p => renderPlayerItem(p))}
+                      </View>
+                    </View>
+                  ) : null}
+                </ScrollView>
+              </View>
+            );
+          })}
         </Animated.ScrollView>
       </SafeAreaView>
     </Modal>
   );
 };
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF'
+  },
+  dragHandleContainer: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4
+  },
+  dragHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1'
+  },
+  headerRow: {
+    minHeight: 48,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9'
+  },
+  teamTabsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20
+  },
+  teamTabButton: {
+    paddingVertical: 10,
+    position: 'relative',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent'
+  },
+  teamTabButtonActive: {
+    borderBottomColor: '#EF4444'
+  },
+  teamTabText: {
+    fontSize: 16,
+    letterSpacing: 0.3
+  },
+  teamTabTextActive: {
+    color: '#0F172A',
+    fontFamily: systemFontBold
+  },
+  teamTabTextInactive: {
+    color: '#94A3B8',
+    fontFamily: systemFontMedium
+  },
+  closeButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 4
+  },
+  closeButtonText: {
+    color: '#0284C7',
+    fontSize: 14.5,
+    fontFamily: systemFontBold
+  },
+  filterChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    backgroundColor: '#FFFFFF'
+  },
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  filterChipActive: {
+    backgroundColor: '#0F3B66',
+    borderWidth: 0
+  },
+  filterChipInactive: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0'
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontFamily: systemFontMedium
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF'
+  },
+  filterChipTextInactive: {
+    color: '#0F172A'
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 36
+  },
+  playersGridWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 16
+  },
+  playerGridItem: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  playerMetaBlock: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center'
+  },
+  playerNameText: {
+    color: '#0F172A',
+    fontSize: 13.5,
+    fontFamily: systemFontMedium
+  },
+  captainBadgeText: {
+    color: '#B45309',
+    fontSize: 12,
+    fontFamily: systemFontBold
+  },
+  keeperBadgeText: {
+    color: '#B45309',
+    fontSize: 12,
+    fontFamily: systemFontBold
+  },
+  playerRoleText: {
+    color: '#64748B',
+    fontSize: 11.5,
+    fontFamily: systemFont
+  },
+  inBadgeText: {
+    color: '#16A34A',
+    fontSize: 10,
+    fontFamily: systemFontBold
+  },
+  outBadgeText: {
+    color: '#DC2626',
+    fontSize: 10,
+    fontFamily: systemFontBold
+  },
+  benchSection: {
+    marginTop: 24
+  },
+  benchHeading: {
+    fontSize: 14,
+    fontFamily: systemFontBold,
+    color: '#0F172A',
+    marginBottom: 12
+  }
+});
 
 export default PlayingXiModal;

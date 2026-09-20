@@ -6,6 +6,7 @@ import { systemFontBold } from '../theme';
 
 export const TeamIdentityMark = ({
   team,
+  teamName,
   tournamentTeams = [],
   logoSource,
   size = 42,
@@ -14,8 +15,9 @@ export const TeamIdentityMark = ({
   opacity = 1,
   style
 }) => {
-  const resolved = resolveTeamWithRoster(team, tournamentTeams);
-  const isPlaceholder = resolved?.isPlaceholder || isPlaceholderTeam(team);
+  const targetTeam = team || teamName;
+  const resolved = resolveTeamWithRoster(targetTeam, tournamentTeams);
+  const isPlaceholder = resolved?.isPlaceholder || isPlaceholderTeam(targetTeam);
   const source = logoSource || (isPlaceholder ? null : getTeamLogoSource(resolved, tournamentTeams));
 
   if (isPlaceholder || !source) {

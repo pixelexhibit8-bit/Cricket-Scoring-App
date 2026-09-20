@@ -260,6 +260,66 @@ export function autoCalculatePointsTable(teams = [], matches = []) {
     return String(a.team || '').localeCompare(String(b.team || ''));
   });
 
+  // 4. Calculate Qualification ('Q') and Elimination ('E')
+  const teamsCount = list.length;
+  const effectiveCutoff = teamsCount >= 5 ? 4 : (teamsCount >= 3 ? 2 : 1);
+  const totalMatchesPlayed = list.reduce((acc, r) => acc + (Number(r.p) || 0), 0);
+
+  const totalMatchesForTeam = {};
+  (matches || []).forEach(m => {
+    if (!m) return;
+    const isPlayoff = String(m.round || m.stage || m.type || '').toLowerCase().match(/semi|final|playoff|eliminator|qualifier/);
+    if (isPlayoff) return;
+    const t1 = resolveTeamName(m.team1);
+    const t2 = resolveTeamName(m.team2);
+    if (t1) totalMatchesForTeam[t1] = (totalMatchesForTeam[t1] || 0) + 1;
+    if (t2) totalMatchesForTeam[t2] = (totalMatchesForTeam[t2] || 0) + 1;
+  });
+
+  const maxMatchesPerTeam = Math.max(...list.map(r => totalMatchesForTeam[r.team] || r.p || 0), 0);
+  const isTournamentLeagueComplete = totalMatchesPlayed > 0 && list.every(r => (totalMatchesForTeam[r.team] || r.p) <= r.p);
+
+  list.forEach((row, idx) => {
+    const rank = idx + 1;
+    const played = Number(row.p || 0);
+    const scheduled = totalMatchesForTeam[row.team] || maxMatchesPerTeam || played;
+    const remaining = Math.max(0, scheduled - played);
+    const maxPossiblePts = row.pts + (remaining * 2);
+
+    if (totalMatchesPlayed > 0 && played > 0) {
+      if (isTournamentLeagueComplete) {
+        if (rank <= effectiveCutoff) {
+          row.isQualified = true;
+          row.qualified = true;
+        } else {
+          row.isEliminated = true;
+          row.eliminated = true;
+        }
+      } else {
+        if (rank <= effectiveCutoff) {
+          const nonQualifiers = list.slice(effectiveCutoff);
+          if (nonQualifiers.length > 0) {
+            const maxOfNonQualifiers = Math.max(...nonQualifiers.map(nq => {
+              const nqScheduled = totalMatchesForTeam[nq.team] || maxMatchesPerTeam || nq.p;
+              const nqRemaining = Math.max(0, nqScheduled - nq.p);
+              return nq.pts + (nqRemaining * 2);
+            }));
+            if (row.pts > maxOfNonQualifiers) {
+              row.isQualified = true;
+              row.qualified = true;
+            }
+          }
+        } else {
+          const cutoffTeam = list[effectiveCutoff - 1];
+          if (cutoffTeam && maxPossiblePts < cutoffTeam.pts) {
+            row.isEliminated = true;
+            row.eliminated = true;
+          }
+        }
+      }
+    }
+  });
+
   return list;
 }
 
@@ -303,7 +363,7 @@ function mapSupabaseRowToTournament(row) {
 import { buildRajasthanLeagueTournament } from './seedRajasthanLeague.js';
 import { buildSadokanPremierLeagueTournament } from './seedSadokanPremierLeague.js';
 
-export const TOURNAMENT_SCHEMA_VERSION = 5;
+export const TOURNAMENT_SCHEMA_VERSION = 6;
 
 /**
  * Get synchronous initial tournament list for 0ms frame-1 rendering
@@ -330,7 +390,7 @@ export async function getTournamentsFromStorage() {
 
     let changed = false;
 
-    // Guarantee Rajasthan League 2026 is always available with full ball-by-ball records
+    // Guarantee Rajasthan League 2026 is always available with 0 matches
     const rpl = buildRajasthanLeagueTournament();
     const existingRplIdx = list.findIndex(t => t.id === rpl.id || t.name === rpl.name);
     if (existingRplIdx === -1) {
@@ -338,14 +398,13 @@ export async function getTournamentsFromStorage() {
       changed = true;
     } else {
       const existingRpl = list[existingRplIdx];
-      const hasFinishedMatches = (existingRpl.matches?.[0]?.status === 'FINISHED' && (existingRpl.matches?.[0]?.rawMatchData?.innings?.[0]?.overHistory?.length || 0) > 0);
-      if (!hasFinishedMatches || (existingRpl.schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION) {
+      if ((existingRpl.schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION || (existingRpl.matches && existingRpl.matches.length > 0)) {
         list[existingRplIdx] = rpl;
         changed = true;
       }
     }
 
-    // Guarantee Sadokan Premier League 2026 is always available with full ball-by-ball records
+    // Guarantee Sadokan Premier League 2026 is always available with 0 matches
     const spl = buildSadokanPremierLeagueTournament();
     const existingSplIdx = list.findIndex(t => t.id === spl.id || t.name === spl.name);
     if (existingSplIdx === -1) {
@@ -353,17 +412,20 @@ export async function getTournamentsFromStorage() {
       changed = true;
     } else {
       const existingSpl = list[existingSplIdx];
-      const hasAll13Finished = (existingSpl.matches?.[12]?.status === 'FINISHED' && (existingSpl.matches?.[12]?.rawMatchData?.innings?.[0]?.overHistory?.length || 0) > 0);
-      if (!hasAll13Finished || (existingSpl.schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION) {
+      if ((existingSpl.schemaVersion || 0) < TOURNAMENT_SCHEMA_VERSION || (existingSpl.matches && existingSpl.matches.length > 0)) {
         list[existingSplIdx] = spl;
         changed = true;
       }
     }
 
-    // Sanitize any other custom user tournaments so they never miss standard schema
+    // Sanitize any other custom user tournaments to clear old match data
     list = list.map(t => {
       let mod = false;
       const copy = { ...t };
+      if (copy.matches && copy.matches.length > 0) {
+        copy.matches = [];
+        mod = true;
+      }
       if (!Array.isArray(copy.venues) || copy.venues.length === 0) {
         copy.venues = [copy.venue || copy.ground || copy.city || copy.host || 'Primary Cricket Ground'];
         mod = true;
@@ -430,21 +492,21 @@ export async function getTournaments() {
       if (rplIdx === -1) {
         cloudTournaments = [rpl, ...cloudTournaments];
       } else {
-        const hasFinished = cloudTournaments[rplIdx].matches?.[0]?.status === 'FINISHED' && (cloudTournaments[rplIdx].matches?.[0]?.rawMatchData?.innings?.[0]?.overHistory?.length || 0) > 0;
-        cloudTournaments[rplIdx] = hasFinished
-          ? { ...rpl, ...cloudTournaments[rplIdx] }
-          : rpl;
+        cloudTournaments[rplIdx] = rpl;
       }
 
       const splIdx = cloudTournaments.findIndex(t => t.id === spl.id || t.name === spl.name);
       if (splIdx === -1) {
         cloudTournaments = [...cloudTournaments, spl];
       } else {
-        const hasAllFinished = cloudTournaments[splIdx].matches?.[12]?.status === 'FINISHED' && (cloudTournaments[splIdx].matches?.[12]?.rawMatchData?.innings?.[0]?.overHistory?.length || 0) > 0;
-        cloudTournaments[splIdx] = hasAllFinished
-          ? { ...spl, ...cloudTournaments[splIdx] }
-          : spl;
+        cloudTournaments[splIdx] = spl;
       }
+
+      // Guarantee all tournaments have 0 matches
+      cloudTournaments = cloudTournaments.map(t => ({
+        ...t,
+        matches: []
+      }));
 
       // Sync local storage with latest cloud snapshot
       await AsyncStorage.setItem(TOURNAMENTS_STORAGE_KEY, JSON.stringify(cloudTournaments));

@@ -1400,40 +1400,55 @@ export const SPL_MATCHES = [
 ];
 
 export function buildSadokanPremierLeagueTournament() {
-  const pointsTable = autoCalculatePointsTable(SPL_TEAMS, SPL_MATCHES);
+  const pointsTable = SPL_TEAMS.map(t => ({
+    team: t.name,
+    shortName: t.shortName,
+    p: 0,
+    w: 0,
+    l: 0,
+    nr: 0,
+    pts: 0,
+    runsScored: 0,
+    ballsFaced: 0,
+    runsConceded: 0,
+    ballsBowled: 0,
+    nrr: '-',
+    form: []
+  }));
+
   const rawTourn = {
-    id: 't_spl_2026_sadokan',
+    id: 'tour_spl_sadokan_2026',
     name: 'Sadokan Premier League 2026',
     title: 'Sadokan Premier League 2026',
-    fullName: 'Sadokan Premier League 2026',
+    fullName: 'Sadokan Premier League 2026 (SPL)',
     city: 'Sadokan',
-    host: 'Sadokan Cricket Ground',
-    category: 'OPEN',
+    host: 'Sadokan Ground Committee',
+    category: 'LIMITED OVERS',
     format: 'LIMITED OVERS',
-    structure: 'hybrid',
+    structure: 'league',
     ballType: 'tennis',
     pitchType: 'turf',
-    overs: 5,
-    maxOvers: 5,
+    overs: 10,
+    maxOvers: 10,
     entryFee: '1500',
     prizes: {
-      first: '₹21,000 + Trophy',
-      runnerUp: '₹11,000 + Trophy',
-      bestBatter: 'Cricket Bat + Trophy',
-      bestBowler: 'Cricket Shoes + Trophy',
-      mvp: 'Player of Series Kit'
+      first: '₹31,000 + SPL Trophy',
+      runnerUp: '₹15,000 + Trophy',
+      bestBatter: 'Custom English Bat',
+      bestBowler: 'Cricket Spikes',
+      mvp: 'Smart Watch + Kit'
     },
     needMoreTeams: false,
     rounds: [
-      'Group / League Matches',
-      'Semi Final',
+      'League Stage',
+      'Semi Finals',
       'Final'
     ],
     groups: [
       {
-        id: 'group_a',
-        roundName: 'Group / League Matches',
-        name: 'Group A',
+        id: 'grp_spl_1',
+        roundName: 'League Stage',
+        name: 'SPL Pool',
         teams: [
           'Sadokan Super Kings',
           'Sangwa Strikers',
@@ -1470,9 +1485,9 @@ export function buildSadokanPremierLeagueTournament() {
     logoUri: 'spl_logo',
     broadcaster: 'CricFlow Live, Ground Commentary',
     teams: SPL_TEAMS,
-    matches: SPL_MATCHES,
+    matches: [],
     pointsTable,
-    schemaVersion: 5
+    schemaVersion: 6
   };
 
   const calculatedStats = calculateTournamentStats(rawTourn);

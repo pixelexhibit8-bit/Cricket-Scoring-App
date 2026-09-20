@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     borderColor: '#18181B'
   },
   modeTabText: {
-    fontSize: 11,
+    fontSize: 13.5,
     fontFamily: systemFontMedium,
     color: themeColors.textSecondary
   },

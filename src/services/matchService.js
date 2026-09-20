@@ -84,6 +84,24 @@ export const syncMatchToSupabase = async (match) => {
   }
 };
 
+export const clearAllMatchesFromSupabase = async () => {
+  if (!isSupabaseConfigured() || !supabase) return true;
+  try {
+    const { error } = await supabase
+      .from('matches')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) {
+      console.warn('[Supabase Clear Matches Warning]:', error.message || error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Clear Matches Exception]:', err.message || err);
+    return false;
+  }
+};
+
 export const fetchFinishedMatchesFromSupabase = async () => {
   if (!isSupabaseConfigured() || !supabase) return [];
 

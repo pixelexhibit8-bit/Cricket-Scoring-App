@@ -61,6 +61,15 @@ function getRibbonConfig(stage, matchNumber) {
   };
 }
 
+// 5 Curated Light Pastel / Tinted Card Palettes for Team Squad Badges
+const SQUAD_CARD_PALETTES = [
+  { bg: '#F0F9FF', border: '#BAE6FD' }, // Soft Sky
+  { bg: '#FFF7ED', border: '#FED7AA' }, // Soft Warm Orange
+  { bg: '#F0FDF4', border: '#BBF7D0' }, // Soft Emerald Mint
+  { bg: '#FAF5FF', border: '#E9D5FF' }, // Soft Lavender
+  { bg: '#FFF1F2', border: '#FECDD3' }  // Soft Rose
+];
+
 export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
   tournament,
   stats,
@@ -428,20 +437,21 @@ export const TournamentOverviewTab = React.memo(function TournamentOverviewTab({
             contentContainerStyle={styles.teamSquadsScrollContent}
           >
             {teams.map((t, tIdx) => {
-              const tCode = t.shortName || (t.name ? t.name.slice(0, 5).toUpperCase() : `T${tIdx + 1}`);
+              const palette = SQUAD_CARD_PALETTES[tIdx % SQUAD_CARD_PALETTES.length];
               return (
                 <TouchableOpacity
                   key={t.id || `team_sq_${tIdx}`}
-                  style={styles.teamSquadCard}
+                  style={[
+                    styles.teamSquadCard,
+                    {
+                      backgroundColor: palette.bg,
+                      borderColor: palette.border
+                    }
+                  ]}
                   activeOpacity={0.8}
                   onPress={() => onSelectTeamSquad && onSelectTeamSquad(t)}
                 >
-                  <View style={styles.teamSquadLogoContainer}>
-                    <TeamIdentityMark team={t} tournamentTeams={teams} size={46} />
-                  </View>
-                  <Text style={styles.teamSquadCardName} numberOfLines={1}>
-                    {tCode}
-                  </Text>
+                  <TeamIdentityMark team={t} tournamentTeams={teams} size={60} />
                 </TouchableOpacity>
               );
             })}
@@ -787,30 +797,16 @@ const styles = StyleSheet.create({
   teamSquadsScrollContent: {
     paddingHorizontal: 16,
     paddingVertical: 6,
-    flexDirection: 'row'
+    flexDirection: 'row',
+    gap: 12
   },
   teamSquadCard: {
-    width: 100,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 0,
-    padding: 12,
+    width: 94,
+    height: 94,
+    borderRadius: 10,
+    borderWidth: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10
-  },
-  teamSquadLogoContainer: {
-    width: 46,
-    height: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8
-  },
-  teamSquadCardName: {
-    fontSize: 12,
-    fontFamily: systemFontBold,
-    color: themeColors.textPrimary,
-    textAlign: 'center'
+    justifyContent: 'center'
   },
   seriesInfoCard: {
     backgroundColor: '#FFFFFF',

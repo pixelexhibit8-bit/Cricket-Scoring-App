@@ -1316,25 +1316,25 @@ const styles = StyleSheet.create({
 
   // Tabs Bar & Pager Styles
   tabsBarWrapper: {
-    backgroundColor: themeColors.appBackground,
-    borderBottomWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 0,
     borderBottomColor: '#EEEEF0',
     position: 'relative'
   },
   tabsScrollContent: {
     paddingHorizontal: 16,
     flexDirection: 'row',
-    gap: 20
+    gap: 22
   },
   tabButton: {
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center'
   },
   tabButtonText: {
-    fontSize: 14,
-    color: '#94A3B8',
+    fontSize: 16.5,
+    color: '#64748B',
     fontFamily: systemFontMedium,
     letterSpacing: -0.1
   },

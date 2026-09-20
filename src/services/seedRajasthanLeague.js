@@ -824,15 +824,13 @@ export function generateInitialPointsTable() {
  * Build the full Rajasthan League 2026 document ready for Supabase and AsyncStorage
  */
 export function buildRajasthanLeagueTournament() {
-  const matches = generateRajasthanLeagueFixtures();
-  // Compute points table from the 45 league stage matches
-  const leagueMatches = matches.slice(0, 45);
-  const pointsTable = autoCalculatePointsTable(RAJASTHAN_LEAGUE_2026.teams, leagueMatches);
+  const pointsTable = generateInitialPointsTable();
 
   const rawTourn = {
     ...RAJASTHAN_LEAGUE_2026,
-    matches,
+    matches: [],
     pointsTable,
+    schemaVersion: 6,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };

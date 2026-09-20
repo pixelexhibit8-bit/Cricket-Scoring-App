@@ -1652,6 +1652,66 @@ export function autoCalculatePointsTable(teams = [], matches = []) {
     return String(a.team || '').localeCompare(String(b.team || ''));
   });
 
+  // 4. Calculate Qualification ('Q') and Elimination ('E')
+  const teamsCount = list.length;
+  const effectiveCutoff = teamsCount >= 5 ? 4 : (teamsCount >= 3 ? 2 : 1);
+  const totalMatchesPlayed = list.reduce((acc, r) => acc + (Number(r.p) || 0), 0);
+
+  const totalMatchesForTeam = {};
+  (matches || []).forEach(m => {
+    if (!m) return;
+    const isPlayoff = String(m.round || m.stage || m.type || '').toLowerCase().match(/semi|final|playoff|eliminator|qualifier/);
+    if (isPlayoff) return;
+    const t1 = resolveTeamName(m.team1);
+    const t2 = resolveTeamName(m.team2);
+    if (t1) totalMatchesForTeam[t1] = (totalMatchesForTeam[t1] || 0) + 1;
+    if (t2) totalMatchesForTeam[t2] = (totalMatchesForTeam[t2] || 0) + 1;
+  });
+
+  const maxMatchesPerTeam = Math.max(...list.map(r => totalMatchesForTeam[r.team] || r.p || 0), 0);
+  const isTournamentLeagueComplete = totalMatchesPlayed > 0 && list.every(r => (totalMatchesForTeam[r.team] || r.p) <= r.p);
+
+  list.forEach((row, idx) => {
+    const rank = idx + 1;
+    const played = Number(row.p || 0);
+    const scheduled = totalMatchesForTeam[row.team] || maxMatchesPerTeam || played;
+    const remaining = Math.max(0, scheduled - played);
+    const maxPossiblePts = row.pts + (remaining * 2);
+
+    if (totalMatchesPlayed > 0 && played > 0) {
+      if (isTournamentLeagueComplete) {
+        if (rank <= effectiveCutoff) {
+          row.isQualified = true;
+          row.qualified = true;
+        } else {
+          row.isEliminated = true;
+          row.eliminated = true;
+        }
+      } else {
+        if (rank <= effectiveCutoff) {
+          const nonQualifiers = list.slice(effectiveCutoff);
+          if (nonQualifiers.length > 0) {
+            const maxOfNonQualifiers = Math.max(...nonQualifiers.map(nq => {
+              const nqScheduled = totalMatchesForTeam[nq.team] || maxMatchesPerTeam || nq.p;
+              const nqRemaining = Math.max(0, nqScheduled - nq.p);
+              return nq.pts + (nqRemaining * 2);
+            }));
+            if (row.pts > maxOfNonQualifiers) {
+              row.isQualified = true;
+              row.qualified = true;
+            }
+          }
+        } else {
+          const cutoffTeam = list[effectiveCutoff - 1];
+          if (cutoffTeam && maxPossiblePts < cutoffTeam.pts) {
+            row.isEliminated = true;
+            row.eliminated = true;
+          }
+        }
+      }
+    }
+  });
+
   return list;
 }
 

@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     borderWidth: 0
   },
   tabTitleText: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: systemFontMedium
   },
   tabTitleActive: {
@@ -338,10 +338,10 @@ const styles = StyleSheet.create({
     color: '#334155'
   },
   tabCountText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: systemFontMedium,
     color: '#64748B',
-    marginTop: 1
+    marginTop: 2
   },
   heroCard: {
     backgroundColor: '#FFFFFF',

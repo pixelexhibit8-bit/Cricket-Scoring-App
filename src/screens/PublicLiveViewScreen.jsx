@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,11 +29,13 @@ import { TeamIdentityMark } from '../components/TeamIdentityMark.jsx';
 import { MatchTabBar } from '../components/MatchTabBar.jsx';
 import { RealtimeWinBar } from '../components/RealtimeWinBar.jsx';
 import { PreInningsScorecard } from '../components/PreInningsScorecard.jsx';
+import { CompleteScorecardView } from '../components/CompleteScorecardView.jsx';
 import { WormGraph } from '../components/WormGraph.jsx';
 import { ManhattanGraph } from '../components/ManhattanGraph.jsx';
 import { MatchInfoPanel } from '../components/MatchInfoPanel.jsx';
-import { PlayerAvatar } from '../components/PlayerAvatar.jsx';
 import { PlayingXiModal } from '../components/modals/PlayingXiModal.jsx';
+import { PointsTableSection } from '../components/tournament/PointsTableSection.jsx';
+import { getInitialTournamentsSync, getTournamentsFromStorage } from '../services/tournamentService.js';
 import {
   formatOvers,
   formatScoreTokenForPublic,
@@ -48,10 +50,11 @@ import {
   getInningBowlingRows,
   getUnplayedBatters,
   formatOrdinal,
-  makeInning
+  makeInning,
+  autoCalculatePointsTable
 } from '../utils/cricketUtils.js';
 
-const PUBLIC_LIVE_TABS = [
+const BASE_PUBLIC_LIVE_TABS = [
   { id: 'info', label: 'Info' },
   { id: 'live', label: 'Live' },
   { id: 'scorecard', label: 'Scorecard' },
@@ -61,8 +64,38 @@ const PUBLIC_LIVE_TABS = [
 
 export function PublicLiveViewScreen(props = {}) {
   const matchCtx = useMatch();
+  const routeParams = props.route?.params || {};
+  const passedMatch = props.activeMatch || props.match || routeParams.matchData || routeParams.match || (routeParams.matchId && (matchCtx.liveMatches?.find(m => m.id === routeParams.matchId) || matchCtx.activeMatch));
+
+  const activeMatch = useMemo(() => {
+    const m = passedMatch || matchCtx.activeMatch || matchCtx.selectedMatch || {};
+    if (!m || (!m.innings && !m.rawMatchData && !m.team1)) return null;
+    if (m.rawMatchData && (!m.innings || m.innings.length === 0)) {
+      return {
+        ...m.rawMatchData,
+        ...m,
+        innings: m.rawMatchData.innings || m.innings,
+        tournament: m.tournament || m.rawMatchData.tournament,
+        tournamentId: m.tournamentId || m.rawMatchData.tournamentId,
+        tournamentName: m.tournamentName || m.rawMatchData.tournamentName
+      };
+    }
+    if (!m.innings || m.innings.length === 0) {
+      const t1Name = m.team1?.name || m.team1 || 'Team 1';
+      const t2Name = m.team2?.name || m.team2 || 'Team 2';
+      const inn1 = makeInning({ name: t1Name }, { name: t2Name }, m.overs || 20);
+      const inn2 = makeInning({ name: t2Name }, { name: t1Name }, m.overs || 20);
+      return {
+        ...m,
+        innings: [inn1, inn2],
+        team1: m.team1 || { name: t1Name },
+        team2: m.team2 || { name: t2Name }
+      };
+    }
+    return m;
+  }, [passedMatch, matchCtx.activeMatch, matchCtx.selectedMatch]);
+
   const {
-    activeMatch = matchCtx.activeMatch,
     publicLiveTab = props.publicLiveTab || matchCtx.publicLiveTab || 'live',
     setPublicLiveTab = matchCtx.setPublicLiveTab,
     liveViewReturnScreen = props.liveViewReturnScreen || matchCtx.liveViewReturnScreen || 'home',
@@ -83,18 +116,48 @@ export function PublicLiveViewScreen(props = {}) {
   const [scorecardInningIndex, setScorecardInningIndex] = useState(0);
   const [oversInningIndex, setOversInningIndex] = useState(0);
 
+  const isTournamentMatch = Boolean(
+    activeMatch?.tournamentId ||
+    activeMatch?.tournamentName ||
+    activeMatch?.seriesName ||
+    activeMatch?.tournament ||
+    activeMatch?.tournamentTitle
+  );
+
+  const publicTabs = useMemo(() => {
+    const list = [...BASE_PUBLIC_LIVE_TABS];
+    if (isTournamentMatch) {
+      list.push({ id: 'table', label: 'Table' });
+    }
+    return list;
+  }, [isTournamentMatch]);
+
   const publicTabsRef = useRef(null);
   const publicPagerRef = useRef(null);
   const publicPagerPosition = useRef(new Animated.Value(
-    Math.max(0, PUBLIC_LIVE_TABS.findIndex(tab => tab.id === publicLiveTab))
+    Math.max(0, publicTabs.findIndex(tab => tab.id === publicLiveTab))
   )).current;
+
+  const handleGoBack = () => {
+    if (props.navigation && props.navigation.canGoBack && props.navigation.canGoBack()) {
+      props.navigation.goBack();
+    } else if (props.onBack) {
+      props.onBack();
+    } else if (setCurrentScreen) {
+      if (isTournamentMatch) {
+        setCurrentScreen('series');
+      } else {
+        setCurrentScreen(liveViewReturnScreen || 'home');
+      }
+    }
+  };
 
   if (!activeMatch || !activeMatch.innings || !activeMatch.innings.length) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: themeColors.appBackground }}>
         <Ionicons name="radio-outline" size={34} color="#94A3B8" />
         <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: systemFontBold, marginTop: 10 }}>No live match in progress</Text>
-        <TouchableOpacity onPress={() => setCurrentScreen && setCurrentScreen('home')} style={{ minHeight: 42, marginTop: 14, paddingHorizontal: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181B' }}>
+        <TouchableOpacity onPress={handleGoBack} style={{ minHeight: 42, marginTop: 14, paddingHorizontal: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181B' }}>
           <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: systemFontBold }}>BACK TO HOME</Text>
         </TouchableOpacity>
       </View>
@@ -203,7 +266,7 @@ export function PublicLiveViewScreen(props = {}) {
   const keepPublicTabVisible = (tabIndex, animated = true) => {
     if (tabIndex === 0) {
       publicTabsRef.current?.scrollTo({ x: 0, animated });
-    } else if (tabIndex === PUBLIC_LIVE_TABS.length - 1) {
+    } else if (tabIndex === publicTabs.length - 1) {
       publicTabsRef.current?.scrollToEnd({ animated });
     } else {
       publicTabsRef.current?.scrollTo({
@@ -223,7 +286,7 @@ export function PublicLiveViewScreen(props = {}) {
   };
 
   const changePublicLiveTab = (nextTabId, movePager = true) => {
-    const nextIndex = PUBLIC_LIVE_TABS.findIndex(tab => tab.id === nextTabId);
+    const nextIndex = publicTabs.findIndex(tab => tab.id === nextTabId);
     if (nextIndex < 0) return;
 
     keepPublicTabVisible(nextIndex);
@@ -235,7 +298,7 @@ export function PublicLiveViewScreen(props = {}) {
 
   const handlePublicPageSelected = (event) => {
     const nextIndex = event.nativeEvent.position;
-    const nextTab = PUBLIC_LIVE_TABS[nextIndex];
+    const nextTab = publicTabs[nextIndex];
     if (!nextTab) return;
     keepPublicTabVisible(nextIndex);
     if (nextTab.id !== publicLiveTab) setPublicLiveTab(nextTab.id);
@@ -247,17 +310,85 @@ export function PublicLiveViewScreen(props = {}) {
   };
 
   useEffect(() => {
-    const idx = PUBLIC_LIVE_TABS.findIndex(t => t.id === publicLiveTab);
+    const idx = publicTabs.findIndex(t => t.id === publicLiveTab);
     if (idx !== -1) {
       publicPagerRef.current?.setPage(idx);
       publicPagerPosition.setValue(idx);
       keepPublicTabVisible(idx, false);
     }
-  }, [publicLiveTab]);
+  }, [publicLiveTab, publicTabs]);
+
+  // Resolve Full Tournament Object
+  const [resolvedTournament, setResolvedTournament] = useState(() => {
+    const tourns = getInitialTournamentsSync();
+    const tId = activeMatch?.tournamentId || activeMatch?.tournament?.id;
+    const tName = activeMatch?.tournamentName || activeMatch?.seriesName || activeMatch?.tournament?.name || activeMatch?.tournamentTitle;
+    if (tId) {
+      const found = tourns.find(t => t.id === tId || String(t.id).toLowerCase() === String(tId).toLowerCase());
+      if (found) return found;
+    }
+    if (tName) {
+      const norm = String(tName).trim().toLowerCase();
+      const found = tourns.find(t => String(t.name || t.title || '').trim().toLowerCase().includes(norm) || norm.includes(String(t.name || '').trim().toLowerCase()));
+      if (found) return found;
+    }
+    return activeMatch?.tournament || (isTournamentMatch ? tourns[0] : null);
+  });
+
+  useEffect(() => {
+    getTournamentsFromStorage().then(list => {
+      if (Array.isArray(list) && list.length > 0) {
+        const tId = activeMatch?.tournamentId || activeMatch?.tournament?.id;
+        const tName = activeMatch?.tournamentName || activeMatch?.seriesName || activeMatch?.tournament?.name || activeMatch?.tournamentTitle;
+        let target = null;
+        if (tId) {
+          target = list.find(t => t.id === tId || String(t.id).toLowerCase() === String(tId).toLowerCase());
+        }
+        if (!target && tName) {
+          const norm = String(tName).trim().toLowerCase();
+          target = list.find(t => String(t.name || t.title || '').trim().toLowerCase().includes(norm) || norm.includes(String(t.name || '').trim().toLowerCase()));
+        }
+        if (target) {
+          setResolvedTournament(target);
+        }
+      }
+    }).catch(() => {});
+  }, [activeMatch?.tournamentId, activeMatch?.tournamentName, activeMatch?.seriesName]);
+
+  // Tournament Navigation
+  const handleOpenTournament = () => {
+    const tData = resolvedTournament || activeMatch.tournament || {
+      id: activeMatch.tournamentId,
+      name: activeMatch.tournamentName || activeMatch.seriesName || 'Tournament'
+    };
+    if (matchCtx.setActiveTournament) {
+      matchCtx.setActiveTournament(tData);
+    }
+    if (matchCtx.setBottomNavTab) {
+      matchCtx.setBottomNavTab('series');
+    }
+    if (matchCtx.setCurrentScreen) {
+      matchCtx.setCurrentScreen('series');
+    }
+  };
+
+  // Full Tournament Points Table (All teams in tournament)
+  const tournamentPointsTable = useMemo(() => {
+    const targetTourn = resolvedTournament || activeMatch?.tournament;
+    if (!targetTourn) return [];
+    const tTeams = targetTourn.teams || [];
+    const tMatches = targetTourn.matches || [];
+    if (tTeams.length === 0) return [];
+    return autoCalculatePointsTable(tTeams, tMatches);
+  }, [resolvedTournament, activeMatch]);
 
   // Overs Tab data (Inning 1 & Inning 2)
   const oversViewInning = oversInningIndex === 1 ? inn2 : inn1;
   const oversHistoryList = oversViewInning?.overHistory || [];
+
+  const t1Short = getTeamShortCode(team1Meta, team1Name);
+  const t2Short = getTeamShortCode(team2Meta, team2Name);
+  const headerMatchTitle = `${t1Short} vs ${t2Short}`;
 
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.appBackground }}>
@@ -265,18 +396,22 @@ export function PublicLiveViewScreen(props = {}) {
       {/* ─── TOP DARK NAVY HEADER (MATCH TITLE + TABS + INTEGRATED LIVE HERO) ─── */}
       <View style={{ backgroundColor: '#071B2C', borderBottomWidth: 0, borderBottomColor: '#123A56' }}>
         {/* Top Title & Back */}
-        <View style={{ paddingHorizontal: 14, paddingTop: insets.top + 8, paddingBottom: 6, flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setCurrentScreen && setCurrentScreen(liveViewReturnScreen)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-            <Ionicons name="arrow-back" size={18} color="#E0F2FE" />
-            <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: systemFontMedium }} numberOfLines={1}>
-              {activeMatch.matchTitle || `${team1Name} vs ${team2Name}`}
-            </Text>
+        <View style={{ paddingHorizontal: 16, paddingTop: insets.top + 8, paddingBottom: 10, flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={handleGoBack}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={{ marginRight: 12, padding: 2, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontFamily: systemFontBold, letterSpacing: 0.2, flex: 1 }} numberOfLines={1}>
+            {headerMatchTitle}
+          </Text>
         </View>
 
-        {/* 5-Tabs Strip */}
+        {/* Tabs Strip */}
         <MatchTabBar
-          tabs={PUBLIC_LIVE_TABS}
+          tabs={publicTabs}
           activeTab={publicLiveTab}
           layouts={publicTabLayouts}
           pageWidth={1}
@@ -359,15 +494,15 @@ export function PublicLiveViewScreen(props = {}) {
         </View>
       </View>
 
-      {/* ─── NATIVE HORIZONTAL SWIPEABLE PAGER (INFO | LIVE | SCORECARD | OVERS | GRAPHS) ─── */}
+      {/* ─── NATIVE HORIZONTAL SWIPEABLE PAGER (INFO | LIVE | SCORECARD | OVERS | GRAPHS | TABLE) ─── */}
       <PagerView
         ref={publicPagerRef}
         style={{ flex: 1 }}
-        initialPage={Math.max(0, PUBLIC_LIVE_TABS.findIndex(tab => tab.id === publicLiveTab))}
+        initialPage={Math.max(0, publicTabs.findIndex(tab => tab.id === publicLiveTab))}
         onPageSelected={handlePublicPageSelected}
         onPageScroll={handlePublicPageScroll}
       >
-        {PUBLIC_LIVE_TABS.map(({ id: pageTabId }) => (
+        {publicTabs.map(({ id: pageTabId }) => (
           <View key={pageTabId} style={{ flex: 1 }}>
             <ScrollView
               style={{ flex: 1 }}
@@ -378,20 +513,18 @@ export function PublicLiveViewScreen(props = {}) {
               {/* ─── TAB 1: INFO TAB ─── */}
               {pageTabId === 'info' && (
                 <MatchInfoPanel
-                  rows={[
-                    { icon: 'trophy-outline', label: 'Match', value: activeMatch.matchTitle || `${team1Name} vs ${team2Name}` },
-                    { icon: 'calendar-outline', label: 'Date & time', value: formatMatchDateTime(activeMatch.startedAt) },
-                    { icon: 'swap-horizontal-outline', label: 'Toss', value: activeMatch.tossResult || `${tossWinnerName} chose to ${tossDecisionText}`, emphasis: true },
-                    activeMatch.venue ? { icon: 'location-outline', label: 'Venue', value: activeMatch.venue } : null,
-                    { icon: 'person-outline', label: 'Umpire', value: activeMatch.umpireName || 'Cric Scorer' },
-                    { icon: 'partly-sunny-outline', label: 'Conditions', value: activeMatch.conditions || '28°C, Clear Sky' }
-                  ]}
+                  match={activeMatch}
+                  teamOne={team1Meta}
+                  teamTwo={team2Meta}
                   teamOneName={team1Name}
                   teamTwoName={team2Name}
+                  tossSummary={`${tossWinnerName} won the toss and chose to ${tossDecisionText}`}
                   playerCount={publicTeamOneRoster.length + publicTeamTwoRoster.length}
-                  onOpenPlayingXi={() => {
+                  onOpenPlayingXi={(tName) => {
                     if (setPlayingXiVisible) setPlayingXiVisible(true);
                   }}
+                  onPressTournament={handleOpenTournament}
+                  tournamentData={resolvedTournament || activeMatch.tournament}
                 />
               )}
 
@@ -506,161 +639,17 @@ export function PublicLiveViewScreen(props = {}) {
 
               {/* ─── TAB 3: SCORECARD TAB ─── */}
               {pageTabId === 'scorecard' && (
-                <View style={{ gap: 14 }}>
-                  {/* INNINGS SWITCHER PILLS (MATCHING FINISHED VIEW) */}
-                  <View style={{ flexDirection: 'row', gap: 8, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 14, borderWidth: 0 }}>
-                    {[
-                      {
-                        name: team1Name,
-                        score: inn1?.battingTeam ? `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}  ${formatOvers(inn1.totalLegalBalls || 0)}` : '0-0'
-                      },
-                      {
-                        name: team2Name,
-                        score: inn2?.battingTeam ? `${inn2.battingTeam.runs ?? 0}-${inn2.battingTeam.wickets ?? 0}  ${formatOvers(inn2.totalLegalBalls || 0)}` : (isInn2 ? '0-0  0.0' : 'Yet to bat')
-                      }
-                    ].map((tObj, idx) => {
-                      const active = scorecardInningIndex === idx;
-                      return (
-                        <TouchableOpacity
-                          key={tObj.name}
-                          onPress={() => setScorecardInningIndex(idx)}
-                          style={{
-                            flex: 1,
-                            minHeight: 48,
-                            paddingHorizontal: 8,
-                            paddingVertical: 6,
-                            borderRadius: 8,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: active ? '#18181B' : '#FFFFFF',
-                            borderWidth: 0
-                          }}
-                        >
-                          <Text style={{ fontSize: 13, fontFamily: systemFontMedium, color: active ? '#FFFFFF' : '#0F172A', textAlign: 'center' }} numberOfLines={1}>
-                            {tObj.name}
-                          </Text>
-                          <Text style={{ fontSize: 10.5, fontFamily: systemFontMedium, color: active ? '#D4D4D8' : '#64748B', marginTop: 2 }} numberOfLines={1}>
-                            {tObj.score}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-                  {!scorecardHasStarted ? (
-                    <PreInningsScorecard players={scorecardDeclaredPlayers} />
-                  ) : (
-                    <>
-                      {/* BATTING TABLE */}
-                      <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, overflow: 'hidden' }}>
-                        <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 0, borderBottomColor: '#E2E8F0' }}>
-                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Text style={{ color: '#1477A8', fontSize: 12, fontFamily: systemFontBold }}>BATTER</Text>
-                            <Ionicons name="arrow-down" size={12} color="#1477A8" />
-                          </View>
-                          <Text style={{ color: '#7C8793', fontSize: 11.5, width: 34, textAlign: 'right', fontFamily: systemFontBold }}>R</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11.5, width: 30, textAlign: 'right', fontFamily: systemFontBold }}>B</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11.5, width: 32, textAlign: 'right', fontFamily: systemFontBold }}>4s</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11.5, width: 32, textAlign: 'right', fontFamily: systemFontBold }}>6s</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11.5, width: 54, textAlign: 'right', fontFamily: systemFontBold }}>SR</Text>
-                        </View>
-
-                        {scorecardKnownBatters.map((b, bi) => {
-                          const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
-                          return (
-                            <View key={`${scorecardInningIndex}-${b.name}-${bi}`} style={{ borderBottomWidth: 0, borderBottomColor: '#F1F5F9' }}>
-                              <TouchableOpacity
-                                activeOpacity={0.7}
-                                onPress={() => handleOpenPlayerProfile && handleOpenPlayerProfile(b.name)}
-                                style={{ minHeight: 56, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' }}
-                              >
-                                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 6 }}>
-                                  <PlayerAvatar name={b.name} photoUrl={b.avatar || b.photoUrl} size={36} />
-                                  <View style={{ flex: 1, minWidth: 0 }}>
-                                    <Text selectable style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>
-                                      {b.name} {b.name === viewInningObj.striker?.name ? '*' : ''}
-                                    </Text>
-                                    <Text selectable style={{ color: b.isOut ? '#64748B' : '#0284C7', fontSize: 10.5, marginTop: 2, fontFamily: systemFontMedium }} numberOfLines={1}>
-                                      {b.dismissal || 'Not out'}
-                                    </Text>
-                                  </View>
-                                </View>
-                                <Text selectable style={{ color: '#0F172A', fontSize: 13.5, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>{b.runs}</Text>
-                                <Text selectable style={{ color: '#64748B', fontSize: 12, width: 30, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{b.balls}</Text>
-                                <Text selectable style={{ color: '#64748B', fontSize: 12, width: 32, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{b.fours || 0}</Text>
-                                <Text selectable style={{ color: '#64748B', fontSize: 12, width: 32, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{b.sixes || 0}</Text>
-                                <Text selectable style={{ color: '#0284C7', fontSize: 11.5, width: 54, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{sr}</Text>
-                              </TouchableOpacity>
-                            </View>
-                          );
-                        })}
-
-                        {/* Extras row */}
-                        <View style={{ minHeight: 40, paddingHorizontal: 14, backgroundColor: '#F8FAFC', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontBold }}>EXTRAS</Text>
-                          <Text selectable style={{ color: '#0F172A', fontSize: 13, fontFamily: systemFontBold, fontVariant: ['tabular-nums'] }}>{scorecardExtras}</Text>
-                        </View>
-                      </View>
-
-                      {/* BOWLING TABLE */}
-                      <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, overflow: 'hidden' }}>
-                        <View style={{ minHeight: 44, backgroundColor: '#F8FAFC', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 0, borderBottomColor: '#F1F5F9' }}>
-                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Text style={{ color: '#1477A8', fontSize: 12, fontFamily: systemFontBold }}>BOWLER</Text>
-                            <Ionicons name="arrow-down" size={12} color="#1477A8" />
-                          </View>
-                          <Text style={{ color: '#7C8793', fontSize: 11.5, width: 34, textAlign: 'right', fontFamily: systemFontBold }}>O</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11.5, width: 34, textAlign: 'right', fontFamily: systemFontBold }}>R</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11.5, width: 32, textAlign: 'right', fontFamily: systemFontBold }}>W</Text>
-                          <Text style={{ color: '#7C8793', fontSize: 11.5, width: 50, textAlign: 'right', fontFamily: systemFontBold }}>ECO</Text>
-                        </View>
-                        {scorecardBowlingRows.length > 0 ? scorecardBowlingRows.map((bowlerRow, bowlerIndex) => (
-                          <View key={`${bowlerRow.name}-${bowlerIndex}`} style={{ minHeight: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderTopWidth: bowlerIndex > 0 ? 1 : 0, borderTopColor: '#F1F5F9' }}>
-                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0, paddingRight: 8 }}>
-                              <PlayerAvatar name={bowlerRow.name} photoUrl={bowlerRow.avatar || bowlerRow.photoUrl} size={36} />
-                              <Text selectable style={{ flex: 1, color: '#0F172A', fontSize: 13, fontFamily: systemFontMedium }} numberOfLines={1}>{bowlerRow.name}</Text>
-                            </View>
-                            <Text selectable style={{ color: '#64748B', fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{bowlerRow.overs}</Text>
-                            <Text selectable style={{ color: '#64748B', fontSize: 12, width: 34, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{bowlerRow.runs}</Text>
-                            <Text selectable style={{ color: '#0284C7', fontSize: 13, width: 32, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontBold }}>{bowlerRow.wickets}</Text>
-                            <Text selectable style={{ color: '#1477A8', fontSize: 12, width: 50, textAlign: 'right', fontVariant: ['tabular-nums'], fontFamily: systemFontMedium }}>{bowlerRow.econ}</Text>
-                          </View>
-                        )) : (
-                          <Text style={{ color: '#94A3B8', fontSize: 11, padding: 12, textAlign: 'center', fontFamily: systemFontMedium }}>No bowling figures yet</Text>
-                        )}
-                      </View>
-
-                      {/* PENDING / YET TO BAT BATTERS */}
-                      {scorecardPendingBatters && scorecardPendingBatters.length > 0 ? (
-                        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 0, padding: 14 }}>
-                          <Text style={{ color: '#64748B', fontSize: 11, fontFamily: systemFontBold, letterSpacing: 0.5, marginBottom: 12, textTransform: 'uppercase' }}>
-                            YET TO BAT ({scorecardPendingBatters.length})
-                          </Text>
-                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                            {scorecardPendingBatters.map(p => (
-                              <TouchableOpacity
-                                key={p.name}
-                                onPress={() => handleOpenPlayerProfile && handleOpenPlayerProfile(p.name)}
-                                activeOpacity={0.7}
-                                style={{ width: '48%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
-                              >
-                                <PlayerAvatar name={p.name} photoUrl={p.avatar} size={38} />
-                                <View style={{ flex: 1, minWidth: 0 }}>
-                                  <Text selectable style={{ color: '#0F172A', fontSize: 12.5, fontFamily: systemFontMedium }} numberOfLines={1}>
-                                    {p.name}
-                                  </Text>
-                                  <Text style={{ color: '#94A3B8', fontSize: 10, fontFamily: systemFontMedium }}>
-                                    SR: {p.sr}
-                                  </Text>
-                                </View>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        </View>
-                      ) : null}
-                    </>
-                  )}
-                </View>
+                <CompleteScorecardView
+                  match={activeMatch}
+                  inningIndex={scorecardInningIndex}
+                  onSelectInning={(idx) => setScorecardInningIndex(idx)}
+                  onSelectPlayer={(pName) => handleOpenPlayerProfile && handleOpenPlayerProfile(pName)}
+                  isLive={true}
+                  team1Name={team1Name}
+                  team2Name={team2Name}
+                  team1Score={inn1?.battingTeam ? `${inn1.battingTeam.runs ?? 0}-${inn1.battingTeam.wickets ?? 0}  ${formatOvers(inn1.totalLegalBalls || 0)}` : '0-0'}
+                  team2Score={inn2?.battingTeam ? `${inn2.battingTeam.runs ?? 0}-${inn2.battingTeam.wickets ?? 0}  ${formatOvers(inn2.totalLegalBalls || 0)}` : (isInn2 ? '0-0  0.0' : 'Yet to bat')}
+                />
               )}
 
               {/* ─── TAB 4: OVERS TAB ─── */}
@@ -731,6 +720,19 @@ export function PublicLiveViewScreen(props = {}) {
                     match={activeMatch}
                     team1Inning={inn1}
                     team2Inning={inn2}
+                  />
+                </View>
+              )}
+
+              {/* ─── TAB 6: POINTS TABLE TAB (FOR TOURNAMENTS) ─── */}
+              {pageTabId === 'table' && (
+                <View style={{ gap: 14 }}>
+                  <PointsTableSection
+                    pointsTableData={tournamentPointsTable}
+                    tournamentTeams={resolvedTournament?.teams || activeMatch.tournament?.teams || activeMatch.teams || []}
+                    totalTeams={(resolvedTournament?.teams || activeMatch.tournament?.teams || activeMatch.teams || []).length}
+                    teamFormEnabled={true}
+                    isOverviewPreview={false}
                   />
                 </View>
               )}
